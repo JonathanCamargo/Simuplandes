@@ -1,0 +1,56 @@
+{
+  "appName": "Simuplandes Studio",
+  "menu": {
+    "file": "File",
+    "new": "New",
+    "loadExample": "Load example four-bar",
+    "importGraph": "Import graph…",
+    "examples": "Examples…",
+    "atlas": "Browse atlas…",
+    "open": "Open",
+    "save": "Save",
+    "saveAs": "Save as…"
+  },
+  "undo": "Undo {{label}}",
+  "redo": "Redo {{label}}",
+  "mode": {
+    "build": "Build",
+    "simulate": "Simulate"
+  },
+  "language": "Language",
+  "theme": {
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "dock": {
+    "label": "Side panel",
+    "inspector": "Inspector",
+    "graph": "Graph",
+    "export": "Export"
+  },
+  "inspector": {
+    "nothingSelected": "Nothing selected",
+    "selectedCount": "{{count}} selected"
+  },
+  "status": {
+    "x": "x",
+    "y": "y",
+    "snap": "snap",
+    "hintPrefix": "hint",
+    "grid": "Grid",
+    "snapToggle": "Snap"
+  },
+  "alerts": {
+    "restored": "Restored last session",
+    "restoreFailed": "Previous session could not be restored (kept as backup): {{message}}",
+    "saved": "Saved {{fileName}}"
+  },
+  "buttons": {
+    "commandPalette": "Command palette",
+    "shortcuts": "Shortcuts"
+  },
+  "rail": {
+    "label": "Tools"
+  },
+  "dropOverlay": "Drop to import"
+}

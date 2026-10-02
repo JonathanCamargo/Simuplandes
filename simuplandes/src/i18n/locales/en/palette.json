@@ -1,0 +1,30 @@
+{
+  "label": "Command palette",
+  "placeholder": "Type a command or tool…",
+  "empty": "No matching commands",
+  "groups": {
+    "file": "File",
+    "tools": "Tools",
+    "edit": "Edit",
+    "view": "View",
+    "preferences": "Preferences",
+    "help": "Help"
+  },
+  "commands": {
+    "toggleGrid": "Toggle grid",
+    "toggleSnap": "Toggle snap",
+    "toggleTheme": "Toggle light/dark theme",
+    "languageEs": "Español",
+    "languageEn": "English",
+    "importGraph": "Import graph",
+    "examples": "Examples",
+    "atlas": "Browse atlas"
+  },
+  "shortcutSheet": {
+    "title": "Keyboard shortcuts",
+    "toolsHeading": "Tools",
+    "editHeading": "Edit",
+    "keyHeading": "Key",
+    "close": "Close"
+  }
+}

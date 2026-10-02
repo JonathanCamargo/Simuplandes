@@ -1,0 +1,204 @@
+{
+  "format": "simuplandes-graphthe-export",
+  "version": 1,
+  "name": "tenbar-b",
+  "units": "mm",
+  "source": {
+    "app": "Simuplandes",
+    "version": "0.1.0"
+  },
+  "graph": {
+    "directed": false,
+    "multigraph": false,
+    "graph": {},
+    "nodes": [
+      {
+        "id": 0,
+        "link_type": "ground",
+        "link_names": [
+          "link-0"
+        ]
+      },
+      {
+        "id": 1,
+        "link_type": "ternary",
+        "link_names": [
+          "link-1"
+        ]
+      },
+      {
+        "id": 2,
+        "link_type": "binary",
+        "link_names": [
+          "link-2"
+        ]
+      },
+      {
+        "id": 3,
+        "link_type": "ternary",
+        "link_names": [
+          "link-3"
+        ]
+      },
+      {
+        "id": 4,
+        "link_type": "quaternary",
+        "link_names": [
+          "link-4"
+        ]
+      },
+      {
+        "id": 5,
+        "link_type": "ternary",
+        "link_names": [
+          "link-5"
+        ]
+      },
+      {
+        "id": 6,
+        "link_type": "binary",
+        "link_names": [
+          "link-6"
+        ]
+      },
+      {
+        "id": 7,
+        "link_type": "binary",
+        "link_names": [
+          "link-7"
+        ]
+      },
+      {
+        "id": 8,
+        "link_type": "binary",
+        "link_names": [
+          "link-8"
+        ]
+      },
+      {
+        "id": 9,
+        "link_type": "binary",
+        "link_names": [
+          "link-9"
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": 0,
+        "target": 1,
+        "pos": [
+          0,
+          0
+        ],
+        "input": true
+      },
+      {
+        "source": 0,
+        "target": 2,
+        "pos": [
+          50,
+          180
+        ]
+      },
+      {
+        "source": 0,
+        "target": 3,
+        "pos": [
+          100,
+          0
+        ]
+      },
+      {
+        "source": 1,
+        "target": 4,
+        "pos": [
+          20.000000000000004,
+          34.64101615137754
+        ]
+      },
+      {
+        "source": 1,
+        "target": 7,
+        "pos": [
+          -28.052558883257653,
+          -4.5884572681198925
+        ]
+      },
+      {
+        "source": 2,
+        "target": 5,
+        "pos": [
+          -69.27084354904943,
+          130.1800359802051
+        ]
+      },
+      {
+        "source": 3,
+        "target": 4,
+        "pos": [
+          110,
+          80
+        ]
+      },
+      {
+        "source": 3,
+        "target": 9,
+        "pos": [
+          114.13995974316975,
+          -32.00096152401578
+        ]
+      },
+      {
+        "source": 4,
+        "target": 5,
+        "pos": [
+          51.49817440348616,
+          84.110444722895
+        ]
+      },
+      {
+        "source": 4,
+        "target": 6,
+        "pos": [
+          -2.3961853879456783,
+          45.75006111792477
+        ]
+      },
+      {
+        "source": 5,
+        "target": 8,
+        "pos": [
+          64.48205389674068,
+          62.03287979139395
+        ]
+      },
+      {
+        "source": 6,
+        "target": 7,
+        "pos": [
+          -40,
+          220
+        ]
+      },
+      {
+        "source": 8,
+        "target": 9,
+        "pos": [
+          260,
+          -80
+        ]
+      }
+    ]
+  },
+  "markers": [
+    {
+      "link": 6,
+      "pos": [
+        -48,
+        228
+      ],
+      "name": "marker-0"
+    }
+  ]
+}

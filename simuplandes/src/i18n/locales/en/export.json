@@ -1,0 +1,36 @@
+{
+  "images": {
+    "drawingSvg": "Drawing as SVG",
+    "drawingPng": "Drawing as PNG",
+    "graphSvg": "Graph as SVG",
+    "graphPng": "Graph as PNG",
+    "printLight": "Print (light)",
+    "error": "Could not export the image. Please try again."
+  },
+  "panel": {
+    "copy": "Copy",
+    "copied": "Copied",
+    "download": "Download",
+    "jsonPreview": "GraphThe Mechanism JSON preview"
+  },
+  "report": {
+    "ready": "Ready to export.",
+    "group": {
+      "errors": "Errors ({{count}})",
+      "warnings": "Warnings ({{count}})",
+      "info": "Notes ({{count}})"
+    },
+    "cannot-simulate-dof": "GraphThe won't be able to simulate this: mobility is F = {{dof}}, expected 1.",
+    "cannot-simulate-no-motor": "GraphThe won't be able to simulate this: there is no motor.",
+    "cannot-simulate-several-motors": "GraphThe won't be able to simulate this: there are {{count}} motors.",
+    "cannot-simulate-motor-not-on-ground": "GraphThe won't be able to simulate this: the motor is not on a ground pivot.",
+    "cannot-simulate-linear-motor": "GraphThe won't be able to simulate this: the motor drives a slider (linear input).",
+    "no-ground": "GraphThe won't be able to simulate this: there is no fixed (ground) link.",
+    "parallel-joint": "A second joint between the same two links was not exported (the graph must stay simple).",
+    "dangling-joint": "A joint references a missing site and was not exported.",
+    "unusual-link-degree": "Link has {{degree}} joint(s) after export; GraphThe's atlas classifies 2 to 5.",
+    "multi-joint-split": "{{links}} pinned at one point: exported as a star around link {{hub}} (kept: {{kept}}; added: {{synthesized}}; removed: {{dropped}}).",
+    "merged-ground": "Fixed bodies merged into one ground: {{names}}.",
+    "ground-loop": "A joint between two fixed bodies was not exported."
+  }
+}

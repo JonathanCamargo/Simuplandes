@@ -1,0 +1,14 @@
+{
+  "title": "Atlas de topologías",
+  "close": "Cerrar",
+  "sizeLabel": "Eslabones",
+  "classLabel": "Clase",
+  "all": "Todas",
+  "count_one": "{{count}} topología",
+  "count_other": "{{count}} topologías",
+  "none": "Ninguna topología coincide con estos filtros.",
+  "opening": "Calculando el dibujo…",
+  "cancel": "Cancelar",
+  "open": "Abrir {{id}}",
+  "error": "No se pudo abrir esta topología: {{message}}"
+}

@@ -1,0 +1,166 @@
+{
+  "format": "simuplandes-graphthe-export",
+  "version": 1,
+  "name": "eightbar-T15",
+  "units": "mm",
+  "source": {
+    "app": "Simuplandes",
+    "version": "0.1.0"
+  },
+  "graph": {
+    "directed": false,
+    "multigraph": false,
+    "graph": {},
+    "nodes": [
+      {
+        "id": 0,
+        "link_type": "ground",
+        "link_names": [
+          "link-0"
+        ]
+      },
+      {
+        "id": 1,
+        "link_type": "quaternary",
+        "link_names": [
+          "link-1"
+        ]
+      },
+      {
+        "id": 2,
+        "link_type": "binary",
+        "link_names": [
+          "link-2"
+        ]
+      },
+      {
+        "id": 3,
+        "link_type": "binary",
+        "link_names": [
+          "link-3"
+        ]
+      },
+      {
+        "id": 4,
+        "link_type": "binary",
+        "link_names": [
+          "link-4"
+        ]
+      },
+      {
+        "id": 5,
+        "link_type": "binary",
+        "link_names": [
+          "link-5"
+        ]
+      },
+      {
+        "id": 6,
+        "link_type": "binary",
+        "link_names": [
+          "link-6"
+        ]
+      },
+      {
+        "id": 7,
+        "link_type": "binary",
+        "link_names": [
+          "link-7"
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": 0,
+        "target": 2,
+        "pos": [
+          97,
+          75
+        ],
+        "input": true
+      },
+      {
+        "source": 0,
+        "target": 3,
+        "pos": [
+          5.744877143742862,
+          67.89379620942903
+        ]
+      },
+      {
+        "source": 0,
+        "target": 4,
+        "pos": [
+          1.9233628454761547,
+          -21.91576317093798
+        ]
+      },
+      {
+        "source": 0,
+        "target": 6,
+        "pos": [
+          88.38565864392712,
+          -57.54078631013817
+        ]
+      },
+      {
+        "source": 1,
+        "target": 3,
+        "pos": [
+          -21.663697760421982,
+          102.23402039496061
+        ]
+      },
+      {
+        "source": 1,
+        "target": 4,
+        "pos": [
+          -3.4043790984741165,
+          41.22498487058116
+        ]
+      },
+      {
+        "source": 1,
+        "target": 5,
+        "pos": [
+          -5.711285697114438,
+          21.245734058533635
+        ]
+      },
+      {
+        "source": 1,
+        "target": 7,
+        "pos": [
+          95.92605297377384,
+          -19.52386042608826
+        ]
+      },
+      {
+        "source": 2,
+        "target": 7,
+        "pos": [
+          73.69808137580131,
+          29.513829604307812
+        ]
+      },
+      {
+        "source": 5,
+        "target": 6,
+        "pos": [
+          -73.36860548378341,
+          -119.63875466547213
+        ]
+      }
+    ]
+  },
+  "markers": [
+    {
+      "link": 1,
+      "pos": [
+        -6.663697760421982,
+        89.23402039496061
+      ],
+      "name": "marker-0"
+    }
+  ]
+}

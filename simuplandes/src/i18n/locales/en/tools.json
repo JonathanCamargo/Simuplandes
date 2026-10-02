@@ -1,0 +1,106 @@
+{
+  "select": {
+    "label": "Select",
+    "description": "Select and move joints, bars or plates",
+    "hint": {
+      "idle": "Click or drag to select…",
+      "boxing": "Drag to box-select; release to confirm",
+      "movingSelection": "Moving the selection…",
+      "draggingJoint": "Dragging the joint — x {{x}} y {{y}}"
+    }
+  },
+  "pan": {
+    "label": "Pan",
+    "description": "Pan the view with a middle-drag or by holding H",
+    "hint": {
+      "idle": "Drag to pan the view; scroll to zoom"
+    }
+  },
+  "bar": {
+    "label": "Bar",
+    "description": "Draw a rigid bar between two points",
+    "hint": {
+      "idle": "Click to start a bar; ends on a joint site are pinned automatically",
+      "drawing": "Length {{length}} · angle {{angle}}° — click or type a value and ⏎",
+      "drawingPin": "Click to pin to {{target}}",
+      "zeroLength": "Move the cursor before clicking: a bar can't have zero length"
+    }
+  },
+  "plate": {
+    "label": "Plate",
+    "description": "Draw a polygon plate with multiple vertices",
+    "hint": {
+      "idle": "Click to add vertices; Enter closes the plate",
+      "needThree": "Add at least 3 vertices before closing the plate",
+      "drawing": "{{count}} vertices — click to add, click the first one or Enter to close",
+      "drawingPin": "Click to pin to {{target}}"
+    }
+  },
+  "groundPivot": {
+    "label": "Ground pivot",
+    "description": "Pin a link site to ground",
+    "hint": {
+      "idle": "Click a site to pin it to ground",
+      "alreadyGround": "That point is already pinned to ground"
+    }
+  },
+  "pin": {
+    "label": "Pin",
+    "description": "Join two coincident sites with a revolute joint",
+    "hint": {
+      "idle": "Click two coincident sites on different links",
+      "needSite": "Click on an existing joint site",
+      "pickSecond": "Click a site on another link",
+      "differentLink": "Pick a site on a different link",
+      "alreadyPinned": "Those two sites are already pinned together"
+    }
+  },
+  "slider": {
+    "label": "Slider",
+    "description": "Create a prismatic joint with a sliding axis",
+    "hint": {
+      "idle": "Click a site and drag the axis direction",
+      "aim": "Aim the axis (15° steps) or type the angle and ⏎ — angle {{angle}}°"
+    }
+  },
+  "motor": {
+    "label": "Motor",
+    "description": "Add a motor to an existing joint",
+    "hint": {
+      "idle": "Click a joint to add a motor",
+      "needJoint": "Click near an existing joint",
+      "alreadyMotor": "Joint {{joint}} already has a motor"
+    }
+  },
+  "marker": {
+    "label": "Trace point",
+    "description": "Add a trace point on a link",
+    "hint": {
+      "idle": "Click on a link to add a marker",
+      "needLink": "Click on a link that isn't ground"
+    }
+  },
+  "defaultNames": {
+    "bar": "Bar",
+    "plate": "Plate",
+    "ground": "Ground",
+    "slider": "Slider",
+    "marker": "Point"
+  },
+  "shortcuts": {
+    "undo": "Undo",
+    "redo": "Redo",
+    "delete": "Delete",
+    "duplicate": "Duplicate",
+    "fit": "Zoom to fit",
+    "cancel": "Cancel",
+    "commit": "Commit",
+    "switchField": "Switch field",
+    "palette": "Command palette",
+    "shortcutSheet": "Shortcut sheet",
+    "wheelZoom": "Wheel: zoom",
+    "middleDragPan": "Middle-drag: pan",
+    "shiftClickAddSelection": "Shift+click: add to selection",
+    "toggleMode": "Toggle Build/Simulate"
+  }
+}

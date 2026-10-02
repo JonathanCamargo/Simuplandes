@@ -1,0 +1,51 @@
+{
+  "common": {
+    "invalidNumber": "Invalid number",
+    "name": "Name",
+    "x": "X",
+    "y": "Y",
+    "angle": "Angle",
+    "clearSelection": "Clear selection"
+  },
+  "document": {
+    "title": "Document",
+    "name": "Name",
+    "units": "Units",
+    "counts": "{{links}} links · {{joints}} joints · {{motors}} motors"
+  },
+  "multi": {
+    "count": "{{count}} objects selected"
+  },
+  "link": {
+    "title": "Link",
+    "color": "Color",
+    "resetColor": "Reset to link-type colour",
+    "ground": "Ground",
+    "length": "Length",
+    "sites": "Sites"
+  },
+  "joint": {
+    "title": "Joint",
+    "typeR": "Revolute (R)",
+    "typeP": "Prismatic (P)",
+    "axis": "Axis angle",
+    "addMotor": "Add motor"
+  },
+  "motor": {
+    "title": "Motor",
+    "mode": "Mode",
+    "modeConstant": "Constant",
+    "modeExpression": "Expression",
+    "speed": "Speed",
+    "expression": "Expression",
+    "expressionPlaceholder": "e.g. sin(t)",
+    "expressionRequired": "The expression cannot be empty"
+  },
+  "site": {
+    "title": "Site"
+  },
+  "marker": {
+    "title": "Marker",
+    "link": "Link"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "format": "simuplandes-parity-fixture",
+  "version": 0,
+  "name": "inverted-slider-crank",
+  "description": "Inverted slider-crank / crank-shaper (the rocker carries the prismatic slot, so its axis rotates with the mechanism); ported from src/kinematics/__fixtures__/invertedSliderCrank.ts (crank=40, O4=(0,-100), reference crank angle 30deg). Crank is the input (full rotation).",
+  "graph": {
+    "nodes": [
+      {
+        "id": 0,
+        "link_type": "ground"
+      },
+      {
+        "id": 1,
+        "link_type": "binary"
+      },
+      {
+        "id": 2,
+        "link_type": "binary"
+      },
+      {
+        "id": 3,
+        "link_type": "block"
+      }
+    ],
+    "edges": [
+      {
+        "source": 0,
+        "target": 1,
+        "pos": [0, 0],
+        "input": true
+      },
+      {
+        "source": 0,
+        "target": 2,
+        "pos": [0, -100]
+      },
+      {
+        "source": 1,
+        "target": 3,
+        "pos": [34.64101615137755, 19.999999999999996]
+      },
+      {
+        "source": 2,
+        "target": 3,
+        "pos": [34.64101615137755, 19.999999999999996],
+        "type": "prismatic",
+        "axis": [0.2773500981126146, 0.9607689228305228]
+      }
+    ]
+  },
+  "markers": [
+    {
+      "link": 2,
+      "pos": [55.425625842204084, 92]
+    },
+    {
+      "link": 3,
+      "pos": [25.033326923072323, 22.77350098112614]
+    }
+  ]
+}

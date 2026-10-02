@@ -1,8 +1,8 @@
-# SimuPlandes
+# Simuplandes
 **Software para simulación de sistemas mecánicos multicuerpo planares simples.**<br>
 
 ## Inicio rápido
-Siga los siguientes pasos para correr Simuplandes
+Siga los siguientes pasos para correr Simuplandes. Requiere Node.js ≥ 22.12.
 
 ### Clonar el repositorio
 ```sh
@@ -15,10 +15,26 @@ cd ./SimuplAndes/simuplandes
 npm install
 ```
 
-### Ejecutar simuplandes
+### Ejecutar Simuplandes
 ```sh
-npm start
+npm run dev
 ```
+(`npm start` sigue funcionando como alias.)
+
+### Verificación
+Antes de aportar cambios, corra:
+```sh
+npm run check
+```
+Esto encadena lint (ESLint), formato (Prettier), tipos (TypeScript) y pruebas (Vitest con cobertura). También:
+```sh
+npm run build
+```
+para producir el bundle de producción.
+
+La documentación de desarrollo (arquitectura, motor cinemático, puente con GraphThe y decisiones de diseño) está en [`docs/`](docs/README.md).
+
+El código de la v0.1 vive en `simuplandes/src/legacy` como referencia únicamente; no se compila ni se prueba.
 
 ## Autor
 Este proyecto fue desarrollado por **Juan Esteban Arboleda Restrepo** como proyecto de grado de Ingeniería Mecánica en la Universidad de Los Andes, Colombia.

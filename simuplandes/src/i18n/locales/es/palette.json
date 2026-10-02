@@ -1,0 +1,30 @@
+{
+  "label": "Paleta de comandos",
+  "placeholder": "Escribe un comando o herramienta…",
+  "empty": "No se encontraron comandos",
+  "groups": {
+    "file": "Archivo",
+    "tools": "Herramientas",
+    "edit": "Edición",
+    "view": "Vista",
+    "preferences": "Preferencias",
+    "help": "Ayuda"
+  },
+  "commands": {
+    "toggleGrid": "Alternar cuadrícula",
+    "toggleSnap": "Alternar ajuste",
+    "toggleTheme": "Alternar tema claro/oscuro",
+    "languageEs": "Español",
+    "languageEn": "English",
+    "importGraph": "Importar grafo",
+    "examples": "Ejemplos",
+    "atlas": "Explorar atlas"
+  },
+  "shortcutSheet": {
+    "title": "Atajos de teclado",
+    "toolsHeading": "Herramientas",
+    "editHeading": "Edición",
+    "keyHeading": "Tecla",
+    "close": "Cerrar"
+  }
+}

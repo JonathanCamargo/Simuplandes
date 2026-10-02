@@ -1,0 +1,56 @@
+{
+  "appName": "Simuplandes Studio",
+  "menu": {
+    "file": "Archivo",
+    "new": "Nuevo",
+    "loadExample": "Cargar ejemplo de cuatro barras",
+    "importGraph": "Importar grafo…",
+    "examples": "Ejemplos…",
+    "atlas": "Explorar atlas…",
+    "open": "Abrir",
+    "save": "Guardar",
+    "saveAs": "Guardar como…"
+  },
+  "undo": "Deshacer {{label}}",
+  "redo": "Rehacer {{label}}",
+  "mode": {
+    "build": "Construir",
+    "simulate": "Simular"
+  },
+  "language": "Idioma",
+  "theme": {
+    "light": "Claro",
+    "dark": "Oscuro"
+  },
+  "dock": {
+    "label": "Panel lateral",
+    "inspector": "Inspector",
+    "graph": "Grafo",
+    "export": "Exportar"
+  },
+  "inspector": {
+    "nothingSelected": "Nada seleccionado",
+    "selectedCount": "{{count}} seleccionados"
+  },
+  "status": {
+    "x": "x",
+    "y": "y",
+    "snap": "ajuste",
+    "hintPrefix": "sugerencia",
+    "grid": "Cuadrícula",
+    "snapToggle": "Ajustar"
+  },
+  "alerts": {
+    "restored": "Se restauró la sesión anterior",
+    "restoreFailed": "No se pudo restaurar la sesión anterior (se guardó una copia de seguridad): {{message}}",
+    "saved": "Se guardó {{fileName}}"
+  },
+  "buttons": {
+    "commandPalette": "Paleta de comandos",
+    "shortcuts": "Atajos"
+  },
+  "rail": {
+    "label": "Herramientas"
+  },
+  "dropOverlay": "Suelta para importar"
+}

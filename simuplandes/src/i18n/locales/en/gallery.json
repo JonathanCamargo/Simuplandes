@@ -1,0 +1,39 @@
+{
+  "title": "Examples",
+  "close": "Close",
+  "empty": {
+    "title": "Start a mechanism",
+    "text": "Pick a tool on the left to draw one, or open an example and press Play.",
+    "import": "Import graph…",
+    "atlas": "Browse atlas…",
+    "dismiss": "Dismiss"
+  },
+  "replace": {
+    "title": "Replace the current drawing?",
+    "text": "Loading an example replaces the current drawing and clears the undo history.",
+    "confirm": "Replace",
+    "cancel": "Cancel"
+  },
+  "examples": {
+    "four-bar": {
+      "title": "Four-bar",
+      "description": "Crank-rocker"
+    },
+    "slider-crank": {
+      "title": "Slider-crank",
+      "description": "Crank driving a slider"
+    },
+    "watt": {
+      "title": "Watt I",
+      "description": "Six-bar linkage"
+    },
+    "stephenson": {
+      "title": "Stephenson I",
+      "description": "Six-bar linkage"
+    },
+    "eight-bar": {
+      "title": "Eight-bar",
+      "description": "Atlas topology T15"
+    }
+  }
+}

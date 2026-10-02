@@ -1,0 +1,78 @@
+{
+  "format": "simuplandes-parity-fixture",
+  "version": 0,
+  "name": "stephenson-ii",
+  "description": "Stephenson six-bar (dms atlas T6B_S), ground = L6 (binary link on the longer coupler->L5->L6->hub path, kinematic inversion of stephenson-iii).",
+  "graph": {
+    "nodes": [
+      {
+        "id": 0,
+        "link_type": "ground"
+      },
+      {
+        "id": 1,
+        "link_type": "ternary"
+      },
+      {
+        "id": 2,
+        "link_type": "binary"
+      },
+      {
+        "id": 3,
+        "link_type": "ternary"
+      },
+      {
+        "id": 4,
+        "link_type": "binary"
+      },
+      {
+        "id": 5,
+        "link_type": "binary"
+      }
+    ],
+    "edges": [
+      {
+        "source": 0,
+        "target": 1,
+        "pos": [50, 180],
+        "input": true
+      },
+      {
+        "source": 0,
+        "target": 5,
+        "pos": [-69.27084354904943, 130.1800359802051]
+      },
+      {
+        "source": 1,
+        "target": 2,
+        "pos": [0, 0]
+      },
+      {
+        "source": 1,
+        "target": 4,
+        "pos": [100, 0]
+      },
+      {
+        "source": 2,
+        "target": 3,
+        "pos": [20.000000000000004, 34.64101615137754]
+      },
+      {
+        "source": 3,
+        "target": 4,
+        "pos": [110, 80]
+      },
+      {
+        "source": 3,
+        "target": 5,
+        "pos": [51.49817440348616, 84.110444722895]
+      }
+    ]
+  },
+  "markers": [
+    {
+      "link": 3,
+      "pos": [51.49817440348616, 84.11044472289501]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "snap": {
+    "site": "articulación {{link}}·{{site}}",
+    "midpoint": "punto medio de {{link}}",
+    "grid": "cuadrícula",
+    "angle": "ángulo {{deg}}°",
+    "none": "libre"
+  },
+  "fit": "Ajustar a la vista",
+  "rulers": {
+    "x": "Regla horizontal",
+    "y": "Regla vertical"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "panel": {
+    "svgLabel": "Grafo de eslabones",
+    "empty": "Dibuja eslabones para ver su grafo",
+    "loadExample": "Cargar ejemplo de cuatro barras"
+  },
+  "layout": {
+    "label": "Disposición",
+    "spatial": "Espacial",
+    "circular": "Circular",
+    "layered": "Por capas"
+  },
+  "node": {
+    "ground": "Tierra",
+    "aria": "{{name}} ({{type}}, {{degree}} juntas)"
+  },
+  "edge": {
+    "aria": "Junta {{name}} ({{type}})"
+  },
+  "linkType": {
+    "ground": "tierra",
+    "binary": "binario",
+    "ternary": "ternario",
+    "quaternary": "cuaternario",
+    "pentary": "pentario"
+  },
+  "checks": {
+    "n": "n = {{n}}",
+    "j": "j = {{j}}",
+    "formula": "F = 3({{n}} − 1) − 2·{{j}} = {{f}}",
+    "formulaEmpty": "F = —",
+    "baranov": {
+      "pass": "Baranov ✓",
+      "fail": "Baranov ✗: subcadena rígida ({{links}})",
+      "skipped": "Baranov: grafo demasiado grande",
+      "explain": "Una subcadena rígida de k eslabones cumple 3(k−1) − 2e ≤ 0 y no puede moverse."
+    },
+    "assortment": {
+      "n2_one": "{{count}} binario",
+      "n2_other": "{{count}} binarios",
+      "n3_one": "{{count}} ternario",
+      "n3_other": "{{count}} ternarios",
+      "n4_one": "{{count}} cuaternario",
+      "n4_other": "{{count}} cuaternarios",
+      "n5_one": "{{count}} pentario o más",
+      "n5_other": "{{count}} pentarios o más"
+    }
+  },
+  "topology": {
+    "fourBar": "Cadena de cuatro barras",
+    "watt": "Cadena de Watt",
+    "stephenson": "Cadena de Stephenson",
+    "atlas": "{{nLinks}} barras · {{id}}",
+    "none": "Sin coincidencia en el atlas",
+    "reason": {
+      "empty": "El grafo está vacío",
+      "notSimple": "El grafo tiene juntas duplicadas (no es simple)",
+      "disconnected": "El grafo no está conectado",
+      "noAtlasForSize": "No hay atlas para este número de eslabones",
+      "noMatch": "No coincide con ninguna topología del atlas"
+    }
+  },
+  "warnings": {
+    "groundLoop": "La junta {{name}} une dos cuerpos fijos; se ignora en el grafo"
+  }
+}

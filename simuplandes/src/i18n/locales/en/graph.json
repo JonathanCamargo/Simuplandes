@@ -1,0 +1,66 @@
+{
+  "panel": {
+    "svgLabel": "Link graph",
+    "empty": "Draw links to see their graph",
+    "loadExample": "Load example four-bar"
+  },
+  "layout": {
+    "label": "Layout",
+    "spatial": "Spatial",
+    "circular": "Circular",
+    "layered": "Layered"
+  },
+  "node": {
+    "ground": "Ground",
+    "aria": "{{name}} ({{type}}, {{degree}} joints)"
+  },
+  "edge": {
+    "aria": "Joint {{name}} ({{type}})"
+  },
+  "linkType": {
+    "ground": "ground",
+    "binary": "binary",
+    "ternary": "ternary",
+    "quaternary": "quaternary",
+    "pentary": "pentary"
+  },
+  "checks": {
+    "n": "n = {{n}}",
+    "j": "j = {{j}}",
+    "formula": "F = 3({{n}} − 1) − 2·{{j}} = {{f}}",
+    "formulaEmpty": "F = —",
+    "baranov": {
+      "pass": "Baranov ✓",
+      "fail": "Baranov ✗: rigid subchain ({{links}})",
+      "skipped": "Baranov: graph too large",
+      "explain": "A rigid subchain of k links satisfies 3(k−1) − 2e ≤ 0 and cannot move."
+    },
+    "assortment": {
+      "n2_one": "{{count}} binary link",
+      "n2_other": "{{count}} binary links",
+      "n3_one": "{{count}} ternary link",
+      "n3_other": "{{count}} ternary links",
+      "n4_one": "{{count}} quaternary link",
+      "n4_other": "{{count}} quaternary links",
+      "n5_one": "{{count}} pentary-or-more link",
+      "n5_other": "{{count}} pentary-or-more links"
+    }
+  },
+  "topology": {
+    "fourBar": "Four-bar chain",
+    "watt": "Watt chain",
+    "stephenson": "Stephenson chain",
+    "atlas": "{{nLinks}} links · {{id}}",
+    "none": "No atlas match",
+    "reason": {
+      "empty": "The graph is empty",
+      "notSimple": "The graph has duplicate joints (not simple)",
+      "disconnected": "The graph is not connected",
+      "noAtlasForSize": "No atlas exists for this link count",
+      "noMatch": "Does not match any atlas topology"
+    }
+  },
+  "warnings": {
+    "groundLoop": "Joint {{name}} joins two fixed bodies; ignored in the graph"
+  }
+}

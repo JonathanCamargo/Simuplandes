@@ -1,0 +1,13 @@
+# Planning / AI-assistant working files (summarized in docs/)
+.planning/
+.claude/
+CLAUDE.md
+
+# Local scratch and logs
+to_delete/
+*.log
+*.tmp
+simuplandes/scratch_probe/
+simuplandes/src/scratch_probe/
+simuplandes/.vitest/
+simuplandes/scripts/__pycache__/

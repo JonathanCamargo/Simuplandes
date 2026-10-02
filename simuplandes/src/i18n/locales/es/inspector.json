@@ -1,0 +1,51 @@
+{
+  "common": {
+    "invalidNumber": "Número no válido",
+    "name": "Nombre",
+    "x": "X",
+    "y": "Y",
+    "angle": "Ángulo",
+    "clearSelection": "Borrar selección"
+  },
+  "document": {
+    "title": "Documento",
+    "name": "Nombre",
+    "units": "Unidades",
+    "counts": "{{links}} eslabones · {{joints}} articulaciones · {{motors}} motores"
+  },
+  "multi": {
+    "count": "{{count}} objetos seleccionados"
+  },
+  "link": {
+    "title": "Eslabón",
+    "color": "Color",
+    "resetColor": "Restablecer color de tipo de eslabón",
+    "ground": "Tierra",
+    "length": "Longitud",
+    "sites": "Puntos"
+  },
+  "joint": {
+    "title": "Articulación",
+    "typeR": "Rotación (R)",
+    "typeP": "Prismática (P)",
+    "axis": "Ángulo del eje",
+    "addMotor": "Añadir motor"
+  },
+  "motor": {
+    "title": "Motor",
+    "mode": "Modo",
+    "modeConstant": "Constante",
+    "modeExpression": "Expresión",
+    "speed": "Velocidad",
+    "expression": "Expresión",
+    "expressionPlaceholder": "p. ej. sin(t)",
+    "expressionRequired": "La expresión no puede estar vacía"
+  },
+  "site": {
+    "title": "Punto"
+  },
+  "marker": {
+    "title": "Marcador",
+    "link": "Eslabón"
+  }
+}

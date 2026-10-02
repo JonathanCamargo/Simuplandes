@@ -1,0 +1,98 @@
+{
+  "mode": {
+    "toggleHint": "Espacio: alternar Construir/Simular"
+  },
+  "transport": {
+    "label": "Transporte",
+    "play": "Reproducir",
+    "pause": "Pausar",
+    "stepForward": "Paso adelante",
+    "stepBack": "Paso atrás",
+    "reset": "Reiniciar",
+    "speed": "Velocidad",
+    "loop": "Repetir",
+    "scrubber": "Entrada {{input}}",
+    "plots": "Gráficas",
+    "enterSimulate": "Pulsa Espacio o Reproducir para simular",
+    "lockUp": "Posición de agarrotamiento en {{value}}",
+    "nearSingular": "Cerca de una posición singular",
+    "direction": {
+      "forward": "Avanza",
+      "backward": "Retrocede"
+    }
+  },
+  "status": {
+    "notDrivable": {
+      "noDof": "Este mecanismo no puede moverse (0 GDL). Mira el indicador F.",
+      "multiDof": "Este mecanismo tiene {{dof}} GDL y el transporte impulsa una sola entrada. Mira el indicador F.",
+      "noInput": "No hay una junta unida a tierra que se pueda impulsar."
+    },
+    "temporaryDriver": "Sin motor: arrastra un eslabón para moverlo; agrega un motor para usar el deslizador",
+    "assemblyFailed": "No se pudo ensamblar: {{joints}}",
+    "invalid": "No se puede simular este documento: {{message}}",
+    "empty": "Dibuja un mecanismo para simularlo",
+    "ignoredMotors_one": "Hay {{count}} motor adicional; el transporte solo impulsa el primero",
+    "ignoredMotors_other": "Hay {{count}} motores adicionales; el transporte solo impulsa el primero"
+  },
+  "solver": {
+    "label": "solver",
+    "ok": "convergió, |f| {{residual}}",
+    "locked": "agarrotado",
+    "noConvergence": "sin convergencia",
+    "invalidInput": "entrada inválida"
+  },
+  "hint": {
+    "simulate": "Arrastra un eslabón para moverlo · Espacio vuelve a Construir",
+    "dragging": "Arrastrando {{link}}",
+    "notDrivable": "Este mecanismo no se mueve · Espacio vuelve a Construir"
+  },
+  "dof": {
+    "badge": "F = {{f}}",
+    "badgeEmpty": "F = —",
+    "title": "Movilidad (Gruebler)",
+    "formula": "F = 3(n − 1) − 2j = 3({{n}} − 1) − 2·{{j}} = {{f}}",
+    "counts": "n = {{n}} eslabones (tierra incluida), j = {{j}} juntas",
+    "rank": "GDL instantáneos en la pose de referencia: {{rank}}",
+    "explain": {
+      "ok": "Un grado de libertad: un motor lo impulsa por completo.",
+      "redundantMobile_one": "F = {{f}} según Gruebler, pero este mecanismo se mueve con {{rank}} GDL porque hay {{count}} restricción redundante (eslabones paralelos).",
+      "redundantMobile_other": "F = {{f}} según Gruebler, pero este mecanismo se mueve con {{rank}} GDL porque hay {{count}} restricciones redundantes (eslabones paralelos).",
+      "structure": "F = {{f}}: es una estructura; no puede moverse.",
+      "multiDof": "F = {{f}}: necesita {{rank}} entradas; el transporte impulsa un solo motor.",
+      "singular": "En la pose de referencia el mecanismo tiene {{rank}} GDL instantáneos (posición singular).",
+      "empty": "Dibuja eslabones y juntas para ver la movilidad.",
+      "invalid": "No se pudo analizar el documento."
+    },
+    "motors": {
+      "none": "Sin motor: arrastra un eslabón para moverlo; agrega un motor para usar el deslizador.",
+      "many_one": "{{count}} motores: el transporte solo impulsa el primero.",
+      "many_other": "{{count}} motores: el transporte solo impulsa el primero."
+    }
+  },
+  "plots": {
+    "title": "Gráficas",
+    "region": "Panel de gráficas",
+    "xAxis": {
+      "label": "Eje x",
+      "input": "Entrada",
+      "time": "Tiempo"
+    },
+    "quantities": "Magnitudes",
+    "exportCsv": "Exportar CSV",
+    "close": "Cerrar gráficas",
+    "emptyTime": "Sin historial: reproduce la simulación para registrar datos en el tiempo",
+    "emptyInput": "No hay barrido disponible para este mecanismo",
+    "nominalRate": "Velocidades y aceleraciones calculadas con la entrada a {{rate}}",
+    "quantity": {
+      "angle": "{{entity}} · ángulo",
+      "omega": "{{entity}} · velocidad angular",
+      "alpha": "{{entity}} · aceleración angular",
+      "x": "{{entity}} · x",
+      "y": "{{entity}} · y",
+      "vx": "{{entity}} · vx",
+      "vy": "{{entity}} · vy",
+      "ax": "{{entity}} · ax",
+      "ay": "{{entity}} · ay"
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "images": {
+    "drawingSvg": "Dibujo como SVG",
+    "drawingPng": "Dibujo como PNG",
+    "graphSvg": "Grafo como SVG",
+    "graphPng": "Grafo como PNG",
+    "printLight": "Impresión (claro)",
+    "error": "No se pudo exportar la imagen. Inténtalo de nuevo."
+  },
+  "panel": {
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "download": "Descargar",
+    "jsonPreview": "Vista previa del JSON de mecanismo de GraphThe"
+  },
+  "report": {
+    "ready": "Listo para exportar.",
+    "group": {
+      "errors": "Errores ({{count}})",
+      "warnings": "Avisos ({{count}})",
+      "info": "Notas ({{count}})"
+    },
+    "cannot-simulate-dof": "GraphThe no podrá simular esto: la movilidad es F = {{dof}}, se esperaba 1.",
+    "cannot-simulate-no-motor": "GraphThe no podrá simular esto: no hay motor.",
+    "cannot-simulate-several-motors": "GraphThe no podrá simular esto: hay {{count}} motores.",
+    "cannot-simulate-motor-not-on-ground": "GraphThe no podrá simular esto: el motor no está en un apoyo fijo.",
+    "cannot-simulate-linear-motor": "GraphThe no podrá simular esto: el motor acciona un deslizador (entrada lineal).",
+    "no-ground": "GraphThe no podrá simular esto: no hay eslabón fijo (tierra).",
+    "parallel-joint": "Un segundo par entre los mismos dos eslabones no se exportó (el grafo debe ser simple).",
+    "dangling-joint": "Un par referencia un punto inexistente y no se exportó.",
+    "unusual-link-degree": "El eslabón tiene {{degree}} unión(es) tras la exportación; el atlas de GraphThe clasifica de 2 a 5.",
+    "multi-joint-split": "{{links}} unidos en un punto: exportado como estrella alrededor del eslabón {{hub}} (conservadas: {{kept}}; añadidas: {{synthesized}}; eliminadas: {{dropped}}).",
+    "merged-ground": "Cuerpos fijos fusionados en una tierra: {{names}}.",
+    "ground-loop": "Un par entre dos cuerpos fijos no se exportó."
+  }
+}

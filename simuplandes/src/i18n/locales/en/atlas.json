@@ -1,0 +1,14 @@
+{
+  "title": "Topology atlas",
+  "close": "Close",
+  "sizeLabel": "Links",
+  "classLabel": "Class",
+  "all": "All",
+  "count_one": "{{count}} topology",
+  "count_other": "{{count}} topologies",
+  "none": "No topology matches these filters.",
+  "opening": "Laying out…",
+  "cancel": "Cancel",
+  "open": "Open {{id}}",
+  "error": "Could not open this topology: {{message}}"
+}

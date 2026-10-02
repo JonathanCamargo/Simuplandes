@@ -1,0 +1,13 @@
+{
+  "ok": "OK",
+  "cancel": "Cancel",
+  "close": "Close",
+  "apply": "Apply",
+  "units": {
+    "mm": "mm",
+    "m": "m"
+  },
+  "yes": "Yes",
+  "no": "No",
+  "notAvailableYet": "Not available yet"
+}

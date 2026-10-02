@@ -1,0 +1,166 @@
+{
+  "format": "simuplandes-graphthe-export",
+  "version": 1,
+  "name": "eightbar-T01",
+  "units": "mm",
+  "source": {
+    "app": "Simuplandes",
+    "version": "0.1.0"
+  },
+  "graph": {
+    "directed": false,
+    "multigraph": false,
+    "graph": {},
+    "nodes": [
+      {
+        "id": 0,
+        "link_type": "ground",
+        "link_names": [
+          "link-0"
+        ]
+      },
+      {
+        "id": 1,
+        "link_type": "ternary",
+        "link_names": [
+          "link-1"
+        ]
+      },
+      {
+        "id": 2,
+        "link_type": "ternary",
+        "link_names": [
+          "link-2"
+        ]
+      },
+      {
+        "id": 3,
+        "link_type": "ternary",
+        "link_names": [
+          "link-3"
+        ]
+      },
+      {
+        "id": 4,
+        "link_type": "binary",
+        "link_names": [
+          "link-4"
+        ]
+      },
+      {
+        "id": 5,
+        "link_type": "binary",
+        "link_names": [
+          "link-5"
+        ]
+      },
+      {
+        "id": 6,
+        "link_type": "binary",
+        "link_names": [
+          "link-6"
+        ]
+      },
+      {
+        "id": 7,
+        "link_type": "binary",
+        "link_names": [
+          "link-7"
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": 0,
+        "target": 1,
+        "pos": [
+          150.03300858899107,
+          53.03300858899106
+        ],
+        "input": true
+      },
+      {
+        "source": 0,
+        "target": 2,
+        "pos": [
+          58.77788573273392,
+          89.86078762043796
+        ]
+      },
+      {
+        "source": 0,
+        "target": 7,
+        "pos": [
+          129.9563714344672,
+          -74.94877175992906
+        ]
+      },
+      {
+        "source": 1,
+        "target": 4,
+        "pos": [
+          -8.581332767081797,
+          70.49222227885289
+        ]
+      },
+      {
+        "source": 1,
+        "target": 6,
+        "pos": [
+          31.369310828569063,
+          -25.798988194030468
+        ]
+      },
+      {
+        "source": 2,
+        "target": 3,
+        "pos": [
+          -34.470396276456235,
+          116.22498487058117
+        ]
+      },
+      {
+        "source": 2,
+        "target": 6,
+        "pos": [
+          -5.71128569711444,
+          21.245734058533635
+        ]
+      },
+      {
+        "source": 3,
+        "target": 5,
+        "pos": [
+          -116.20598138219042,
+          -19.523860426088238
+        ]
+      },
+      {
+        "source": 3,
+        "target": 7,
+        "pos": [
+          20.665072786810235,
+          7.5468381932988775
+        ]
+      },
+      {
+        "source": 4,
+        "target": 5,
+        "pos": [
+          -148.3686054837834,
+          -44.63875466547213
+        ]
+      }
+    ]
+  },
+  "markers": [
+    {
+      "link": 3,
+      "pos": [
+        -22.470396276456235,
+        134.22498487058118
+      ],
+      "name": "marker-0"
+    }
+  ]
+}

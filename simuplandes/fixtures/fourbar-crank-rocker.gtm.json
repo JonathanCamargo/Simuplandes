@@ -1,0 +1,55 @@
+{
+  "format": "simuplandes-parity-fixture",
+  "version": 0,
+  "name": "fourbar-crank-rocker",
+  "description": "Grashof four-bar, crank is the input (full rotation).",
+  "graph": {
+    "nodes": [
+      {
+        "id": 0,
+        "link_type": "ground"
+      },
+      {
+        "id": 1,
+        "link_type": "binary"
+      },
+      {
+        "id": 2,
+        "link_type": "binary"
+      },
+      {
+        "id": 3,
+        "link_type": "binary"
+      }
+    ],
+    "edges": [
+      {
+        "source": 0,
+        "target": 1,
+        "pos": [0, 0],
+        "input": true
+      },
+      {
+        "source": 1,
+        "target": 2,
+        "pos": [20.000000000000004, 34.64101615137754]
+      },
+      {
+        "source": 2,
+        "target": 3,
+        "pos": [110, 80]
+      },
+      {
+        "source": 3,
+        "target": 0,
+        "pos": [100, 0]
+      }
+    ]
+  },
+  "markers": [
+    {
+      "link": 2,
+      "pos": [51.49817440348616, 84.11044472289501]
+    }
+  ]
+}

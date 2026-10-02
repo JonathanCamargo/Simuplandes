@@ -1,0 +1,39 @@
+{
+  "format": "simuplandes-topology-atlas",
+  "version": 1,
+  "nLinks": 6,
+  "source": "dms.mechanisms.atlas.TopologyAtlas",
+  "dmsVersion": "unknown",
+  "networkxVersion": "3.6.1",
+  "idScheme": "dms topology_id, verbatim",
+  "topologies": [
+    {
+      "id": "T6B_S",
+      "name": "stephenson",
+      "assortment": [4, 2, 0, 0],
+      "edges": [
+        [0, 1],
+        [0, 2],
+        [0, 3],
+        [1, 4],
+        [2, 5],
+        [3, 4],
+        [4, 5]
+      ]
+    },
+    {
+      "id": "T6B_W",
+      "name": "watt",
+      "assortment": [4, 2, 0, 0],
+      "edges": [
+        [0, 1],
+        [0, 2],
+        [0, 3],
+        [1, 4],
+        [2, 5],
+        [3, 4],
+        [3, 5]
+      ]
+    }
+  ]
+}

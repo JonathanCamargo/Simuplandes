@@ -1,0 +1,14 @@
+{
+  "snap": {
+    "site": "joint {{link}}·{{site}}",
+    "midpoint": "midpoint of {{link}}",
+    "grid": "grid",
+    "angle": "angle {{deg}}°",
+    "none": "free"
+  },
+  "fit": "Zoom to fit",
+  "rulers": {
+    "x": "Horizontal ruler",
+    "y": "Vertical ruler"
+  }
+}

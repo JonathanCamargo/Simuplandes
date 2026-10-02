@@ -1,0 +1,61 @@
+{
+  "format": "simuplandes-parity-fixture",
+  "version": 0,
+  "name": "slider-crank",
+  "description": "Offset slider-crank (ground owns the prismatic rail); ported from src/kinematics/__fixtures__/sliderCrank.ts (crank=40, coupler=120, offset=10, reference crank angle 30deg). Crank is the input (full rotation).",
+  "graph": {
+    "nodes": [
+      {
+        "id": 0,
+        "link_type": "ground"
+      },
+      {
+        "id": 1,
+        "link_type": "binary"
+      },
+      {
+        "id": 2,
+        "link_type": "binary"
+      },
+      {
+        "id": 3,
+        "link_type": "slider"
+      }
+    ],
+    "edges": [
+      {
+        "source": 0,
+        "target": 1,
+        "pos": [0, 0],
+        "input": true
+      },
+      {
+        "source": 1,
+        "target": 2,
+        "pos": [34.64101615137755, 19.999999999999996]
+      },
+      {
+        "source": 2,
+        "target": 3,
+        "pos": [154.22362358239153, 10]
+      },
+      {
+        "source": 0,
+        "target": 3,
+        "pos": [154.22362358239153, 10],
+        "type": "prismatic",
+        "axis": [1, 0]
+      }
+    ]
+  },
+  "markers": [
+    {
+      "link": 2,
+      "pos": [94.43231986688454, 40]
+    },
+    {
+      "link": 3,
+      "pos": [154.22362358239153, 18]
+    }
+  ]
+}

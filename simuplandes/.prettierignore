@@ -1,0 +1,11 @@
+dist
+coverage
+node_modules
+package-lock.json
+src/legacy
+public
+test-results
+playwright-report
+blob-report
+fixtures/*.curve.json
+fixtures/*.graphthe.json

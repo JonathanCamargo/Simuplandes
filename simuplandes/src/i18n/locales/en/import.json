@@ -1,0 +1,67 @@
+{
+  "title": "Import graph",
+  "paste": "Paste graph JSON",
+  "openFile": "Open file…",
+  "drop": "Drop a .json file here",
+  "tabs": {
+    "drawing": "Drawing",
+    "graph": "Graph"
+  },
+  "commit": "Import",
+  "replace": "Replace current drawing",
+  "replaceNotice": "Importing replaces the current drawing and clears the undo history.",
+  "cancel": "Cancel",
+  "cancelLayout": "Stop layout",
+  "relayout": "Lay out again",
+  "progress": "Laying out… try {{tries}} of {{max}}",
+  "verdict": {
+    "ready": "Ready to simulate: the input turns {{rangeDeg}}°.",
+    "range": "Moves, but only {{rangeDeg}}° of input range.",
+    "notReady": "Not ready to simulate."
+  },
+  "groups": {
+    "errors": "Errors ({{count}})",
+    "warnings": "Warnings ({{count}})",
+    "info": "Notes ({{count}})"
+  },
+  "report": {
+    "unparseable": "The text is not valid JSON.",
+    "unknown-format": "This is not a recognized graph format.",
+    "too-large": "The graph is too large to import ({{what}}: {{actual}}, limit {{limit}}).",
+    "empty-graph": "The graph has no nodes or no edges.",
+    "no-ground": "No node is marked as the fixed (ground) link.",
+    "self-loop": "An edge joins a node to itself and was dropped.",
+    "duplicate-edge": "A repeated edge was dropped (the graph must stay simple).",
+    "disconnected": "{{nodes}} node(s) are not connected to the ground ({{components}} separate group(s)).",
+    "partial-positions": "Only some nodes have positions, so the drawing cannot use them as given.",
+    "missing-input": "No input (motor) edge is marked. Choose which joint to drive.",
+    "several-inputs": "{{count}} edges are marked as input. Choose one.",
+    "input-not-on-ground": "The input edge is not attached to the ground.",
+    "unsupported-joint": "Joint type \"{{type}}\" is not supported.",
+    "prismatic-no-axis": "A slider joint has no axis.",
+    "multi-joint": "{{links}} links meet at one joint; it will be imported as a star.",
+    "units-unknown": "Length units \"{{units}}\" are not recognized; they are kept as a label only.",
+    "layout-applied": "Positions were computed automatically ({{tries}} tries, {{rangeDeg}}° of motion).",
+    "layout-unavailable": "Automatic layout is not available here.",
+    "lengths-infeasible": "No drawing matches the given link lengths (residual {{residual}}).",
+    "not-one-dof-topology": "This graph does not have one degree of freedom (Grübler F = {{gruebler}}).",
+    "dof-not-one": "The mechanism has mobility {{rankDof}}, expected 1.",
+    "not-drivable": "The mechanism cannot be driven from the chosen input.",
+    "assembly-failed": "The mechanism does not assemble with these positions.",
+    "low-mobility": "The input only moves {{rangeDeg}}° (below {{threshold}}°)."
+  },
+  "fix": {
+    "default-axis": "Use the default axis",
+    "revolute": "Treat as a pin joint",
+    "skip": "Skip these joints",
+    "drop": "Drop it",
+    "keep": "Keep it",
+    "none": "No input",
+    "input": "Drive joint {{u}}–{{v}}",
+    "ground": "Use node {{original}} as ground",
+    "layout": "Lay out automatically",
+    "centroid": "Place missing nodes at the centroid",
+    "retry-layout": "Try another layout",
+    "keep-star": "Keep the star"
+  }
+}

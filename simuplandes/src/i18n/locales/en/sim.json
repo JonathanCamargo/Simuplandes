@@ -1,0 +1,98 @@
+{
+  "mode": {
+    "toggleHint": "Space: toggle Build/Simulate"
+  },
+  "transport": {
+    "label": "Transport",
+    "play": "Play",
+    "pause": "Pause",
+    "stepForward": "Step forward",
+    "stepBack": "Step back",
+    "reset": "Reset",
+    "speed": "Speed",
+    "loop": "Loop",
+    "scrubber": "Input {{input}}",
+    "plots": "Plots",
+    "enterSimulate": "Press Space or Play to simulate",
+    "lockUp": "Toggle position at {{value}}",
+    "nearSingular": "Near a singular position",
+    "direction": {
+      "forward": "Forward",
+      "backward": "Backward"
+    }
+  },
+  "status": {
+    "notDrivable": {
+      "noDof": "This mechanism cannot move (0 DOF). See the F badge.",
+      "multiDof": "This mechanism has {{dof}} DOF and the transport drives a single input. See the F badge.",
+      "noInput": "There is no ground-connected joint to drive."
+    },
+    "temporaryDriver": "No motor: drag a link to move it; add a motor to use the scrubber",
+    "assemblyFailed": "Could not assemble: {{joints}}",
+    "invalid": "This document cannot be simulated: {{message}}",
+    "empty": "Draw a mechanism to simulate it",
+    "ignoredMotors_one": "There is {{count}} extra motor; the transport drives only the first",
+    "ignoredMotors_other": "There are {{count}} extra motors; the transport drives only the first"
+  },
+  "solver": {
+    "label": "solver",
+    "ok": "converged, |f| {{residual}}",
+    "locked": "locked",
+    "noConvergence": "no convergence",
+    "invalidInput": "invalid input"
+  },
+  "hint": {
+    "simulate": "Drag a link to drive it · Space returns to Build",
+    "dragging": "Dragging {{link}}",
+    "notDrivable": "This mechanism does not move · Space returns to Build"
+  },
+  "dof": {
+    "badge": "F = {{f}}",
+    "badgeEmpty": "F = —",
+    "title": "Mobility (Gruebler)",
+    "formula": "F = 3(n − 1) − 2j = 3({{n}} − 1) − 2·{{j}} = {{f}}",
+    "counts": "n = {{n}} links (ground included), j = {{j}} joints",
+    "rank": "Instantaneous DOF at the reference pose: {{rank}}",
+    "explain": {
+      "ok": "One degree of freedom: one motor drives it completely.",
+      "redundantMobile_one": "F = {{f}} by Gruebler, but this mechanism moves with {{rank}} DOF because a constraint is redundant (parallel links).",
+      "redundantMobile_other": "F = {{f}} by Gruebler, but this mechanism moves with {{rank}} DOF because {{count}} constraints are redundant (parallel links).",
+      "structure": "F = {{f}}: this is a structure; it cannot move.",
+      "multiDof": "F = {{f}}: it needs {{rank}} inputs; the transport drives a single motor.",
+      "singular": "At the reference pose the mechanism has {{rank}} instantaneous DOF (singular position).",
+      "empty": "Draw links and joints to see the mobility.",
+      "invalid": "The document could not be analyzed."
+    },
+    "motors": {
+      "none": "No motor: drag a link to move it; add a motor to use the scrubber.",
+      "many_one": "{{count}} motors: the transport drives only the first.",
+      "many_other": "{{count}} motors: the transport drives only the first."
+    }
+  },
+  "plots": {
+    "title": "Plots",
+    "region": "Plot dock",
+    "xAxis": {
+      "label": "x axis",
+      "input": "Input",
+      "time": "Time"
+    },
+    "quantities": "Quantities",
+    "exportCsv": "Export CSV",
+    "close": "Close plots",
+    "emptyTime": "No history yet: play the simulation to record data over time",
+    "emptyInput": "No sweep is available for this mechanism",
+    "nominalRate": "Velocities and accelerations computed with the input at {{rate}}",
+    "quantity": {
+      "angle": "{{entity}} · angle",
+      "omega": "{{entity}} · angular velocity",
+      "alpha": "{{entity}} · angular acceleration",
+      "x": "{{entity}} · x",
+      "y": "{{entity}} · y",
+      "vx": "{{entity}} · vx",
+      "vy": "{{entity}} · vy",
+      "ax": "{{entity}} · ax",
+      "ay": "{{entity}} · ay"
+    }
+  }
+}

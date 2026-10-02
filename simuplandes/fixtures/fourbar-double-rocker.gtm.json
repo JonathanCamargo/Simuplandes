@@ -1,0 +1,55 @@
+{
+  "format": "simuplandes-parity-fixture",
+  "version": 0,
+  "name": "fourbar-double-rocker",
+  "description": "Non-Grashof four-bar; input link only rocks (bounded range).",
+  "graph": {
+    "nodes": [
+      {
+        "id": 0,
+        "link_type": "ground"
+      },
+      {
+        "id": 1,
+        "link_type": "binary"
+      },
+      {
+        "id": 2,
+        "link_type": "binary"
+      },
+      {
+        "id": 3,
+        "link_type": "binary"
+      }
+    ],
+    "edges": [
+      {
+        "source": 0,
+        "target": 1,
+        "pos": [0, 0],
+        "input": true
+      },
+      {
+        "source": 1,
+        "target": 2,
+        "pos": [84.57233587073176, 30.781812899310186]
+      },
+      {
+        "source": 2,
+        "target": 3,
+        "pos": [123.8907766506494, 38.134378073187264]
+      },
+      {
+        "source": 3,
+        "target": 0,
+        "pos": [100, 0]
+      }
+    ]
+  },
+  "markers": [
+    {
+      "link": 2,
+      "pos": [101.47434432048667, 49.20251077871784]
+    }
+  ]
+}

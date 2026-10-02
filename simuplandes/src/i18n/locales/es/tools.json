@@ -1,0 +1,106 @@
+{
+  "select": {
+    "label": "Seleccionar",
+    "description": "Selecciona y mueve juntas, barras o placas",
+    "hint": {
+      "idle": "Haz clic o arrastra para seleccionar…",
+      "boxing": "Arrastra para seleccionar por caja; suelta para confirmar",
+      "movingSelection": "Moviendo la selección…",
+      "draggingJoint": "Arrastrando la articulación — x {{x}} y {{y}}"
+    }
+  },
+  "pan": {
+    "label": "Desplazar",
+    "description": "Desplaza la vista con el botón central o manteniendo H",
+    "hint": {
+      "idle": "Arrastra para desplazar la vista; rueda para hacer zoom"
+    }
+  },
+  "bar": {
+    "label": "Barra",
+    "description": "Dibuja una barra rígida entre dos puntos",
+    "hint": {
+      "idle": "Haz clic para empezar una barra; los extremos sobre una articulación se fijan con un pasador",
+      "drawing": "Longitud {{length}} · ángulo {{angle}}° — clic o escribe un valor y ⏎",
+      "drawingPin": "Clic para fijar con pasador a {{target}}",
+      "zeroLength": "Mueve el cursor antes de hacer clic: la barra no puede tener longitud cero"
+    }
+  },
+  "plate": {
+    "label": "Placa",
+    "description": "Dibuja una placa poligonal con varios vértices",
+    "hint": {
+      "idle": "Haz clic para añadir vértices; Enter cierra la placa",
+      "needThree": "Añade al menos 3 vértices antes de cerrar la placa",
+      "drawing": "{{count}} vértices — clic para añadir, clic en el primero o Enter para cerrar",
+      "drawingPin": "Clic para fijar con pasador a {{target}}"
+    }
+  },
+  "groundPivot": {
+    "label": "Pivote a tierra",
+    "description": "Fija un punto de un eslabón a tierra",
+    "hint": {
+      "idle": "Haz clic en un punto para fijarlo a tierra",
+      "alreadyGround": "Ese punto ya está fijado a tierra"
+    }
+  },
+  "pin": {
+    "label": "Pasador",
+    "description": "Une dos puntos coincidentes con una articulación de rotación",
+    "hint": {
+      "idle": "Haz clic en dos puntos coincidentes de eslabones distintos",
+      "needSite": "Haz clic sobre una articulación existente",
+      "pickSecond": "Haz clic en una articulación de otro eslabón",
+      "differentLink": "Elige un punto de un eslabón distinto",
+      "alreadyPinned": "Esos dos puntos ya están unidos con un pasador"
+    }
+  },
+  "slider": {
+    "label": "Corredera",
+    "description": "Crea una articulación prismática con eje de deslizamiento",
+    "hint": {
+      "idle": "Haz clic en un punto y arrastra la dirección del eje",
+      "aim": "Apunta el eje (pasos de 15°) o escribe el ángulo y ⏎ — ángulo {{angle}}°"
+    }
+  },
+  "motor": {
+    "label": "Motor",
+    "description": "Añade un motor a una articulación existente",
+    "hint": {
+      "idle": "Haz clic en una articulación para añadir un motor",
+      "needJoint": "Haz clic cerca de una articulación existente",
+      "alreadyMotor": "La articulación {{joint}} ya tiene un motor"
+    }
+  },
+  "marker": {
+    "label": "Marcador",
+    "description": "Añade un punto de trazo sobre un eslabón",
+    "hint": {
+      "idle": "Haz clic sobre un eslabón para añadir un marcador",
+      "needLink": "Haz clic sobre un eslabón que no sea la bancada"
+    }
+  },
+  "defaultNames": {
+    "bar": "Barra",
+    "plate": "Placa",
+    "ground": "Bancada",
+    "slider": "Corredera",
+    "marker": "Punto"
+  },
+  "shortcuts": {
+    "undo": "Deshacer",
+    "redo": "Rehacer",
+    "delete": "Eliminar",
+    "duplicate": "Duplicar",
+    "fit": "Ajustar a la vista",
+    "cancel": "Cancelar",
+    "commit": "Confirmar",
+    "switchField": "Cambiar de campo",
+    "palette": "Paleta de comandos",
+    "shortcutSheet": "Hoja de atajos",
+    "wheelZoom": "Rueda: zoom",
+    "middleDragPan": "Arrastre con botón central: desplazar",
+    "shiftClickAddSelection": "Mayús+clic: añadir a la selección",
+    "toggleMode": "Alternar Construir/Simular"
+  }
+}

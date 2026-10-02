@@ -1,0 +1,39 @@
+{
+  "title": "Ejemplos",
+  "close": "Cerrar",
+  "empty": {
+    "title": "Empieza un mecanismo",
+    "text": "Elige una herramienta a la izquierda para dibujar uno, o abre un ejemplo y pulsa Reproducir.",
+    "import": "Importar grafo…",
+    "atlas": "Explorar atlas…",
+    "dismiss": "Descartar"
+  },
+  "replace": {
+    "title": "¿Reemplazar el dibujo actual?",
+    "text": "Cargar un ejemplo reemplaza el dibujo actual y borra el historial de deshacer.",
+    "confirm": "Reemplazar",
+    "cancel": "Cancelar"
+  },
+  "examples": {
+    "four-bar": {
+      "title": "Cuatro barras",
+      "description": "Manivela-balancín"
+    },
+    "slider-crank": {
+      "title": "Biela-manivela",
+      "description": "Manivela que mueve un deslizador"
+    },
+    "watt": {
+      "title": "Watt I",
+      "description": "Mecanismo de seis barras"
+    },
+    "stephenson": {
+      "title": "Stephenson I",
+      "description": "Mecanismo de seis barras"
+    },
+    "eight-bar": {
+      "title": "Ocho barras",
+      "description": "Topología del atlas T15"
+    }
+  }
+}

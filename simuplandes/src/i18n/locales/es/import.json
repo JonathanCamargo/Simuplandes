@@ -1,0 +1,67 @@
+{
+  "title": "Importar grafo",
+  "paste": "Pega el JSON del grafo",
+  "openFile": "Abrir archivo…",
+  "drop": "Suelta aquí un archivo .json",
+  "tabs": {
+    "drawing": "Dibujo",
+    "graph": "Grafo"
+  },
+  "commit": "Importar",
+  "replace": "Reemplazar el dibujo actual",
+  "replaceNotice": "Importar reemplaza el dibujo actual y borra el historial de deshacer.",
+  "cancel": "Cancelar",
+  "cancelLayout": "Detener el acomodo",
+  "relayout": "Acomodar de nuevo",
+  "progress": "Acomodando… intento {{tries}} de {{max}}",
+  "verdict": {
+    "ready": "Listo para simular: la entrada gira {{rangeDeg}}°.",
+    "range": "Se mueve, pero solo {{rangeDeg}}° de rango de entrada.",
+    "notReady": "No está listo para simular."
+  },
+  "groups": {
+    "errors": "Errores ({{count}})",
+    "warnings": "Avisos ({{count}})",
+    "info": "Notas ({{count}})"
+  },
+  "report": {
+    "unparseable": "El texto no es JSON válido.",
+    "unknown-format": "Este no es un formato de grafo reconocido.",
+    "too-large": "El grafo es demasiado grande para importarlo ({{what}}: {{actual}}, límite {{limit}}).",
+    "empty-graph": "El grafo no tiene nodos o no tiene aristas.",
+    "no-ground": "Ningún nodo está marcado como eslabón fijo (tierra).",
+    "self-loop": "Una arista une un nodo consigo mismo y se descartó.",
+    "duplicate-edge": "Se descartó una arista repetida (el grafo debe ser simple).",
+    "disconnected": "{{nodes}} nodo(s) no están conectados a tierra ({{components}} grupo(s) separado(s)).",
+    "partial-positions": "Solo algunos nodos tienen posición, así que el dibujo no puede usarlas tal cual.",
+    "missing-input": "No hay arista de entrada (motor) marcada. Elige qué par accionar.",
+    "several-inputs": "{{count}} aristas están marcadas como entrada. Elige una.",
+    "input-not-on-ground": "La arista de entrada no está unida a tierra.",
+    "unsupported-joint": "El tipo de par \"{{type}}\" no está soportado.",
+    "prismatic-no-axis": "Un par deslizante no tiene eje.",
+    "multi-joint": "{{links}} eslabones coinciden en un par; se importará como estrella.",
+    "units-unknown": "Las unidades de longitud \"{{units}}\" no se reconocen; solo se conservan como etiqueta.",
+    "layout-applied": "Las posiciones se calcularon automáticamente ({{tries}} intentos, {{rangeDeg}}° de movimiento).",
+    "layout-unavailable": "El acomodo automático no está disponible aquí.",
+    "lengths-infeasible": "Ningún dibujo coincide con las longitudes dadas (residuo {{residual}}).",
+    "not-one-dof-topology": "Este grafo no tiene un grado de libertad (Grübler F = {{gruebler}}).",
+    "dof-not-one": "El mecanismo tiene movilidad {{rankDof}}, se esperaba 1.",
+    "not-drivable": "El mecanismo no se puede accionar desde la entrada elegida.",
+    "assembly-failed": "El mecanismo no se ensambla con estas posiciones.",
+    "low-mobility": "La entrada solo se mueve {{rangeDeg}}° (menos de {{threshold}}°)."
+  },
+  "fix": {
+    "default-axis": "Usar el eje por defecto",
+    "revolute": "Tratar como pasador",
+    "skip": "Omitir estos pares",
+    "drop": "Descartarlo",
+    "keep": "Conservarlo",
+    "none": "Sin entrada",
+    "input": "Accionar el par {{u}}–{{v}}",
+    "ground": "Usar el nodo {{original}} como tierra",
+    "layout": "Acomodar automáticamente",
+    "centroid": "Colocar los nodos faltantes en el centroide",
+    "retry-layout": "Probar otro acomodo",
+    "keep-star": "Conservar la estrella"
+  }
+}
