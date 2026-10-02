@@ -34,10 +34,8 @@ para producir el bundle de producción.
 
 La documentación de desarrollo (arquitectura, motor cinemático, puente con GraphThe y decisiones de diseño) está en [`docs/`](docs/README.md).
 
-El código de la v0.1 vive en `simuplandes/src/legacy` como referencia únicamente; no se compila ni se prueba.
-
-## Autor
-Este proyecto fue desarrollado por **Juan Esteban Arboleda Restrepo** como proyecto de grado de Ingeniería Mecánica en la Universidad de Los Andes, Colombia.
+## Reconocimientos
+La semilla de Simuplandes fue el trabajo de **Juan Esteban Arboleda Restrepo** como proyecto de grado de Ingeniería Mecánica en la Universidad de Los Andes, Colombia. Agradecemos su contribucion al planteamiento del software, interfaz grafica y primera version. Su código de la v0.1 vive en `simuplandes/src/legacy` como referencia únicamente; no se compila ni se prueba.
 
 ## Licencia
 Este proyecto se rige por la licencia "MIT". Puede encontrar una copia de la licencia en el archivo [LICENCE](/LICENSE) de este repositorio.
