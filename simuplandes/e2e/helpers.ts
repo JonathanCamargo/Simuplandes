@@ -128,6 +128,10 @@ export function getSimPlot(page: Page): Promise<ReturnType<SimTestHook["getPlot"
   return simHook(page, (h) => h.getPlot());
 }
 
+export function getSimDynamics(page: Page): Promise<ReturnType<SimTestHook["getDynamics"]>> {
+  return simHook(page, (h) => h.getDynamics());
+}
+
 /** `getTrace` needs an extra (markerId) argument, which a `page.evaluate` callback can only receive via its own second `arg` parameter -- not via closing over an outer variable -- so it bypasses `simHook`. */
 export function getSimTrace(
   page: Page,

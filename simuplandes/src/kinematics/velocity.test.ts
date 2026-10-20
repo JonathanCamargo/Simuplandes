@@ -242,7 +242,7 @@ describe("solveVelocity — defensive statuses", () => {
     const g1 = defineLink({ name: "g1", isGround: true, origin: [0, 0], sites: { p: [0, 0] } });
     const g2 = defineLink({ name: "g2", isGround: true, origin: [5, 5], sites: { p: [0, 0] } });
     const doc = makeDocument({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "ground-ground",
       links: [g1.link, g2.link],
       joints: [

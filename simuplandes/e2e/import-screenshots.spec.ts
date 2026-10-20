@@ -69,7 +69,7 @@ test("empty state, examples dialog and atlas dialog screenshots", async ({ page 
 
   // (a) empty state with the gallery, light, es.
   await expect(page.getByTestId("empty-state")).toBeVisible();
-  await expect(page.getByTestId("example-card")).toHaveCount(5);
+  await expect(page.getByTestId("example-card")).toHaveCount(7);
   await shot(page, "empty-state-light-es");
 
   // (c) atlas dialog, light, es: all entries.

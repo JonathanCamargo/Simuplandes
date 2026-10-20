@@ -20,11 +20,12 @@
 
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { List, ListItemButton, Typography } from "@mui/material";
+import { List, ListItemButton, Stack, Typography } from "@mui/material";
 // Imported from the `esm/` subpath: see TopBar.tsx's TSDoc for why.
 import ErrorIcon from "@mui/icons-material/esm/Error";
 import WarningIcon from "@mui/icons-material/esm/Warning";
 import InfoIcon from "@mui/icons-material/esm/Info";
+import CheckCircleIcon from "@mui/icons-material/esm/CheckCircle";
 import type { StoreApi } from "zustand";
 import type { Id } from "../../model";
 import type { MechanismStore } from "../../store";
@@ -113,9 +114,12 @@ export function ValidationReport({
 
   if (report.items.length === 0) {
     return (
-      <Typography data-testid="export-report-empty" color="text.secondary" sx={{ px: 1 }}>
-        {t("export.report.ready")}
-      </Typography>
+      <Stack direction="row" spacing={0.75} alignItems="center" sx={{ color: "success.main" }}>
+        <CheckCircleIcon fontSize="small" aria-hidden="true" />
+        <Typography data-testid="export-report-empty" variant="body2">
+          {t("export.report.ready")}
+        </Typography>
+      </Stack>
     );
   }
 

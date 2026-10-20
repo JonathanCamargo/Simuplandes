@@ -1,7 +1,8 @@
 /**
  * Link Inspector form: name, colour (with a reset to the link-type default),
  * a read-only ground chip, position X/Y + angle (degrees), an exact bar
- * length for two-site links, and a clickable list of the link's sites.
+ * length for two-site links, and a clickable list of the link's sites. A
+ * moving link also gets its dynamics: mass properties and loads.
  */
 
 import type { ReactNode } from "react";
@@ -18,6 +19,8 @@ import {
   Typography,
 } from "@mui/material";
 import { NumberField } from "../NumberField";
+import { MassSection } from "./MassSection";
+import { LoadsSection } from "./LoadsSection";
 import { barLength, linkPoseRecipe, setBarLengthRecipes } from "../edits";
 import { rename, setLinkColor } from "../../../store/commands";
 import { siteWorldPosition, radToDeg, type Link, type MechanismDocument } from "../../../model";
@@ -125,6 +128,14 @@ export function LinkForm({ store, doc, link }: LinkFormProps): ReactNode {
           );
         })}
       </List>
+      {link.isGround ? null : (
+        <>
+          <Divider aria-hidden />
+          <MassSection store={store} doc={doc} link={link} />
+          <Divider aria-hidden />
+          <LoadsSection store={store} doc={doc} link={link} />
+        </>
+      )}
     </Stack>
   );
 }

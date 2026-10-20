@@ -22,6 +22,7 @@ import Konva from "konva";
 import type { Vec2 } from "../../geom";
 import type { RenderModel } from "../renderModel";
 import { angleToKonvaRotationDeg, worldToScreen, type Viewport } from "../viewport";
+import { springZigzag } from "../springGlyph";
 
 export interface RenderLayers {
   links: Konva.Layer | null;
@@ -98,6 +99,21 @@ export function applyRenderModelToLayers(
   }
   for (const site of model.freeSites) {
     setPosition(jointNodes.get(`site:${site.siteId}`), site.point, viewport);
+  }
+  for (const spring of model.springs) {
+    const node = jointNodes.get(`spring:${spring.springId}`);
+    if (spring.kind === "linear") {
+      const a = worldToScreen(viewport, spring.a);
+      const b = worldToScreen(viewport, spring.b);
+      setPoints(node, springZigzag(a, b));
+    } else {
+      setPosition(node, spring.point, viewport);
+    }
+  }
+  for (const load of model.loads) {
+    const node = jointNodes.get(`load:${load.loadId}`);
+    setPosition(node, load.point, viewport);
+    if (node && load.forceAngle !== null) node.rotation(angleToKonvaRotationDeg(load.forceAngle));
   }
 
   layers.links?.batchDraw();

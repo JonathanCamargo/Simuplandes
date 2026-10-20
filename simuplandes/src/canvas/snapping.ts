@@ -21,7 +21,17 @@
  */
 
 import { distance, direction, magnitude, sub, dot, type Vec2 } from "../geom";
-import { siteWorldPosition, type MechanismDocument, type Id } from "../model";
+import {
+  barPathSites,
+  edgeAt,
+  edgeMidpoint,
+  siteWorldPosition,
+  type Edge,
+  type Id,
+  type Link,
+  type MechanismDocument,
+  type Vec2Tuple,
+} from "../model";
 import { radToDeg, degToRad } from "../model/units";
 
 export type SnapKind = "site" | "midpoint" | "grid" | "angle" | "none";
@@ -80,8 +90,9 @@ function findNearestMidpoint(
 ): { linkId: Id; point: Vec2 } | null {
   let best: { linkId: Id; point: Vec2; dist: number } | null = null;
 
-  const consider = (linkId: Id, a: Vec2, b: Vec2): void => {
-    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  const consider = (link: Link, a: Vec2Tuple, b: Vec2Tuple, edge: Edge): void => {
+    const linkId = link.id;
+    const mid = siteWorldPosition(link, edgeMidpoint(a, b, edge));
     const dist = distance(cursor, mid);
     if (dist <= radiusWorld && (best === null || dist < best.dist)) {
       best = { linkId, point: mid, dist };
@@ -89,19 +100,14 @@ function findNearestMidpoint(
   };
 
   for (const link of doc.links) {
-    if (!link.isGround && link.shape.kind === "bar" && link.sites.length === 2) {
-      consider(
-        link.id,
-        siteWorldPosition(link, link.sites[0].local),
-        siteWorldPosition(link, link.sites[1].local),
-      );
+    const path = barPathSites(link);
+    if (!link.isGround && link.shape.kind === "bar" && path.length === 2) {
+      consider(link, path[0].local, path[1].local, edgeAt(link.shape.edges, 0));
     }
     if (link.shape.kind === "plate") {
       const outline = link.shape.outline;
       for (let i = 0; i < outline.length; i++) {
-        const a = siteWorldPosition(link, outline[i]);
-        const b = siteWorldPosition(link, outline[(i + 1) % outline.length]);
-        consider(link.id, a, b);
+        consider(link, outline[i], outline[(i + 1) % outline.length], edgeAt(link.shape.edges, i));
       }
     }
   }

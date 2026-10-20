@@ -47,6 +47,7 @@ import {
   type PaletteCommand,
   type PaletteGroup,
 } from "./paletteCommands";
+import { clearAllAnnotations } from "../../store/annotations";
 
 export interface CommandPaletteProps {
   studioStore: StoreApi<StudioState>;
@@ -115,6 +116,9 @@ export function CommandPalette({
       case "delete":
         mechanismStore.getState().deleteSelection();
         break;
+      case "clearAnnotations":
+        clearAllAnnotations(mechanismStore);
+        break;
       case "fit":
         studioStore.getState().requestFit();
         break;
@@ -135,6 +139,15 @@ export function CommandPalette({
         break;
       case "openDialog":
         studioStore.getState().openDialog(action.dialog);
+        break;
+      case "setMode":
+        // The palette is itself a modal, and Simulate is refused while a
+        // modal is open, so close it before switching.
+        studioStore.getState().closePalette();
+        studioStore.getState().setMode(action.mode);
+        break;
+      case "showDockTab":
+        studioStore.getState().setRightDockTab(action.tab);
         break;
     }
   }
@@ -168,68 +181,85 @@ export function CommandPalette({
       // one-shot auto-focus, so this always wins the race deterministically.
       TransitionProps={{ onEntered: () => inputRef.current?.focus() }}
     >
-      <Command label={t("palette.label")}>
-        <Box sx={{ p: 1.5, borderBottom: 1, borderColor: "divider" }}>
-          <Command.Input
-            ref={inputRef}
-            placeholder={t("palette.placeholder")}
-            style={{
-              width: "100%",
-              border: "none",
-              outline: "none",
-              font: "inherit",
-              fontSize: "1rem",
-              background: "transparent",
-              padding: "8px 4px",
-            }}
-          />
-        </Box>
-        <Command.List style={{ maxHeight: 360, overflowY: "auto", padding: "4px 0" }}>
-          <Command.Empty>
-            <Box sx={{ px: 2, py: 3, color: "text.secondary" }}>{t("palette.empty")}</Box>
-          </Command.Empty>
-          {GROUP_ORDER.map((group) => (
-            <Command.Group key={group} heading={t(`palette.groups.${group}`)}>
-              {commands
-                .filter((c) => c.group === group)
-                .map((command) => {
-                  const Icon =
-                    command.action.type === "setTool" ? TOOL_ICONS[command.action.tool] : null;
-                  const label = t(command.labelKey);
-                  return (
-                    <Command.Item
-                      key={command.id}
-                      value={label}
-                      keywords={command.keywordsKeys.map((key) => t(key))}
-                      onSelect={() => handleSelect(command)}
-                    >
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                          width: "100%",
-                          px: 1,
-                          py: 0.75,
-                        }}
+      <Box
+        sx={{
+          "& [cmdk-group-heading]": {
+            px: 2,
+            pt: 1.5,
+            pb: 0.5,
+            fontSize: "0.7rem",
+            fontWeight: 700,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+            color: "text.secondary",
+          },
+          "& [cmdk-item]": { mx: 1, borderRadius: 1, cursor: "pointer" },
+          "& [cmdk-item][data-selected='true']": { bgcolor: "action.selected" },
+        }}
+      >
+        <Command label={t("palette.label")}>
+          <Box sx={{ p: 1.5, borderBottom: 1, borderColor: "divider" }}>
+            <Command.Input
+              ref={inputRef}
+              placeholder={t("palette.placeholder")}
+              style={{
+                width: "100%",
+                border: "none",
+                outline: "none",
+                font: "inherit",
+                fontSize: "1rem",
+                background: "transparent",
+                padding: "8px 4px",
+              }}
+            />
+          </Box>
+          <Command.List style={{ maxHeight: 360, overflowY: "auto", padding: "4px 0" }}>
+            <Command.Empty>
+              <Box sx={{ px: 2, py: 3, color: "text.secondary" }}>{t("palette.empty")}</Box>
+            </Command.Empty>
+            {GROUP_ORDER.map((group) => (
+              <Command.Group key={group} heading={t(`palette.groups.${group}`)}>
+                {commands
+                  .filter((c) => c.group === group)
+                  .map((command) => {
+                    const Icon =
+                      command.action.type === "setTool" ? TOOL_ICONS[command.action.tool] : null;
+                    const label = t(command.labelKey);
+                    return (
+                      <Command.Item
+                        key={command.id}
+                        value={label}
+                        keywords={command.keywordsKeys.map((key) => t(key))}
+                        onSelect={() => handleSelect(command)}
                       >
-                        {Icon ? <Icon fontSize="small" /> : null}
-                        <Typography component="span" sx={{ flex: 1 }}>
-                          {label}
-                        </Typography>
-                        {command.shortcut ? (
-                          <Typography component="kbd" variant="caption" sx={{ opacity: 0.7 }}>
-                            {command.shortcut}
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                            width: "100%",
+                            px: 1,
+                            py: 0.75,
+                          }}
+                        >
+                          {Icon ? <Icon fontSize="small" /> : null}
+                          <Typography component="span" sx={{ flex: 1 }}>
+                            {label}
                           </Typography>
-                        ) : null}
-                      </Box>
-                    </Command.Item>
-                  );
-                })}
-            </Command.Group>
-          ))}
-        </Command.List>
-      </Command>
+                          {command.shortcut ? (
+                            <Typography component="kbd" variant="caption" sx={{ opacity: 0.7 }}>
+                              {command.shortcut}
+                            </Typography>
+                          ) : null}
+                        </Box>
+                      </Command.Item>
+                    );
+                  })}
+              </Command.Group>
+            ))}
+          </Command.List>
+        </Command>
+      </Box>
     </Dialog>
   );
 }

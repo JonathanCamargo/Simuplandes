@@ -56,12 +56,23 @@ export function RightDock({
       sx={{ display: "flex", flexDirection: "column", height: "100%" }}
     >
       {/* Roboto (robiolab theme) is wider than the old stack: tighter tab
-          padding keeps "INSPECTOR" unclipped at the default dock width. */}
+          padding and sentence case keep "Inspector" unclipped down to the
+          narrowest dock width an embedded studio gets. */}
       <Tabs
         value={tab}
         onChange={handleChange}
         variant="fullWidth"
-        sx={{ "& .MuiTab-root": { minWidth: 0, px: 1 } }}
+        sx={{
+          minHeight: 44,
+          borderBottom: 1,
+          borderColor: "divider",
+          "& .MuiTab-root": {
+            minWidth: 0,
+            minHeight: 44,
+            px: 1,
+            fontSize: "0.9rem",
+          },
+        }}
       >
         <Tab value="inspector" label={t("shell.dock.inspector")} />
         <Tab value="graph" label={t("shell.dock.graph")} />
@@ -76,7 +87,9 @@ export function RightDock({
           flexDirection: "column",
         }}
       >
-        {tab === "inspector" ? <InspectorPanel store={mechanismStore} /> : null}
+        {tab === "inspector" ? (
+          <InspectorPanel store={mechanismStore} simStore={sim?.store} />
+        ) : null}
         {tab === "graph" ? (
           <GraphPanel mechanismStore={mechanismStore} studioStore={studioStore} />
         ) : null}

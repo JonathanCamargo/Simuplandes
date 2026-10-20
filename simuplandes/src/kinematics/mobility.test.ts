@@ -120,7 +120,7 @@ describe("grueblerMobility: ground links merged into one frame", () => {
 
     const jointO2Id = createId("joint");
     const doc = makeDocument({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "split-ground-four-bar",
       links: [ground1.link, ground2.link, crank.link, coupler.link, rocker.link],
       joints: [

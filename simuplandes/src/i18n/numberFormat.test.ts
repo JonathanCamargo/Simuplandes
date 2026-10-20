@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseNumberInput, formatNumber } from "./numberFormat";
+import { parseNumberInput, formatNumber, formatSignificant } from "./numberFormat";
 
 describe("parseNumberInput", () => {
   it("accepts a comma decimal separator", () => {
@@ -66,5 +66,18 @@ describe("formatNumber", () => {
 
   it("does not group thousands", () => {
     expect(formatNumber(12345.678, "en", 2)).toBe("12345.68");
+  });
+});
+
+describe("formatSignificant", () => {
+  it("keeps significant digits for small and large values", () => {
+    expect(formatSignificant(0.0000416667, "en")).toBe("0.00004167");
+    expect(formatSignificant(0.0000416667, "es")).toBe("0,00004167");
+    expect(formatSignificant(12345.678, "en")).toBe("12350");
+    expect(formatSignificant(2, "en", 3)).toBe("2");
+  });
+
+  it("never renders -0", () => {
+    expect(formatSignificant(-0, "en")).toBe("0");
   });
 });

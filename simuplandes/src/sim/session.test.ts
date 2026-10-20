@@ -79,6 +79,7 @@ describe("createSimSession: fourBar with a second (ignored) motor", () => {
       jointId: jointA.id,
       kind: "rotary" as const,
       drive: { mode: "constant" as const, speed: 1 },
+      dynamics: { mode: "motion" as const },
     };
     const doc: MechanismDocument = { ...base, motors: [base.motors[0], secondMotor] };
 
@@ -98,6 +99,7 @@ describe("createSimSession: fourBar with a second (ignored) motor", () => {
       jointId: jointA.id,
       kind: "rotary" as const,
       drive: { mode: "constant" as const, speed: 1 },
+      dynamics: { mode: "motion" as const },
     };
     expectNoMutation({ ...base, motors: [base.motors[0], secondMotor] });
   });
@@ -136,7 +138,7 @@ function buildFourBarTruss(): MechanismDocument {
   });
 
   return makeDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "four-bar-truss",
     links: [...base.links, fifthBar.link],
     joints: [
@@ -216,7 +218,7 @@ function buildFloatingPair(): MechanismDocument {
   const linkB = defineLink({ name: "linkB", origin: [0, 0], sites: { pin: [0, 0] } });
 
   return makeDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "floating-pair",
     links: [ground.link, linkA.link, linkB.link],
     joints: [
@@ -238,7 +240,7 @@ function buildIsolatedLink(): MechanismDocument {
   const ground = defineLink({ name: "ground", isGround: true, origin: [0, 0], sites: {} });
   const lonely = defineLink({ name: "lonely", origin: [0, 0], sites: {} });
   return makeDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "isolated-link",
     links: [ground.link, lonely.link],
     joints: [],
@@ -434,6 +436,7 @@ describe("createSimSession: an authored motor with a dangling joint reference", 
       jointId: "joint-does-not-exist",
       kind: "rotary" as const,
       drive: { mode: "constant" as const, speed: 1 },
+      dynamics: { mode: "motion" as const },
     };
     const doc: MechanismDocument = { ...base, motors: [danglingMotor] };
 
@@ -451,6 +454,7 @@ describe("createSimSession: an authored motor with a dangling joint reference", 
       jointId: "joint-does-not-exist",
       kind: "rotary" as const,
       drive: { mode: "constant" as const, speed: 1 },
+      dynamics: { mode: "motion" as const },
     };
     expectNoMutation({ ...base, motors: [danglingMotor] });
   });
@@ -467,7 +471,7 @@ function buildGroundSliderOnly(): MechanismDocument {
   const slider = defineLink({ name: "slider", origin: [5, 0], sites: { rail: [5, 0] } });
 
   return makeDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "ground-slider-only",
     links: [ground.link, slider.link],
     joints: [
@@ -517,7 +521,7 @@ function buildDanglingSiteJoint(): MechanismDocument {
   const bar = defineLink({ name: "bar", origin: [10, 0], sites: { P: [10, 0] } });
 
   const doc = makeDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "dangling-site-joint",
     links: [ground.link, bar.link],
     joints: [],

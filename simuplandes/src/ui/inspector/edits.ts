@@ -23,6 +23,7 @@ import {
 import {
   indexDocument,
   jointClusterSiteIds,
+  barPathSites,
   siteWorldPosition,
   worldToLinkLocal,
   degToRad,
@@ -36,6 +37,7 @@ import {
   type Motor,
   type Marker,
   type Site,
+  type Spring,
   type MechanismDocument,
 } from "../../model";
 import {
@@ -54,7 +56,8 @@ export type InspectorTarget =
   | { kind: "joint"; joint: Joint }
   | { kind: "site"; site: Site; link: Link }
   | { kind: "motor"; motor: Motor }
-  | { kind: "marker"; marker: Marker };
+  | { kind: "marker"; marker: Marker }
+  | { kind: "spring"; spring: Spring };
 
 /**
  * Resolves the current selection to what the Inspector should show: the
@@ -93,13 +96,17 @@ export function resolveInspectorTarget(
   const marker = index.markers.get(id);
   if (marker) return { kind: "marker", marker };
 
+  const spring = index.springs.get(id);
+  if (spring) return { kind: "spring", spring };
+
   return { kind: "document" };
 }
 
-/** The distance between a link's two sites, or `null` unless it has exactly two. */
+/** The distance between the two sites of a bar's path, or `null` unless the path has exactly two. */
 export function barLength(link: Link): number | null {
-  if (link.sites.length !== 2) return null;
-  const [a, b] = link.sites;
+  const path = barPathSites(link);
+  if (path.length !== 2) return null;
+  const [a, b] = path;
   return distance(toVec2(a.local), toVec2(b.local));
 }
 
@@ -114,10 +121,11 @@ export function setBarLengthRecipes(doc: MechanismDocument, link: Link, length: 
   if (!(length > 0)) {
     throw new CommandError("length must be positive");
   }
-  if (link.sites.length !== 2) {
-    throw new CommandError(`link "${link.id}" does not have exactly two sites`);
+  const path = barPathSites(link);
+  if (path.length !== 2) {
+    throw new CommandError(`link "${link.id}" is not a two-site bar`);
   }
-  const [siteA, siteB] = link.sites;
+  const [siteA, siteB] = path;
   const a = toVec2(siteA.local);
   const b = toVec2(siteB.local);
   const dir = normalize(sub(b, a));
@@ -189,6 +197,39 @@ export function markerWorldRecipes(doc: MechanismDocument, marker: Marker, world
   const link = indexDocument(doc).links.get(marker.linkId);
   if (!link) throw new CommandError(`unknown link "${marker.linkId}"`);
   return [setMarkerLocal(marker.id, worldToLinkLocal(link.pose, world))];
+}
+
+/** The distance (model units) between a linear spring's two sites at the reference pose. */
+export function springReferenceLength(
+  doc: MechanismDocument,
+  spring: Extract<Spring, { kind: "linear" }>,
+): number {
+  const index = indexDocument(doc);
+  const a = index.sites.get(spring.siteA);
+  const b = index.sites.get(spring.siteB);
+  if (!a || !b) throw new CommandError(`unknown site of spring "${spring.id}"`);
+  return distance(siteWorldPosition(a.link, a.site.local), siteWorldPosition(b.link, b.site.local));
+}
+
+/** The label of the joint a torsional spring sits on (its name, or its id). */
+export function springJointLabel(
+  doc: MechanismDocument,
+  spring: Extract<Spring, { kind: "torsional" }>,
+): string {
+  const joint = indexDocument(doc).joints.get(spring.jointId);
+  return joint ? joint.name || joint.id : spring.jointId;
+}
+
+/** Every load whose site belongs to `link`, with that site. */
+export function loadsOnLink(
+  doc: MechanismDocument,
+  link: Link,
+): { load: MechanismDocument["loads"][number]; site: Site }[] {
+  const sites = new Map(link.sites.map((site) => [site.id, site]));
+  return doc.loads.flatMap((load) => {
+    const site = sites.get(load.siteId);
+    return site ? [{ load, site }] : [];
+  });
 }
 
 /** Converts a stored motor speed (rad/s for rotary, length-units/s for linear) to its display unit. */

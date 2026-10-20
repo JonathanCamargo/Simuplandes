@@ -27,11 +27,11 @@ interface PointerOverrides {
 }
 
 function emptyDoc(): MechanismDocument {
-  return MechanismDocumentSchema.parse({ schemaVersion: 1 });
+  return MechanismDocumentSchema.parse({ schemaVersion: 2 });
 }
 
 const TWO_LINKS_DOC: MechanismDocument = MechanismDocumentSchema.parse({
-  schemaVersion: 1,
+  schemaVersion: 2,
   links: [
     {
       id: "link-crank",
@@ -166,7 +166,7 @@ describe("selectTool: click select", () => {
 
   it("click on a free site selects the site id", () => {
     const doc = MechanismDocumentSchema.parse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: [
         {
           id: "link-a",
@@ -523,6 +523,7 @@ const DEFAULT_NAMES = {
   ground: "Bancada",
   slider: "Corredera",
   marker: "Punto",
+  spring: "Resorte",
 };
 
 describe("selectTool: integration with a real store", () => {
@@ -640,6 +641,7 @@ describe("selectTool: integration with a real store", () => {
       ground: "Bancada",
       slider: "Corredera",
       marker: "Punto",
+      spring: "Resorte",
     };
 
     function drag(

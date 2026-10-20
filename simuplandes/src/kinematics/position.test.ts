@@ -302,7 +302,7 @@ describe("solvePosition — failure safety", () => {
 
     const jointO2Id = createId("joint");
     return makeDocument({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "short-coupler-slider-crank",
       links: [ground.link, crank.link, coupler.link, slider.link],
       joints: [
@@ -370,7 +370,7 @@ describe("newtonSolve — n === 0 (a joint between two ground links)", () => {
     const g1 = defineLink({ name: "g1", isGround: true, origin: [0, 0], sites: { p: [0, 0] } });
     const g2 = defineLink({ name: "g2", isGround: true, origin: [5, 5], sites: { p: [0, 0] } });
     const doc = makeDocument({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "ground-ground",
       links: [g1.link, g2.link],
       joints: [
@@ -392,7 +392,7 @@ describe("newtonSolve — n === 0 (a joint between two ground links)", () => {
     const g1 = defineLink({ name: "g1", isGround: true, origin: [0, 0], sites: { p: [0, 0] } });
     const g2 = defineLink({ name: "g2", isGround: true, origin: [0, 0], sites: { p: [10, 0] } });
     const doc = makeDocument({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "ground-ground-apart",
       links: [g1.link, g2.link],
       joints: [

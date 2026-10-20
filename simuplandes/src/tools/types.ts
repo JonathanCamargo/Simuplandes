@@ -8,7 +8,7 @@
  */
 
 import type { Vec2 } from "../geom";
-import type { Id, MechanismDocument, Vec2Tuple } from "../model";
+import type { AnnotationColor, Edge, Id, MechanismDocument, Vec2Tuple } from "../model";
 import type { SnapResult } from "../canvas/snapping";
 import type { SelectionMode } from "../store/selection";
 import type { ToolId } from "./registry";
@@ -28,6 +28,14 @@ export interface ToolContext {
    * all share this same seed and therefore merge into ONE undo step.
    */
   gestureSeed: string;
+  /** The Brush tool's current color and width (screen px); defaults to ink, 3 px. */
+  brush?: BrushSettings;
+}
+
+/** What the Brush tool paints with: a color name and a width in screen pixels at the current zoom. */
+export interface BrushSettings {
+  color: AnnotationColor;
+  widthPx: number;
 }
 
 export type ToolEvent =
@@ -45,7 +53,15 @@ export type ToolEvent =
    * learn the ids it just caused to be created (e.g. Bar's chain-continue
    * pin) without ever minting ids itself. */
   | { type: "committed"; linkId?: Id; siteIds: Id[]; createdIds: Id[] }
-  | { type: "cancel" };
+  | { type: "cancel" }
+  /** A button outside the canvas acting on the tool, e.g. the edge toolbar's "edge:arc". */
+  | { type: "command"; command: string };
+
+/** One end of a spring being drawn: an existing site, a point on a link, or a ground anchor (world points). */
+export type SpringEnd =
+  | { kind: "site"; siteId: Id }
+  | { kind: "link"; linkId: Id; at: Vec2 }
+  | { kind: "ground"; at: Vec2 };
 
 export type ToolEffect =
   | {
@@ -85,7 +101,26 @@ export type ToolEffect =
   | { kind: "deleteSelection" }
   | { kind: "duplicateSelection"; offset: Vec2 }
   | { kind: "addMotor"; jointId: Id; motorKind: "rotary" | "linear" }
-  | { kind: "addMarker"; linkId: Id; local: Vec2Tuple };
+  | { kind: "addMarker"; linkId: Id; local: Vec2Tuple }
+  | { kind: "commitSpring"; a: SpringEnd; b: SpringEnd; freeLength: number }
+  /**
+   * A plate's new outline (link-local) and edges (`undefined`: all
+   * straight). Every edit within one drag shares `gestureId`, so the drag
+   * is ONE undo step (see `moveEntities`).
+   */
+  | {
+      kind: "setPlateOutline";
+      linkId: Id;
+      outline: Vec2Tuple[];
+      edges: Edge[] | undefined;
+      gestureId: string;
+    }
+  /** A finished freehand stroke: world points, color name, width in model units. */
+  | { kind: "addAnnotation"; points: Vec2Tuple[]; color: AnnotationColor; width: number }
+  /** Annotations the Eraser crossed; one drag (`gestureId`) is one undo step. */
+  | { kind: "deleteAnnotations"; ids: Id[]; gestureId: string }
+  /** A bar's new edges, coalesced by `gestureId` like `setPlateOutline`. */
+  | { kind: "setBarEdges"; linkId: Id; edges: Edge[] | undefined; gestureId: string };
 
 export type HintMessage = { key: string; values?: Record<string, string | number> };
 
@@ -94,7 +129,29 @@ export type PreviewShape =
   | { kind: "polyline"; points: Vec2[]; closed: boolean }
   | { kind: "rect"; min: Vec2; max: Vec2 }
   | { kind: "ray"; from: Vec2; angle: number }
-  | { kind: "point"; at: Vec2 };
+  | { kind: "point"; at: Vec2 }
+  /** A stroke being painted: drawn like a saved annotation (width in model units). */
+  | { kind: "stroke"; points: Vec2[]; color: AnnotationColor; width: number };
+
+/**
+ * A grab handle a tool shows over the document: a shape vertex, a straight
+ * edge's midpoint, an arc's apex ("bulge") or a Bézier control point
+ * (drawn with a tangent line back to `from`, its vertex). `active` marks
+ * the handles of what the tool currently has selected.
+ */
+export interface ToolHandle {
+  kind: "vertex" | "midpoint" | "bulge" | "control";
+  at: Vec2;
+  from?: Vec2;
+  active?: boolean;
+}
+
+/** A floating toolbar a tool asks for at world point `at`: the selected edge's type and actions. */
+export interface EdgeMenu {
+  at: Vec2;
+  kind: Edge["kind"];
+  canSplit: boolean;
+}
 
 export interface ToolReduceResult<S> {
   state: S;
@@ -121,4 +178,12 @@ export interface ToolMachine<S> {
    */
   snapExclude?(state: S): ReadonlySet<Id> | undefined;
   dynamicInput(state: S): DynamicInputState | undefined;
+  /**
+   * Grab handles drawn from the CURRENT document (unlike `preview`, which
+   * only sees the machine's state), so they stay right across undo/redo.
+   * Optional: only shape-editing tools implement it.
+   */
+  handles?(state: S, ctx: ToolContext): ToolHandle[];
+  /** The edge toolbar to show, if any; its buttons come back as `command` events. Optional. */
+  edgeMenu?(state: S, ctx: ToolContext): EdgeMenu | undefined;
 }

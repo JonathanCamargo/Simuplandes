@@ -11,7 +11,11 @@
     "copy": "Copy",
     "copied": "Copied",
     "download": "Download",
-    "jsonPreview": "GraphThe Mechanism JSON preview"
+    "jsonPreview": "GraphThe Mechanism JSON preview",
+    "imagesHeading": "Images",
+    "imagesHint": "What the canvas shows right now, in the current pose.",
+    "graphtheHeading": "GraphThe (JSON)",
+    "graphtheHint": "The mechanism as a graph, for the GraphThe research pipeline."
   },
   "report": {
     "ready": "Ready to export.",

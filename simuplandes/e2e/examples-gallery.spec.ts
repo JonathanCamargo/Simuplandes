@@ -1,5 +1,5 @@
 /**
- * Real-browser proof for UX-02 / SC-5: the empty state offers the five
+ * Real-browser proof for UX-02 / SC-5: the empty state offers the seven
  * bundled examples, each loads straight into Simulate and moves on Play, the
  * empty state never blocks a tool, and an edited drawing asks before it is
  * replaced.
@@ -9,6 +9,7 @@ import {
   clickCanvasPoint,
   getSimInput,
   getSimMode,
+  getSimDynamics,
   getSimPoses,
   getSimStatus,
   loadExampleFourBar,
@@ -37,12 +38,12 @@ function trackPageErrors(page: Page): Error[] {
   return errors;
 }
 
-test("a fresh page shows the empty state with five example cards", async ({ page }) => {
+test("a fresh page shows the empty state with seven example cards", async ({ page }) => {
   const pageErrors = trackPageErrors(page);
   await removeFilePickers(page);
   await page.goto("/");
   await expect(page.getByTestId("empty-state")).toBeVisible();
-  await expect(page.getByTestId("example-card")).toHaveCount(5);
+  await expect(page.getByTestId("example-card")).toHaveCount(7);
   expect(pageErrors).toEqual([]);
 });
 
@@ -68,6 +69,32 @@ for (const example of EXAMPLES) {
         timeout: 5_000,
       })
       .toBeGreaterThan(0.05);
+    expect(JSON.stringify(await getSimPoses(page))).not.toBe(before);
+    expect(pageErrors).toEqual([]);
+  });
+}
+
+for (const example of [
+  { id: "double-pendulum", links: 3 },
+  { id: "mass-spring", links: 2 },
+]) {
+  test(`dynamics example "${example.id}" opens in Dynamics and moves on Play`, async ({ page }) => {
+    const pageErrors = trackPageErrors(page);
+    await removeFilePickers(page);
+    await page.goto("/");
+    await page.locator(`[data-testid="example-card"][data-example-id="${example.id}"]`).click();
+
+    await expect
+      .poll(async () => (await readSessionDocument(page).catch(() => null))?.links.length ?? 0)
+      .toBe(example.links);
+    await expect.poll(() => getSimMode(page)).toBe("simulate");
+    await expect.poll(async () => (await getSimDynamics(page))?.summary.status).toBe("ready");
+
+    const before = JSON.stringify(await getSimPoses(page));
+    await page.getByRole("button", { name: "Reproducir" }).click();
+    await expect
+      .poll(async () => (await getSimInput(page))?.input ?? 0, { timeout: 10_000 })
+      .toBeGreaterThan(0.2);
     expect(JSON.stringify(await getSimPoses(page))).not.toBe(before);
     expect(pageErrors).toEqual([]);
   });

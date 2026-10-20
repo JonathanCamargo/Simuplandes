@@ -44,7 +44,17 @@ function ExampleCardImpl({ example, onSelect }: ExampleCardProps): ReactNode {
           <Typography variant="subtitle2" component="div" noWrap>
             {t(example.titleKey)}
           </Typography>
-          <Typography variant="caption" color="text.secondary" component="div" noWrap>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            component="div"
+            sx={{
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
             {t(example.descriptionKey)}
           </Typography>
         </Box>

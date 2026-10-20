@@ -61,7 +61,7 @@ export function build(): MechanismDocument {
   const jointO2Id = createId("joint");
 
   return makeDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "inverted-slider-crank",
     links: [ground.link, crank.link, rocker.link, block.link],
     joints: [

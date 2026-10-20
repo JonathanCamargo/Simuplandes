@@ -23,6 +23,8 @@ function makeFakeRuntime(snapshot: SimRuntime["snapshot"] = () => null): SimRunt
     setSpeed: vi.fn(),
     setLoop: vi.fn(),
     scrubTo: vi.fn(),
+    setAnalysis: vi.fn(),
+    setDuration: vi.fn(),
     beginDrag: vi.fn(() => false),
     dragTo: vi.fn(),
     endDrag: vi.fn(),
@@ -202,5 +204,13 @@ describe("installSimTestHook", () => {
       xAxis: "input",
       quantityIds: [],
     });
+  });
+
+  it("getDynamics() reads simStore.dynamics", () => {
+    const studioStore = createStudioStore();
+    const simStore = createSimStore();
+    installSimTestHook({ studioStore, simStore, runtime: makeFakeRuntime() }, { dev: true });
+
+    expect(window.__simuplandesSim!.getDynamics()).toBeNull();
   });
 });

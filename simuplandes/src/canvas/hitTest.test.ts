@@ -10,7 +10,7 @@ import {
 
 function doc(input: Partial<MechanismDocumentInput> = {}): MechanismDocument {
   return MechanismDocumentSchema.parse({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "test",
     units: { length: "mm" },
     links: [],
@@ -463,5 +463,45 @@ describe("hitTest / sitesNear: options.poses (Phase 5 pose seam)", () => {
   it("sitesNear with no options behaves exactly as before (reference poses)", () => {
     const results = sitesNear(posedDoc, { x: 10, y: 0 }, 1);
     expect(results.map((r) => r.siteId).sort()).toEqual(["gPin", "mPin"]);
+  });
+});
+
+describe("hitTest: springs", () => {
+  const withSprings = doc({
+    ...fourBar,
+    springs: [
+      {
+        id: "spring1",
+        kind: "linear",
+        siteA: "gO4",
+        siteB: "pB",
+        stiffness: 1,
+        freeLength: 30,
+      },
+      { id: "spring2", kind: "torsional", jointId: "jointA", stiffness: 1 },
+    ],
+  });
+
+  it("hits a linear spring along its line, after sites and before link bodies", () => {
+    // spring1 runs from (100, 0) to (70, 0).
+    expect(hitTest(withSprings, { x: 85, y: 0.5 }, 1)).toEqual({
+      kind: "spring",
+      springId: "spring1",
+    });
+    expect(hitTest(withSprings, { x: 100.1, y: 0 }, 1)).toEqual({
+      kind: "site",
+      siteId: "gO4",
+      linkId: "ground",
+    });
+  });
+
+  it("follows posed geometry", () => {
+    const poses = new Map<Id, Pose>([["coupler", { position: [40, 40], angle: 0 }]]);
+    // The coupler moved up 40, so the spring now runs (100, 0) -> (70, 40).
+    expect(hitTest(withSprings, { x: 85, y: 0 }, 1, { poses }).kind).toBe("none");
+    expect(hitTest(withSprings, { x: 85, y: 20 }, 1, { poses })).toEqual({
+      kind: "spring",
+      springId: "spring1",
+    });
   });
 });

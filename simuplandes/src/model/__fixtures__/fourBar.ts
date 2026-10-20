@@ -7,7 +7,7 @@ import { MechanismDocumentSchema, type MechanismDocumentInput } from "../schema"
  * and 02-03.
  */
 export const fourBarFixture: MechanismDocumentInput = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   name: "Four-bar",
   units: { length: "mm" },
   links: [

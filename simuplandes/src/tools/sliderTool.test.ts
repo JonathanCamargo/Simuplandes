@@ -7,7 +7,7 @@ import { sliderTool, type SliderToolState } from "./sliderTool";
 import { expectHintLocalized } from "./machines.test";
 
 function emptyDoc(): MechanismDocument {
-  return MechanismDocumentSchema.parse({ schemaVersion: 1 });
+  return MechanismDocumentSchema.parse({ schemaVersion: 2 });
 }
 
 function ctxFor(doc: MechanismDocument, radiusWorld = 8): ToolContext {

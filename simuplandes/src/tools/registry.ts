@@ -12,9 +12,30 @@
  */
 
 export type ToolId =
-  "select" | "pan" | "bar" | "plate" | "groundPivot" | "pin" | "slider" | "motor" | "marker";
+  | "select"
+  | "pan"
+  | "bar"
+  | "plate"
+  | "groundPivot"
+  | "pin"
+  | "slider"
+  | "spring"
+  | "motor"
+  | "marker"
+  | "vertex"
+  | "brush"
+  | "eraser";
 
-export type ToolGroup = "navigate" | "draw" | "connect" | "drive" | "measure";
+export type ToolGroup =
+  "navigate" | "draw" | "connect" | "drive" | "measure" | "shape" | "annotate";
+
+/**
+ * The editing modes a tool belongs to. The rail lists the tools of the
+ * current mode (Build's while simulating); picking a tool from another mode
+ * switches to its first mode. Build creates links and joints; Draw only
+ * reshapes them and never changes the joint graph.
+ */
+export type EditMode = "build" | "draw";
 
 export interface ToolDescriptor {
   id: ToolId;
@@ -24,6 +45,7 @@ export interface ToolDescriptor {
   descKey: string;
   hintKey: string;
   group: ToolGroup;
+  modes: readonly EditMode[];
 }
 
 /** Order is significant: it is the rail's display order (UX.md's rail table). */
@@ -35,6 +57,7 @@ export const TOOL_REGISTRY: readonly ToolDescriptor[] = [
     descKey: "tools.select.description",
     hintKey: "tools.select.hint.idle",
     group: "navigate",
+    modes: ["build"],
   },
   {
     id: "pan",
@@ -43,6 +66,7 @@ export const TOOL_REGISTRY: readonly ToolDescriptor[] = [
     descKey: "tools.pan.description",
     hintKey: "tools.pan.hint.idle",
     group: "navigate",
+    modes: ["build", "draw"],
   },
   {
     id: "bar",
@@ -51,6 +75,7 @@ export const TOOL_REGISTRY: readonly ToolDescriptor[] = [
     descKey: "tools.bar.description",
     hintKey: "tools.bar.hint.idle",
     group: "draw",
+    modes: ["build"],
   },
   {
     id: "plate",
@@ -59,6 +84,7 @@ export const TOOL_REGISTRY: readonly ToolDescriptor[] = [
     descKey: "tools.plate.description",
     hintKey: "tools.plate.hint.idle",
     group: "draw",
+    modes: ["build"],
   },
   {
     id: "groundPivot",
@@ -67,6 +93,7 @@ export const TOOL_REGISTRY: readonly ToolDescriptor[] = [
     descKey: "tools.groundPivot.description",
     hintKey: "tools.groundPivot.hint.idle",
     group: "connect",
+    modes: ["build"],
   },
   {
     id: "pin",
@@ -75,6 +102,7 @@ export const TOOL_REGISTRY: readonly ToolDescriptor[] = [
     descKey: "tools.pin.description",
     hintKey: "tools.pin.hint.idle",
     group: "connect",
+    modes: ["build"],
   },
   {
     id: "slider",
@@ -83,6 +111,16 @@ export const TOOL_REGISTRY: readonly ToolDescriptor[] = [
     descKey: "tools.slider.description",
     hintKey: "tools.slider.hint.idle",
     group: "connect",
+    modes: ["build"],
+  },
+  {
+    id: "spring",
+    key: "k",
+    labelKey: "tools.spring.label",
+    descKey: "tools.spring.description",
+    hintKey: "tools.spring.hint.idle",
+    group: "connect",
+    modes: ["build"],
   },
   {
     id: "motor",
@@ -91,6 +129,7 @@ export const TOOL_REGISTRY: readonly ToolDescriptor[] = [
     descKey: "tools.motor.description",
     hintKey: "tools.motor.hint.idle",
     group: "drive",
+    modes: ["build"],
   },
   {
     id: "marker",
@@ -99,8 +138,41 @@ export const TOOL_REGISTRY: readonly ToolDescriptor[] = [
     descKey: "tools.marker.description",
     hintKey: "tools.marker.hint.idle",
     group: "measure",
+    modes: ["build"],
+  },
+  {
+    id: "vertex",
+    key: "e",
+    labelKey: "tools.vertex.label",
+    descKey: "tools.vertex.description",
+    hintKey: "tools.vertex.hint.idle",
+    group: "shape",
+    modes: ["draw"],
+  },
+  {
+    id: "brush",
+    key: "b",
+    labelKey: "tools.brush.label",
+    descKey: "tools.brush.description",
+    hintKey: "tools.brush.hint.idle",
+    group: "annotate",
+    modes: ["draw"],
+  },
+  {
+    id: "eraser",
+    key: "x",
+    labelKey: "tools.eraser.label",
+    descKey: "tools.eraser.description",
+    hintKey: "tools.eraser.hint.idle",
+    group: "annotate",
+    modes: ["draw"],
   },
 ];
+
+/** The tools the rail lists in `mode`, in registry order. */
+export function toolsForMode(mode: EditMode): ToolDescriptor[] {
+  return TOOL_REGISTRY.filter((tool) => tool.modes.includes(mode));
+}
 
 export interface ShortcutDescriptor {
   id: string;

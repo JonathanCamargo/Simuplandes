@@ -8,9 +8,9 @@ import { fourBarFixture } from "./__fixtures__/fourBar";
 
 describe("MechanismDocumentSchema", () => {
   it("parses a minimal valid document with defaults filled in", () => {
-    const parsed = MechanismDocumentSchema.parse({ schemaVersion: 1, links: [], joints: [] });
+    const parsed = MechanismDocumentSchema.parse({ schemaVersion: 2, links: [], joints: [] });
     expect(parsed).toEqual({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "Untitled mechanism",
       units: { length: "mm" },
       links: [],
@@ -18,12 +18,15 @@ describe("MechanismDocumentSchema", () => {
       motors: [],
       markers: [],
       loads: [],
+      springs: [],
+      annotations: [],
+      dynamics: { gravity: [0, -9.81], barDensity: 0.5, plateDensity: 10 },
     });
   });
 
   it("accepts units.length 'm'", () => {
     const parsed = MechanismDocumentSchema.parse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: [],
       joints: [],
       units: { length: "m" },
@@ -33,7 +36,7 @@ describe("MechanismDocumentSchema", () => {
 
   it('rejects units.length \'cm\' with an issue at ["units","length"]', () => {
     const result = MechanismDocumentSchema.safeParse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: [],
       joints: [],
       units: { length: "cm" },
@@ -54,7 +57,7 @@ describe("MechanismDocumentSchema", () => {
 
   it("rejects a P joint without an axis", () => {
     const doc = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: fourBarFixture.links,
       joints: [{ id: "joint-x", type: "P", siteA: "site-1", siteB: "site-3" }],
     };
@@ -64,7 +67,7 @@ describe("MechanismDocumentSchema", () => {
 
   it('rejects a P joint with a zero axis at ["joints",i,"axis"]', () => {
     const doc = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: fourBarFixture.links,
       joints: [{ id: "joint-x", type: "P", siteA: "site-1", siteB: "site-3", axis: [0, 0] }],
     };
@@ -77,7 +80,7 @@ describe("MechanismDocumentSchema", () => {
 
   it("strips an axis field on an R joint (strip mode)", () => {
     const doc = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: fourBarFixture.links,
       joints: [{ id: "joint-x", type: "R", siteA: "site-1", siteB: "site-3", axis: [1, 0] }],
     };
@@ -87,7 +90,7 @@ describe("MechanismDocumentSchema", () => {
 
   it("rejects a plate outline with only 2 points", () => {
     const result = MechanismDocumentSchema.safeParse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       joints: [],
       links: [
         {
@@ -111,7 +114,7 @@ describe("MechanismDocumentSchema", () => {
 
   it("rejects an unknown shape kind", () => {
     const result = MechanismDocumentSchema.safeParse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       joints: [],
       links: [
         {
@@ -129,7 +132,7 @@ describe("MechanismDocumentSchema", () => {
 
   it("rejects a joint referencing an unknown siteA", () => {
     const doc = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: fourBarFixture.links,
       joints: [{ id: "joint-x", type: "R", siteA: "site-9", siteB: "site-3" }],
     };
@@ -142,7 +145,7 @@ describe("MechanismDocumentSchema", () => {
 
   it("rejects a joint whose siteA and siteB are on the same link", () => {
     const doc = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: fourBarFixture.links,
       joints: [{ id: "joint-x", type: "R", siteA: "site-1", siteB: "site-2" }],
     };
@@ -174,7 +177,7 @@ describe("MechanismDocumentSchema", () => {
 
   it("rejects a rotary motor on a P joint", () => {
     const doc: MechanismDocumentInput = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: fourBarFixture.links,
       joints: [{ id: "joint-1", type: "P", siteA: "site-1", siteB: "site-3", axis: [1, 0] }],
       motors: [
@@ -244,7 +247,7 @@ describe("MechanismDocumentSchema", () => {
 
   it("rejects a duplicate id (a site reusing a link's id) with a message containing 'duplicate id' and the id", () => {
     const doc = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: [
         {
           id: "link-1",
@@ -266,8 +269,8 @@ describe("MechanismDocumentSchema", () => {
     }
   });
 
-  it("rejects schemaVersion 2", () => {
-    const result = MechanismDocumentSchema.safeParse({ schemaVersion: 2, links: [], joints: [] });
+  it("rejects schemaVersion 3", () => {
+    const result = MechanismDocumentSchema.safeParse({ schemaVersion: 3, links: [], joints: [] });
     expect(result.success).toBe(false);
   });
 
@@ -278,7 +281,7 @@ describe("MechanismDocumentSchema", () => {
 
   it("rejects NaN in a site's local coordinate", () => {
     const doc = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: [
         {
           id: "link-1",
@@ -297,7 +300,7 @@ describe("MechanismDocumentSchema", () => {
 
   it("rejects Infinity in a site's local coordinate", () => {
     const doc = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: [
         {
           id: "link-1",
@@ -316,7 +319,7 @@ describe("MechanismDocumentSchema", () => {
 
   it("preserves a large negative y exactly (no y-flip)", () => {
     const doc = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: [
         {
           id: "link-1",
@@ -334,13 +337,209 @@ describe("MechanismDocumentSchema", () => {
   });
 });
 
+describe("MechanismDocumentSchema: dynamics (v2)", () => {
+  function issuePaths(doc: MechanismDocumentInput): string[] {
+    const result = MechanismDocumentSchema.safeParse(doc);
+    return result.success ? [] : result.error.issues.map((i) => i.path.join("."));
+  }
+
+  it("accepts linear and torsional springs, filling damping and freeAngle", () => {
+    const parsed = MechanismDocumentSchema.parse({
+      ...fourBarFixture,
+      springs: [
+        {
+          id: "spring-1",
+          kind: "linear",
+          siteA: "site-2",
+          siteB: "site-6",
+          stiffness: 100,
+          freeLength: 50,
+        },
+        { id: "spring-2", kind: "torsional", jointId: "joint-4", stiffness: 2 },
+      ],
+    });
+    expect(parsed.springs[0]).toMatchObject({ name: "", damping: 0, freeLength: 50 });
+    expect(parsed.springs[1]).toMatchObject({ name: "", damping: 0, freeAngle: 0 });
+  });
+
+  it("rejects a linear spring with an unknown site or both sites on one link", () => {
+    expect(
+      issuePaths({
+        ...fourBarFixture,
+        springs: [
+          { id: "s", kind: "linear", siteA: "nope", siteB: "nada", stiffness: 1, freeLength: 1 },
+        ],
+      }),
+    ).toEqual(expect.arrayContaining(["springs.0.siteA", "springs.0.siteB"]));
+    expect(
+      issuePaths({
+        ...fourBarFixture,
+        springs: [
+          {
+            id: "s",
+            kind: "linear",
+            siteA: "site-3",
+            siteB: "site-4",
+            stiffness: 1,
+            freeLength: 1,
+          },
+        ],
+      }),
+    ).toContain("springs.0.siteB");
+  });
+
+  it("rejects a torsional spring on an unknown or prismatic joint", () => {
+    expect(
+      issuePaths({
+        ...fourBarFixture,
+        springs: [{ id: "s", kind: "torsional", jointId: "joint-9", stiffness: 1 }],
+      }),
+    ).toContain("springs.0.jointId");
+    expect(
+      issuePaths({
+        schemaVersion: 2,
+        links: fourBarFixture.links,
+        joints: [{ id: "joint-1", type: "P", siteA: "site-1", siteB: "site-3", axis: [1, 0] }],
+        springs: [{ id: "s", kind: "torsional", jointId: "joint-1", stiffness: 1 }],
+      }),
+    ).toContain("springs.0.jointId");
+  });
+
+  it("rejects a spring id that duplicates another entity", () => {
+    expect(
+      issuePaths({
+        ...fourBarFixture,
+        springs: [{ id: "joint-1", kind: "torsional", jointId: "joint-1", stiffness: 1 }],
+      }),
+    ).toContain("springs.0.id");
+  });
+
+  it("rejects negative stiffness, mass or inertia", () => {
+    expect(
+      issuePaths({
+        ...fourBarFixture,
+        springs: [{ id: "s", kind: "torsional", jointId: "joint-1", stiffness: -1 }],
+      }),
+    ).toContain("springs.0.stiffness");
+    const links = structuredClone(fourBarFixture.links)!;
+    links[1].massProperties = { mass: -1, com: [0, 0], inertia: -2 };
+    expect(issuePaths({ ...fourBarFixture, links })).toEqual(
+      expect.arrayContaining(["links.1.massProperties.mass", "links.1.massProperties.inertia"]),
+    );
+  });
+
+  it("defaults motor dynamics to motion and accepts an effort expression", () => {
+    const parsed = MechanismDocumentSchema.parse(fourBarFixture);
+    expect(parsed.motors[0].dynamics).toEqual({ mode: "motion" });
+    const effort = MechanismDocumentSchema.parse({
+      ...fourBarFixture,
+      motors: [{ ...fourBarFixture.motors![0], dynamics: { mode: "effort", expression: "2" } }],
+    });
+    expect(effort.motors[0].dynamics).toEqual({ mode: "effort", expression: "2" });
+  });
+
+  it("rejects non-positive densities", () => {
+    expect(
+      issuePaths({ ...fourBarFixture, dynamics: { barDensity: 0, plateDensity: -1 } }),
+    ).toEqual(expect.arrayContaining(["dynamics.barDensity", "dynamics.plateDensity"]));
+  });
+});
+
 describe("checkDocumentIntegrity", () => {
   it("is exported and callable directly for unit testing", () => {
-    const doc = { links: [], joints: [], motors: [], markers: [], loads: [] };
+    const doc = { links: [], joints: [], motors: [], markers: [], loads: [], springs: [] };
     const issues: unknown[] = [];
     checkDocumentIntegrity(doc, {
       addIssue: (issue: unknown) => issues.push(issue),
     } as unknown as Parameters<typeof checkDocumentIntegrity>[1]);
     expect(issues).toHaveLength(0);
+  });
+});
+
+describe("MechanismDocumentSchema: bar path", () => {
+  const withCrankShape = (shape: unknown): MechanismDocumentInput =>
+    ({
+      ...fourBarFixture,
+      links: fourBarFixture.links!.map((l) => (l.id === "link-2" ? { ...l, shape } : l)),
+    }) as MechanismDocumentInput;
+
+  it("gives a bar without a path every site, in order", () => {
+    const parsed = MechanismDocumentSchema.parse(fourBarFixture);
+    expect(parsed.links.find((l) => l.id === "link-2")!.shape).toEqual({
+      kind: "bar",
+      path: ["site-3", "site-4"],
+    });
+  });
+
+  it("keeps an explicit path, even one that skips sites", () => {
+    const parsed = MechanismDocumentSchema.parse(withCrankShape({ kind: "bar", path: ["site-4"] }));
+    expect(parsed.links.find((l) => l.id === "link-2")!.shape).toEqual({
+      kind: "bar",
+      path: ["site-4"],
+    });
+  });
+
+  it("rejects a path naming another link's site, or a site twice", () => {
+    for (const path of [
+      ["site-3", "site-1"],
+      ["site-3", "site-3"],
+    ]) {
+      const result = MechanismDocumentSchema.safeParse(withCrankShape({ kind: "bar", path }));
+      expect(result.success).toBe(false);
+    }
+  });
+});
+
+describe("MechanismDocumentSchema: curved edges", () => {
+  const withCrankShape = (shape: unknown): MechanismDocumentInput =>
+    ({
+      ...fourBarFixture,
+      links: fourBarFixture.links!.map((l) => (l.id === "link-2" ? { ...l, shape } : l)),
+    }) as MechanismDocumentInput;
+
+  it("accepts a bar with one edge per segment, of every kind", () => {
+    for (const edge of [
+      { kind: "line" },
+      { kind: "arc", bulge: -1.5 },
+      { kind: "bezier", out: [10, 5], in: [-10, 5] },
+    ]) {
+      expect(
+        MechanismDocumentSchema.safeParse(withCrankShape({ kind: "bar", edges: [edge] })).success,
+      ).toBe(true);
+    }
+  });
+
+  it("rejects the wrong number of edges, or a bulge past MAX_BULGE", () => {
+    const arc = { kind: "arc", bulge: 0.5 };
+    expect(
+      MechanismDocumentSchema.safeParse(withCrankShape({ kind: "bar", edges: [arc, arc] })).success,
+    ).toBe(false);
+    expect(
+      MechanismDocumentSchema.safeParse(
+        withCrankShape({ kind: "bar", edges: [{ kind: "arc", bulge: 5 }] }),
+      ).success,
+    ).toBe(false);
+  });
+});
+
+describe("MechanismDocumentSchema: annotations", () => {
+  const note = {
+    id: "note",
+    kind: "stroke",
+    points: [
+      [0, 0],
+      [5, 5],
+    ],
+    color: "green",
+    width: 1,
+  };
+
+  it("accepts strokes and rejects an unknown color, no points or a duplicate id", () => {
+    const parse = (annotations: unknown[]) =>
+      MechanismDocumentSchema.safeParse({ ...fourBarFixture, annotations }).success;
+    expect(parse([note])).toBe(true);
+    expect(parse([{ ...note, color: "#ff0000" }])).toBe(false);
+    expect(parse([{ ...note, points: [] }])).toBe(false);
+    expect(parse([{ ...note, id: "link-1" }])).toBe(false);
   });
 });

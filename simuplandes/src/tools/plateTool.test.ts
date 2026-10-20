@@ -6,7 +6,7 @@ import { plateTool, type PlateToolState } from "./plateTool";
 import { expectHintLocalized } from "./machines.test";
 
 function emptyDoc(): MechanismDocument {
-  return MechanismDocumentSchema.parse({ schemaVersion: 1 });
+  return MechanismDocumentSchema.parse({ schemaVersion: 2 });
 }
 
 function ctxFor(doc: MechanismDocument, radiusWorld = 8): ToolContext {
@@ -170,7 +170,7 @@ describe("plateTool", () => {
 
   it("hint reports drawingPin when hovering a named site", () => {
     const doc = MechanismDocumentSchema.parse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: [
         {
           id: "link-1",

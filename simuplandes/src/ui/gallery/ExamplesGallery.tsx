@@ -12,7 +12,12 @@ import { Box, Dialog, DialogContent, DialogTitle, IconButton } from "@mui/materi
 import { useTranslation } from "react-i18next";
 import type { MechanismStore } from "../../store";
 import type { StudioState } from "../../uiState/studioStore";
-import { EXAMPLES, loadExampleDocument, type ExampleId } from "../../examples/registry";
+import {
+  EXAMPLES,
+  loadExampleDocument,
+  type ExampleEntry,
+  type ExampleId,
+} from "../../examples/registry";
 import { commitImportedDocument } from "../import/commitDocument";
 import { ExampleCard } from "./ExampleCard";
 import { ReplaceConfirm } from "./ReplaceConfirm";
@@ -21,14 +26,22 @@ export interface ExamplesGalleryProps {
   store: MechanismStore;
   studio: StoreApi<StudioState>;
   variant: "dialog" | "inline";
+  /** Called with an example's analysis just before it opens in Simulate, so a dynamics example opens in Dynamics. */
+  onAnalysis?: (analysis: ExampleEntry["analysis"]) => void;
 }
 
-export function ExamplesGallery({ store, studio, variant }: ExamplesGalleryProps): ReactNode {
+export function ExamplesGallery({
+  store,
+  studio,
+  variant,
+  onAnalysis,
+}: ExamplesGalleryProps): ReactNode {
   const { t } = useTranslation();
   const dialog = useStore(studio, (s) => s.dialog);
   const [pending, setPending] = useState<ExampleId | null>(null);
 
   function load(id: ExampleId): void {
+    onAnalysis?.(EXAMPLES.find((example) => example.id === id)!.analysis);
     commitImportedDocument(loadExampleDocument(id), {
       mechanismStore: store,
       studioStore: studio,

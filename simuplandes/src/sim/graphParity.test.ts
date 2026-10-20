@@ -57,7 +57,7 @@ const fixtures: NamedDoc[] = [
         name: "brace",
         isGround: false,
         pose: { position: [0, 0], angle: 0 },
-        shape: { kind: "bar" },
+        shape: { kind: "bar", path: ["brace-site-1", "brace-site-2"] },
         sites: [
           { id: "brace-site-1", name: "", local: [0, 0] },
           { id: "brace-site-2", name: "", local: [140, 80] },

@@ -22,11 +22,35 @@ import type { Id, Pose } from "../model";
 import type { SimRange, SimSessionSummary } from "./session";
 import type { TraceData } from "./traces";
 import type { MeasurementTable, QuantityDef } from "./plots";
+import type { DynamicsSessionSummary } from "./dynamicsSession";
+import type { TrajectoryStatus, TrajectoryStop } from "./trajectory";
 
 /** The transport's supported speed multipliers. `setSpeed` ignores any other value. */
 export const SPEED_OPTIONS = [0.25, 0.5, 1, 2, 4] as const;
 
 export type SpeedMultiplier = (typeof SPEED_OPTIONS)[number];
+
+/** Which analysis Simulate mode runs: kinematics (scrub one input, with the forces it needs) or forward dynamics (integrate in time). */
+export type SimAnalysis = "kinematics" | "dynamics";
+
+/** The dynamics durations the transport offers, in simulated seconds. `setDynamicsDuration` ignores any other value. */
+export const DURATION_OPTIONS = [2, 5, 10, 20, 30, 60] as const;
+
+/** The default dynamics duration, seconds. */
+export const DEFAULT_DYNAMICS_DURATION = 10;
+
+/** A throttled snapshot of a dynamics session and its trajectory, for the transport. */
+export interface DynamicsReadout {
+  readonly summary: DynamicsSessionSummary;
+  /** `null` when the session is not ready (no trajectory). */
+  readonly status: TrajectoryStatus | null;
+  /** Simulated seconds integrated so far. */
+  readonly computedTime: number;
+  readonly duration: number;
+  readonly stop: TrajectoryStop | null;
+  /** True when some frame met a singular solve. */
+  readonly singular: boolean;
+}
 
 /** What the per-frame solve reported for the current pose. */
 export type SolverReadoutStatus = "ok" | "locked" | "no-convergence" | "invalid-input";
@@ -56,6 +80,12 @@ export interface PlotPrefs {
 export interface SimState {
   /** `null` means "not simulating" (Build mode, or no document to simulate). */
   session: SimSessionSummary | null;
+  /** The chosen analysis. A user preference: survives `clear()`. */
+  analysis: SimAnalysis;
+  /** Simulated seconds a dynamics run integrates. A user preference: survives `clear()`. */
+  dynamicsDuration: number;
+  /** The dynamics session and trajectory state; `null` outside Dynamics. */
+  dynamics: DynamicsReadout | null;
   range: SimRange | null;
   playing: boolean;
   speed: SpeedMultiplier;
@@ -70,12 +100,17 @@ export interface SimState {
   traces: readonly TraceData[];
   /** The full-sweep "vs input" measurement table, published once per session. `null` with no motor/sweep. */
   sweepTable: MeasurementTable | null;
+  /** Link poses at evenly spaced samples of the sweep (at most `SWEEP_POSE_SAMPLES`), published once per session: the space the mechanism moves through. `[]` with no sweep. */
+  sweepPoses: readonly ReadonlyMap<Id, Pose>[];
   /** Every plottable quantity for the current session's system. `[]` with no compiled system. */
   quantities: readonly QuantityDef[];
   /** Bumped (at most once per readout-throttle interval) whenever the live time-history ring buffer grows. React plot components subscribe to this instead of polling the buffer every frame. */
   historyVersion: number;
 
   setSession(session: SimSessionSummary | null, range: SimRange | null): void;
+  setAnalysis(analysis: SimAnalysis): void;
+  setDynamicsDuration(seconds: number): void;
+  setDynamics(dynamics: DynamicsReadout | null): void;
   setPlaying(playing: boolean): void;
   setSpeed(speed: number): void;
   setLoop(loop: boolean): void;
@@ -86,15 +121,16 @@ export interface SimState {
   setPlotOpen(open: boolean): void;
   setPlotXAxis(axis: PlotXAxis): void;
   setPlotQuantities(ids: readonly string[]): void;
-  /** Sets `traces`/`sweepTable`/`quantities` together (always published as one atomic sweep-derived batch). */
+  /** Sets `traces`/`sweepTable`/`quantities`/`sweepPoses` together (always published as one atomic sweep-derived batch). */
   setSweepData(data: {
     traces: readonly TraceData[];
     sweepTable: MeasurementTable | null;
     quantities: readonly QuantityDef[];
+    sweepPoses?: readonly ReadonlyMap<Id, Pose>[];
   }): void;
   /** Increments `historyVersion` by one. */
   bumpHistoryVersion(): void;
-  /** Resets `session`, `range`, `playing`, `poses`, `readout`, `dragging`, `traces`, `sweepTable`, `quantities` and `historyVersion`. Keeps `speed`, `loop` and `plot` (user preferences for the session). */
+  /** Resets `session`, `range`, `playing`, `poses`, `readout`, `dragging`, `traces`, `sweepTable`, `quantities`, `historyVersion` and `dynamics`. Keeps `speed`, `loop`, `plot`, `analysis` and `dynamicsDuration` (user preferences for the session). */
   clear(): void;
 }
 
@@ -110,6 +146,9 @@ function isSpeedMultiplier(value: number): value is SpeedMultiplier {
 export function createSimStore(): SimStore {
   return createStore<SimState>((set, get) => ({
     session: null,
+    analysis: "kinematics",
+    dynamicsDuration: DEFAULT_DYNAMICS_DURATION,
+    dynamics: null,
     range: null,
     playing: false,
     speed: 1,
@@ -120,11 +159,22 @@ export function createSimStore(): SimStore {
     plot: INITIAL_PLOT_PREFS,
     traces: [],
     sweepTable: null,
+    sweepPoses: [],
     quantities: [],
     historyVersion: 0,
 
     setSession(session, range) {
       set({ session, range });
+    },
+    setAnalysis(analysis) {
+      set({ analysis });
+    },
+    setDynamicsDuration(seconds) {
+      if (!(DURATION_OPTIONS as readonly number[]).includes(seconds)) return;
+      set({ dynamicsDuration: seconds });
+    },
+    setDynamics(dynamics) {
+      set({ dynamics });
     },
     setPlaying(playing) {
       set({ playing });
@@ -157,8 +207,8 @@ export function createSimStore(): SimStore {
     setPlotQuantities(ids) {
       set({ plot: { ...get().plot, quantityIds: ids } });
     },
-    setSweepData({ traces, sweepTable, quantities }) {
-      set({ traces, sweepTable, quantities });
+    setSweepData({ traces, sweepTable, quantities, sweepPoses = [] }) {
+      set({ traces, sweepTable, quantities, sweepPoses });
     },
     bumpHistoryVersion() {
       set({ historyVersion: get().historyVersion + 1 });
@@ -173,8 +223,10 @@ export function createSimStore(): SimStore {
         dragging: null,
         traces: [],
         sweepTable: null,
+        sweepPoses: [],
         quantities: [],
         historyVersion: 0,
+        dynamics: null,
       });
     },
   }));

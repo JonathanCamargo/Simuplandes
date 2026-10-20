@@ -8,7 +8,7 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useStore, type StoreApi } from "zustand";
-import { Box, Checkbox, FormControlLabel, Stack, Typography } from "@mui/material";
+import { Checkbox, FormControlLabel, Stack, Typography } from "@mui/material";
 import { formatNumber } from "../../i18n/numberFormat";
 import { toolById } from "../../tools/registry";
 import type { StudioState } from "../../uiState/studioStore";
@@ -44,7 +44,10 @@ export function StatusBar({
   const mode = useStore(studioStore, (s) => s.mode);
   const cursorWorld = useStore(studioStore, (s) => s.cursorWorld);
   const snapStatus = useStore(studioStore, (s) => s.snapStatus);
-  const hint = useStore(studioStore, (s) => s.hint);
+  // While simulating, Simulate's own hint wins over the (inactive) tool's.
+  const hint = useStore(studioStore, (s) =>
+    s.mode === "simulate" && s.simHint ? s.simHint : s.hint,
+  );
   const activeTool = useStore(studioStore, (s) => s.activeTool);
   const language = useStore(preferencesStore, (s) => s.language);
   const gridVisible = useStore(preferencesStore, (s) => s.gridVisible);
@@ -78,27 +81,51 @@ export function StatusBar({
       sx={{
         gridArea: "sb",
         px: 1.5,
-        py: 0.5,
+        py: 0.25,
+        minWidth: 0,
         borderTop: 1,
         borderColor: "divider",
         fontVariantNumeric: "tabular-nums",
         overflow: "hidden",
       }}
     >
-      <Typography variant="caption" noWrap>
-        {t("shell.status.x")} {xText}
+      {/* The next-step hint matters most to a learner: it leads and takes the free space. */}
+      <Typography
+        variant="caption"
+        noWrap
+        title={hintText}
+        sx={{ fontWeight: 600, flex: "1 1 auto", minWidth: 0 }}
+      >
+        {t("shell.status.hintPrefix")}: {hintText}
       </Typography>
-      <Typography variant="caption" noWrap>
-        {t("shell.status.y")} {yText}
-      </Typography>
-      <Typography variant="caption" noWrap>
-        {t("shell.status.snap")}: {snapText}
+      {solverText !== null ? (
+        <Typography
+          variant="caption"
+          noWrap
+          color={solver?.status === "ok" ? "text.secondary" : "warning.main"}
+          sx={{ flexShrink: 0, display: { xs: "none", md: "block" } }}
+        >
+          {t("sim.solver.label")}: {solverText}
+        </Typography>
+      ) : null}
+      {snapStatus !== null ? (
+        <Typography variant="caption" noWrap color="primary" sx={{ flexShrink: 0 }}>
+          {t("shell.status.snap")}: {snapText}
+        </Typography>
+      ) : null}
+      <Typography
+        variant="caption"
+        noWrap
+        sx={{ flexShrink: 0, minWidth: 150, display: { xs: "none", md: "block" } }}
+      >
+        {t("shell.status.x")} {xText}&nbsp;&nbsp;{t("shell.status.y")} {yText}
       </Typography>
       <FormControlLabel
-        sx={{ mr: 0 }}
+        sx={{ mr: 0, flexShrink: 0 }}
         control={
           <Checkbox
             size="small"
+            sx={{ p: 0.5 }}
             checked={gridVisible}
             onChange={(event) => preferencesStore.getState().setGridVisible(event.target.checked)}
           />
@@ -106,25 +133,17 @@ export function StatusBar({
         label={<Typography variant="caption">{t("shell.status.grid")}</Typography>}
       />
       <FormControlLabel
-        sx={{ mr: 0 }}
+        sx={{ mr: 0, flexShrink: 0 }}
         control={
           <Checkbox
             size="small"
+            sx={{ p: 0.5 }}
             checked={snapEnabled}
             onChange={(event) => preferencesStore.getState().setSnapEnabled(event.target.checked)}
           />
         }
         label={<Typography variant="caption">{t("shell.status.snapToggle")}</Typography>}
       />
-      <Box sx={{ flex: 1 }} />
-      {solverText !== null ? (
-        <Typography variant="caption" noWrap>
-          {t("sim.solver.label")}: {solverText}
-        </Typography>
-      ) : null}
-      <Typography variant="caption" noWrap sx={{ fontWeight: 600 }}>
-        {t("shell.status.hintPrefix")}: {hintText}
-      </Typography>
     </Stack>
   );
 }

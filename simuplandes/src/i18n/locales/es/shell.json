@@ -9,12 +9,15 @@
     "atlas": "Explorar atlas…",
     "open": "Abrir",
     "save": "Guardar",
-    "saveAs": "Guardar como…"
+    "saveAs": "Guardar como…",
+    "share": "Copiar enlace para compartir",
+    "exportImage": "Exportar imagen…"
   },
   "undo": "Deshacer {{label}}",
   "redo": "Rehacer {{label}}",
   "mode": {
     "build": "Construir",
+    "draw": "Dibujar",
     "simulate": "Simular"
   },
   "language": "Idioma",
@@ -43,7 +46,11 @@
   "alerts": {
     "restored": "Se restauró la sesión anterior",
     "restoreFailed": "No se pudo restaurar la sesión anterior (se guardó una copia de seguridad): {{message}}",
-    "saved": "Se guardó {{fileName}}"
+    "saved": "Se guardó {{fileName}}",
+    "linkCopied": "Enlace copiado: quien lo abra verá este mecanismo",
+    "linkFailed": "No se pudo copiar el enlace",
+    "shareLoaded": "Se abrió el mecanismo compartido",
+    "shareFailed": "No se pudo abrir el enlace compartido: {{message}}"
   },
   "buttons": {
     "commandPalette": "Paleta de comandos",
@@ -52,5 +59,14 @@
   "rail": {
     "label": "Herramientas"
   },
-  "dropOverlay": "Suelta para importar"
+  "dropOverlay": "Suelta para importar",
+  "appNameShort": "Simuplandes",
+  "appNameSuffix": "Studio",
+  "share": {
+    "title": "¿Abrir el mecanismo compartido?",
+    "text": "El enlace trae un mecanismo. Abrirlo reemplaza tu dibujo actual y su historial de deshacer.",
+    "open": "Abrir",
+    "keep": "Conservar el mío"
+  },
+  "exampleFourBarName": "Ejemplo de cuatro barras"
 }

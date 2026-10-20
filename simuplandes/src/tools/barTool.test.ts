@@ -7,12 +7,12 @@ import { barTool, type BarToolState } from "./barTool";
 import { expectHintLocalized } from "./machines.test";
 
 function emptyDoc(): MechanismDocument {
-  return MechanismDocumentSchema.parse({ schemaVersion: 1 });
+  return MechanismDocumentSchema.parse({ schemaVersion: 2 });
 }
 
 function docWithSite(): { doc: MechanismDocument; siteId: string; linkId: string } {
   const doc = MechanismDocumentSchema.parse({
-    schemaVersion: 1,
+    schemaVersion: 2,
     links: [
       {
         id: "link-1",

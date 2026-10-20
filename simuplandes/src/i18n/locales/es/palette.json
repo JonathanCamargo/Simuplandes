@@ -18,7 +18,18 @@
     "languageEn": "English",
     "importGraph": "Importar grafo",
     "examples": "Ejemplos",
-    "atlas": "Explorar atlas"
+    "atlas": "Explorar atlas",
+    "exportImage": "Exportar imagen",
+    "exportImageKeywords": "png svg",
+    "modeBuild": "Ir a Construir",
+    "modeDraw": "Ir a Dibujar",
+    "modeDrawKeywords": "forma contorno vértices editar",
+    "modeSimulate": "Ir a Simular",
+    "modeSimulateKeywords": "reproducir animar",
+    "showGraph": "Mostrar el grafo",
+    "showGraphKeywords": "topología gruebler",
+    "clearAnnotations": "Borrar todas las notas",
+    "clearAnnotationsKeywords": "anotaciones pincel borrar eliminar dibujos"
   },
   "shortcutSheet": {
     "title": "Atajos de teclado",

@@ -32,16 +32,20 @@ import type { MechanismStore } from "../../store";
 import type { StudioState } from "../../uiState/studioStore";
 import type { PreferencesState } from "../../uiState/preferences";
 import { createViewStore, type ViewStore } from "../../canvas/viewStore";
+import { motionBounds } from "../../canvas/bounds";
+import type { Viewport } from "../../canvas/viewport";
 import { CanvasStage } from "../../canvas/CanvasStage";
 import type { PosesSource, TracePrimitive } from "../../canvas/posesSource";
 import { ToolPreview } from "../../canvas/layers/ToolPreview";
 import { canvasTokensFor } from "../theme/studioTheme";
 import { useToolController } from "../../tools/react/useToolController";
 import { DynamicInputBadge } from "../../tools/react/DynamicInputBadge";
+import { EdgeToolbar } from "../../tools/react/EdgeToolbar";
+import { BrushToolbar } from "../../tools/react/BrushToolbar";
 // `CanvasArea` (src/ui) is the seam's UI half: it may import `src/sim`
 // TYPES/stores (poses/readout), but `src/canvas` itself never imports
 // `src/sim` -- see `src/canvas/posesSource.ts`'s own TSDoc.
-import { createSimStore, type SimStore } from "../../sim/simStore";
+import { createSimStore, type SimAnalysis, type SimStore } from "../../sim/simStore";
 import type { SimRuntime } from "../../sim/runtime";
 import { useSimController } from "../../sim/react/useSimController";
 import { getGraphAnalysis } from "../../graph";
@@ -67,6 +71,8 @@ const NOOP_SIM_RUNTIME_FOR_BUILD_MODE: SimRuntime = {
   setSpeed() {},
   setLoop() {},
   scrubTo() {},
+  setAnalysis() {},
+  setDuration() {},
   beginDrag: () => false,
   dragTo() {},
   endDrag() {},
@@ -84,6 +90,41 @@ function createPosesSource(simStore: SimStore): PosesSource {
         if (state.poses !== prevState.poses) listener();
       }),
   };
+}
+
+/**
+ * "Zoom to fit" for what the canvas shows right now: in Simulate mode the
+ * current poses and coupler-curve traces, otherwise the document's reference
+ * pose. Reads the stores at call time, so it frames the moment of the click.
+ */
+function fitToCanvasContent(
+  view: ViewStore,
+  store: MechanismStore,
+  studio: StoreApi<StudioState>,
+  simStore: SimStore | undefined,
+): void {
+  const simState = simStore && studio.getState().mode === "simulate" ? simStore.getState() : null;
+  view
+    .getState()
+    .fitDocument(
+      store.getState().document,
+      simState ? { poses: simState.poses, traces: simState.traces } : undefined,
+    );
+}
+
+/**
+ * Arms the one-time widening of an automatic fit to the whole motion: `ref`
+ * remembers the viewport the fit left, until the end of the current task.
+ * Only a sweep published in that same task (a mechanism opened straight into
+ * Simulate: an example, a shared link, a load while simulating) widens the
+ * view; a later Build/Simulate toggle never moves the camera.
+ */
+function armMotionFit(ref: { current: Viewport | null }, view: ViewStore): void {
+  const framed = view.getState().viewport;
+  ref.current = framed;
+  setTimeout(() => {
+    if (ref.current === framed) ref.current = null;
+  }, 0);
 }
 
 // eslint-disable-next-line react-refresh/only-export-components -- context/hook live next to their provider component per the plan (04-04/04-06 both import from here).
@@ -163,6 +204,16 @@ export function CanvasArea({
   // store's initial 0x0 size (a race between this effect and the
   // ResizeObserver's first callback) would compute a garbage near-zero zoom.
   const hasAutoFittedRef = useRef(false);
+  // The viewport an automatic fit (mount or freshly opened document) left
+  // behind, armed until the end of that task (`armMotionFit`). A sweep that
+  // arrives meanwhile, with the view untouched, widens it once to the whole motion.
+  const autoFitViewportRef = useRef<Viewport | null>(null);
+  // `sim` is a fresh object every render; its `store` is the stable part.
+  const simStore = sim?.store;
+  const simRuntime = sim?.runtime;
+  const setAnalysis = simRuntime
+    ? (analysis: SimAnalysis) => simRuntime.setAnalysis(analysis)
+    : undefined;
 
   useEffect(() => {
     const element = containerRef.current;
@@ -177,13 +228,22 @@ export function CanvasArea({
         hasAutoFittedRef.current = true;
         const initialDocument = store.getState().document;
         if (initialDocument.links.length > 0) {
-          view.getState().fitDocument(initialDocument);
+          // A session restored straight into Simulate already has its sweep.
+          const sweepPoses = simStore?.getState().sweepPoses ?? [];
+          if (sweepPoses.length > 0 && studio.getState().mode === "simulate") {
+            view
+              .getState()
+              .fitBounds(motionBounds(initialDocument, sweepPoses, simStore?.getState().traces));
+          } else {
+            view.getState().fitDocument(initialDocument);
+            armMotionFit(autoFitViewportRef, view);
+          }
         }
       }
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, [store, view]);
+  }, [store, view, simStore, studio]);
 
   useEffect(() => {
     prevDocumentRef.current = store.getState().document;
@@ -194,21 +254,36 @@ export function CanvasArea({
       prevDocumentRef.current = state.document;
       if (isFreshDocument) {
         view.getState().fitDocument(state.document);
+        armMotionFit(autoFitViewportRef, view);
       }
     });
   }, [store, view]);
 
+  useEffect(() => {
+    if (!simStore) return undefined;
+    return simStore.subscribe((state, prevState) => {
+      if (state.sweepPoses === prevState.sweepPoses || state.sweepPoses.length === 0) return;
+      const framed = autoFitViewportRef.current;
+      autoFitViewportRef.current = null;
+      if (framed !== null && view.getState().viewport === framed) {
+        view
+          .getState()
+          .fitBounds(motionBounds(store.getState().document, state.sweepPoses, state.traces));
+      }
+    });
+  }, [simStore, store, view]);
+
   // "Zoom to fit" (command palette's `view:fit` command, or a future `F`
   // hotkey): `fitRequest` only ever increments, so any change (never the
-  // initial mount at 0) re-fits the CURRENT document -- not just on load.
+  // initial mount at 0) re-fits what the canvas CURRENTLY shows -- not just on load.
   const isFirstFitRequestRender = useRef(true);
   useEffect(() => {
     if (isFirstFitRequestRender.current) {
       isFirstFitRequestRender.current = false;
       return;
     }
-    view.getState().fitDocument(store.getState().document);
-  }, [fitRequest, store, view]);
+    fitToCanvasContent(view, store, studio, simStore);
+  }, [fitRequest, store, view, studio, simStore]);
 
   return (
     <ViewStoreContext.Provider value={view}>
@@ -246,23 +321,32 @@ export function CanvasArea({
                 tokens={tokens}
                 language={language}
                 shapes={controller.preview}
+                handles={controller.handles}
               />
             )}
           </CanvasStage>
         )}
         {isSimulate ? null : <DynamicInputBadge dynamicInput={controller.dynamicInput} />}
+        <BrushToolbar store={store} studio={studio} preferences={preferences} tokens={tokens} />
+        {isSimulate ? null : (
+          <EdgeToolbar
+            menu={controller.edgeMenu}
+            viewport={viewport}
+            onCommand={controller.sendCommand}
+          />
+        )}
         <Tooltip title={t("canvas.fit")}>
           <IconButton
             aria-label={t("canvas.fit")}
             size="small"
-            onClick={() => view.getState().fitDocument(store.getState().document)}
+            onClick={() => fitToCanvasContent(view, store, studio, simStore)}
             sx={{ position: "absolute", top: 8, right: 8, bgcolor: "background.paper" }}
           >
             <ZoomOutMapIcon fontSize="small" />
           </IconButton>
         </Tooltip>
-        <EmptyState store={store} studio={studio} />
-        <ExamplesGallery store={store} studio={studio} variant="dialog" />
+        <EmptyState store={store} studio={studio} onAnalysis={setAnalysis} />
+        <ExamplesGallery store={store} studio={studio} variant="dialog" onAnalysis={setAnalysis} />
       </Box>
     </ViewStoreContext.Provider>
   );

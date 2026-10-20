@@ -1,8 +1,8 @@
 /**
  * Unit and angle conventions for the mechanism document (MDL-05):
  * - World coordinates are y-up, model units (`units.length`: `"mm"` default
- *   or `"m"`, a label only — no runtime conversion between units in this
- *   phase).
+ *   or `"m"`). Geometry never converts between units; only dynamics does,
+ *   through `metersPerUnit`, because masses and forces are SI.
  * - Angles are stored in radians everywhere inside the document and are
  *   converted to degrees only at the UI edge, via `radToDeg`/`formatAngle`.
  */
@@ -15,6 +15,11 @@ export type LengthUnit = (typeof LENGTH_UNITS)[number];
 
 /** The default length unit for a new document. */
 export const DEFAULT_LENGTH_UNIT: LengthUnit = "mm";
+
+/** How many meters one model unit is. Dynamics uses it to work in SI. */
+export function metersPerUnit(unit: LengthUnit): number {
+  return unit === "mm" ? 1e-3 : 1;
+}
 
 /** Converts radians to degrees. */
 export function radToDeg(rad: number): number {

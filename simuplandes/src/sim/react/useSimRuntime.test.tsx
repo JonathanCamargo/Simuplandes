@@ -31,6 +31,8 @@ function makeFakeRuntime() {
     setSpeed: vi.fn(),
     setLoop: vi.fn(),
     scrubTo: vi.fn(),
+    setAnalysis: vi.fn(),
+    setDuration: vi.fn(),
     beginDrag: vi.fn(() => false),
     dragTo: vi.fn(),
     endDrag: vi.fn(),
@@ -84,7 +86,7 @@ describe("useSimRuntime", () => {
 
     expect(runtime.enter).toHaveBeenCalledTimes(1);
     expect(runtime.enter).toHaveBeenCalledWith(mechanismStore.getState().document);
-    expect(studioStore.getState().hint).toEqual({ key: "sim.hint.simulate" });
+    expect(studioStore.getState().simHint).toEqual({ key: "sim.hint.simulate" });
   });
 
   it("setMode('simulate') sets the notDrivable hint when the session status isn't ready", () => {
@@ -113,7 +115,7 @@ describe("useSimRuntime", () => {
       studioStore.getState().setMode("simulate");
     });
 
-    expect(studioStore.getState().hint).toEqual({ key: "sim.hint.notDrivable" });
+    expect(studioStore.getState().simHint).toEqual({ key: "sim.hint.notDrivable" });
   });
 
   it("a document change while simulating calls runtime.documentChanged(newDoc)", () => {
@@ -150,7 +152,7 @@ describe("useSimRuntime", () => {
     act(() => studioStore.getState().setMode("build"));
 
     expect(runtime.exit).toHaveBeenCalledTimes(1);
-    expect(studioStore.getState().hint).toBeNull();
+    expect(studioStore.getState().simHint).toBeNull();
   });
 
   it("simStore.dragging set publishes a dragging hint with the link's name; cleared reverts to the simulate hint", () => {
@@ -163,13 +165,13 @@ describe("useSimRuntime", () => {
     act(() => studioStore.getState().setMode("simulate"));
     act(() => simStore.getState().setDragging({ linkId }));
 
-    expect(studioStore.getState().hint).toEqual({
+    expect(studioStore.getState().simHint).toEqual({
       key: "sim.hint.dragging",
       values: { link: "Coupler" },
     });
 
     act(() => simStore.getState().setDragging(null));
-    expect(studioStore.getState().hint).toEqual({ key: "sim.hint.simulate" });
+    expect(studioStore.getState().simHint).toEqual({ key: "sim.hint.simulate" });
   });
 
   it("dragging is ignored while in Build mode", () => {
@@ -180,7 +182,7 @@ describe("useSimRuntime", () => {
     renderHook(() => useSimRuntime(options));
 
     act(() => simStore.getState().setDragging({ linkId }));
-    expect(studioStore.getState().hint).toBeNull();
+    expect(studioStore.getState().simHint).toBeNull();
   });
 
   it("unmount calls runtime.dispose() and removes every subscription (no calls after unmount)", () => {

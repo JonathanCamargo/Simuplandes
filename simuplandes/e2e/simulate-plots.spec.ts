@@ -85,7 +85,9 @@ test("Plots show output angle vs input and export a correct CSV", async ({ page 
   expect(filePath).not.toBeNull();
   const text = fs.readFileSync(filePath, "utf8");
 
-  expect(download.suggestedFilename()).toMatch(/^simuplandes-four-bar-example-vs-input\.csv$/);
+  expect(download.suggestedFilename()).toMatch(
+    /^simuplandes-ejemplo-de-cuatro-barras-vs-input\.csv$/,
+  );
 
   const { header, rows } = parseCsv(text);
   expect(header).toEqual(["input O2 [deg]", "rocker.angle [deg]"]);

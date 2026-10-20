@@ -16,7 +16,7 @@
 import type { StoreApi } from "zustand/vanilla";
 import type { Id, Pose } from "../../model";
 import type { StudioMode, StudioState } from "../../uiState/studioStore";
-import type { PlotPrefs, SimReadout, SimStore } from "../simStore";
+import type { DynamicsReadout, PlotPrefs, SimReadout, SimStore } from "../simStore";
 import type { SimSessionSummary } from "../session";
 import type { SimRuntime } from "../runtime";
 
@@ -37,6 +37,8 @@ export interface SimTestHook {
   ): { points: readonly (readonly [number, number])[]; closed: boolean } | null;
   getReadout(): SimReadout | null;
   getPlot(): PlotPrefs;
+  /** The Dynamics session/trajectory readout, or `null` outside Dynamics. */
+  getDynamics(): DynamicsReadout | null;
 }
 
 declare global {
@@ -105,6 +107,9 @@ export function installSimTestHook(
     },
     getPlot() {
       return simStore.getState().plot;
+    },
+    getDynamics() {
+      return simStore.getState().dynamics;
     },
   };
 

@@ -41,7 +41,7 @@ describe("ShortcutSheet", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("lists all 9 tools with their key and localized label", () => {
+  it("lists every tool with its key and localized label", () => {
     const { studioStore } = setup("es");
     act(() => studioStore.getState().openShortcutSheet());
     const dialog = screen.getByRole("dialog");

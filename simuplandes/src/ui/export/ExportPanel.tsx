@@ -17,7 +17,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useStore, type StoreApi } from "zustand";
 import { useTranslation } from "react-i18next";
-import { Box, Button, Stack, Typography } from "@mui/material";
+import { Box, Button, Divider, Stack, Typography } from "@mui/material";
 import type { MechanismStore } from "../../store";
 import type { StudioState } from "../../uiState/studioStore";
 import type { PreferencesState } from "../../uiState/preferences";
@@ -103,70 +103,108 @@ export function ExportPanel({
     await saveBlobToFile(blob, graphtheFileName(doc), JSON_SAVE_OPTIONS);
   }
 
-  const widthPx = canvasSize?.width || 480;
-  const heightPx = canvasSize?.height || 320;
+  // The viewport maps world points into its own widthPx x heightPx box, so the
+  // image must be that size too; a different box crops or pads the drawing.
+  // Rounded to whole pixels: the measured canvas size is often fractional, and
+  // a PNG can only have whole pixels (the 2x PNG must match the SVG exactly).
+  const widthPx = Math.round(canvasSize?.width || viewport.widthPx || 480);
+  const heightPx = Math.round(canvasSize?.height || viewport.heightPx || 320);
 
   return (
-    <Stack spacing={1.5} sx={{ p: 1.5 }} data-testid="export-panel">
-      <ValidationReport report={report} studioStore={studioStore} mechanismStore={mechanismStore} />
+    <Stack spacing={2} sx={{ p: 1.5 }} data-testid="export-panel">
+      <PanelSection title={t("export.panel.imagesHeading")} hint={t("export.panel.imagesHint")}>
+        <ImageExportActions
+          doc={doc}
+          poses={poses}
+          traces={traces}
+          view={{ viewport, widthPx, heightPx }}
+          analysis={analysis}
+          layoutMode={layoutMode}
+          stores={{ studioStore, mechanismStore }}
+          themeMode={themeMode}
+          i18n={i18n}
+        />
+      </PanelSection>
 
-      <Stack direction="row" spacing={1}>
-        <Button
-          size="small"
-          variant="outlined"
-          data-testid="export-copy"
-          onClick={() => void handleCopy()}
-        >
-          {copied ? t("export.panel.copied") : t("export.panel.copy")}
-        </Button>
-        <Button
-          size="small"
-          variant="outlined"
-          data-testid="export-download"
-          onClick={() =>
-            void handleDownload().catch((e: unknown) => {
-              if (!isAbortError(e)) throw e;
-            })
-          }
-        >
-          {t("export.panel.download")}
-        </Button>
-      </Stack>
+      <Divider />
 
-      <Box
-        component="pre"
-        data-testid="export-json"
-        aria-label={t("export.panel.jsonPreview")}
-        sx={{
-          m: 0,
-          p: 1,
-          flex: "1 1 auto",
-          minHeight: 120,
-          maxHeight: 320,
-          overflow: "auto",
-          fontFamily: "monospace",
-          fontSize: 12,
-          whiteSpace: "pre",
-          bgcolor: "action.hover",
-          borderRadius: 1,
-        }}
-      >
-        <Typography component="code" sx={{ fontFamily: "inherit", fontSize: "inherit" }}>
-          {result.text.trimEnd()}
+      <PanelSection title={t("export.panel.graphtheHeading")} hint={t("export.panel.graphtheHint")}>
+        <ValidationReport
+          report={report}
+          studioStore={studioStore}
+          mechanismStore={mechanismStore}
+        />
+
+        <Stack direction="row" spacing={1}>
+          <Button
+            size="small"
+            variant="outlined"
+            data-testid="export-copy"
+            onClick={() => void handleCopy()}
+          >
+            {copied ? t("export.panel.copied") : t("export.panel.copy")}
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            data-testid="export-download"
+            onClick={() =>
+              void handleDownload().catch((e: unknown) => {
+                if (!isAbortError(e)) throw e;
+              })
+            }
+          >
+            {t("export.panel.download")}
+          </Button>
+        </Stack>
+
+        <Box
+          component="pre"
+          data-testid="export-json"
+          aria-label={t("export.panel.jsonPreview")}
+          sx={{
+            m: 0,
+            p: 1,
+            minHeight: 96,
+            maxHeight: 220,
+            overflow: "auto",
+            fontFamily: "monospace",
+            fontSize: 12,
+            whiteSpace: "pre",
+            bgcolor: "action.hover",
+            borderRadius: 1,
+          }}
+        >
+          <Typography component="code" sx={{ fontFamily: "inherit", fontSize: "inherit" }}>
+            {result.text.trimEnd()}
+          </Typography>
+        </Box>
+      </PanelSection>
+    </Stack>
+  );
+}
+
+/** A titled block of the Export tab, with a one-line explanation under the title. */
+function PanelSection({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint: string;
+  children: ReactNode;
+}): ReactNode {
+  return (
+    <Stack spacing={1}>
+      <Box>
+        <Typography variant="subtitle2" component="h2" sx={{ fontWeight: 700 }}>
+          {title}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          {hint}
         </Typography>
       </Box>
-
-      <ImageExportActions
-        doc={doc}
-        poses={poses}
-        traces={traces}
-        view={{ viewport, widthPx, heightPx }}
-        analysis={analysis}
-        layoutMode={layoutMode}
-        stores={{ studioStore, mechanismStore }}
-        themeMode={themeMode}
-        i18n={i18n}
-      />
+      {children}
     </Stack>
   );
 }

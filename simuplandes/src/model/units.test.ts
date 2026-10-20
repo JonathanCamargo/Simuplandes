@@ -6,12 +6,18 @@ import {
   degToRad,
   formatAngle,
   formatLength,
+  metersPerUnit,
 } from "./units";
 
 describe("units", () => {
   it("exposes LENGTH_UNITS and DEFAULT_LENGTH_UNIT", () => {
     expect(LENGTH_UNITS).toEqual(["mm", "m"]);
     expect(DEFAULT_LENGTH_UNIT).toBe("mm");
+  });
+
+  it("metersPerUnit gives the SI scale of each unit", () => {
+    expect(metersPerUnit("mm")).toBe(0.001);
+    expect(metersPerUnit("m")).toBe(1);
   });
 
   it("radToDeg converts radians to degrees", () => {

@@ -80,6 +80,7 @@ function resolveDragLinkId(doc: MechanismDocument, hit: HitResult): Id | null {
       if (!entry || entry.link.isGround) return null;
       return entry.link.id;
     }
+    case "spring":
     case "none":
       return null;
   }

@@ -18,7 +18,18 @@
     "languageEn": "English",
     "importGraph": "Import graph",
     "examples": "Examples",
-    "atlas": "Browse atlas"
+    "atlas": "Browse atlas",
+    "exportImage": "Export image",
+    "exportImageKeywords": "png svg",
+    "modeBuild": "Switch to Build",
+    "modeDraw": "Switch to Draw",
+    "modeDrawKeywords": "shape outline vertices edit",
+    "modeSimulate": "Switch to Simulate",
+    "modeSimulateKeywords": "play animate",
+    "showGraph": "Show the graph",
+    "showGraphKeywords": "topology gruebler",
+    "clearAnnotations": "Clear all notes",
+    "clearAnnotationsKeywords": "annotations brush erase delete drawings"
   },
   "shortcutSheet": {
     "title": "Keyboard shortcuts",

@@ -96,7 +96,7 @@ function buildFourBarTruss(): MechanismDocument {
     name: "fifth-bar",
     isGround: false,
     pose: fifthPose,
-    shape: { kind: "bar" },
+    shape: { kind: "bar", path: [siteAtA.id, siteAtO4.id] },
     sites: [siteAtA, siteAtO4],
   };
 
@@ -354,6 +354,7 @@ describe("Transport: ignored motors", () => {
       jointId: doc.joints.find((j) => j.name === "A")!.id,
       kind: "rotary" as const,
       drive: { mode: "constant" as const, speed: 1 },
+      dynamics: { mode: "motion" as const },
     };
     const twoMotorDoc: MechanismDocument = { ...doc, motors: [...doc.motors, secondMotor] };
     const { studioStore } = renderTransport(twoMotorDoc);

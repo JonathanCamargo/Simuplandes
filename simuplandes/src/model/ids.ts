@@ -6,7 +6,8 @@
  */
 
 /** The kinds of entities that get an id in a mechanism document. */
-export type EntityKind = "link" | "site" | "joint" | "motor" | "marker" | "load";
+export type EntityKind =
+  "link" | "site" | "joint" | "motor" | "marker" | "load" | "spring" | "annotation";
 
 /** An opaque entity id. Not guaranteed to be a strict UUID. */
 export type Id = string;

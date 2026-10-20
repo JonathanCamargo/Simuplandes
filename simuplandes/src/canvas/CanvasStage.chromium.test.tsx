@@ -28,7 +28,7 @@ import { createStudioStore } from "../uiState/studioStore";
 import { createMechanismStore } from "../store/mechanismStore";
 import { buildExampleFourBar } from "../store/examples";
 import { CanvasArea, ViewStoreContext, useViewStore } from "../ui/shell/CanvasArea";
-import { CanvasStage } from "./CanvasStage";
+import { CanvasStage, type CanvasPointerEvent } from "./CanvasStage";
 import { createViewStore, type ViewStore } from "./viewStore";
 import { worldToScreen, screenToWorld, type Viewport } from "./viewport";
 import { gridSpacingFor } from "./grid";
@@ -133,6 +133,7 @@ function renderCanvasStage(
   extra: {
     issueLinkIds?: ReadonlySet<Id>;
     posesSource?: ReturnType<typeof createFakePosesSource>;
+    onPointer?: (event: CanvasPointerEvent) => void;
   } = {},
 ) {
   const store = createMechanismStore();
@@ -156,6 +157,7 @@ function renderCanvasStage(
             height={600}
             issueLinkIds={extra.issueLinkIds}
             posesSource={extra.posesSource}
+            onPointer={extra.onPointer}
           />
         </ThemeProvider>
       </I18nextProvider>
@@ -377,6 +379,27 @@ describe("CanvasStage (chromium, real Konva)", () => {
       const parsed = JSON.parse(attr!) as Viewport;
       expect(parsed).toEqual(view.getState().viewport);
     });
+  });
+});
+
+describe("CanvasStage (chromium): pointer delivery", () => {
+  it("delivers a down and an up even when a move follows in the same frame", async () => {
+    const view = createViewStore();
+    const types: CanvasPointerEvent["type"][] = [];
+    const { container } = renderCanvasStage(view, { onPointer: (e) => types.push(e.type) });
+    const stageEl = await waitForStage(container);
+
+    dispatchPointer(stageEl, "pointermove", { x: 100, y: 100 });
+    dispatchPointer(stageEl, "pointermove", { x: 105, y: 100 });
+    dispatchPointer(stageEl, "pointerdown", { x: 110, y: 100 });
+    dispatchPointer(stageEl, "pointerup", { x: 110, y: 100 });
+    dispatchPointer(stageEl, "pointermove", { x: 120, y: 100 });
+    dispatchPointer(stageEl, "pointermove", { x: 130, y: 100 });
+    await nextFrame();
+    await nextFrame();
+
+    // The two leading moves coalesce, as do the two trailing ones.
+    expect(types).toEqual(["pointermove", "pointerdown", "pointerup", "pointermove"]);
   });
 });
 

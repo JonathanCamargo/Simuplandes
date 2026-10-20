@@ -46,3 +46,16 @@ export function formatNumber(value: number, lang: Language, fractionDigits: numb
   });
   return formatter.format(normalized);
 }
+
+/**
+ * Formats `value` to `digits` significant digits with the locale's decimal
+ * separator and no grouping, for quantities whose magnitude varies widely
+ * (a link's inertia can be 1e-6 kg·m²). Never renders `"-0"`.
+ */
+export function formatSignificant(value: number, lang: Language, digits = 4): string {
+  const formatter = new Intl.NumberFormat(lang === "es" ? "es-ES" : "en-US", {
+    maximumSignificantDigits: digits,
+    useGrouping: false,
+  });
+  return formatter.format(Object.is(value, -0) ? 0 : value);
+}

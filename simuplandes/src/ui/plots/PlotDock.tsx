@@ -17,6 +17,10 @@
  *   version bump is picked up by a raw `simStore.subscribe` inside a
  *   `useEffect` and pushed straight into the mounted `UPlotChart` via its
  *   imperative `setData` -- PlotDock itself never re-renders per bump.
+ *
+ * In Dynamics the x axis is always time: the runtime's history table is the
+ * computed trajectory, and the input/time toggle and nominal-rate note are
+ * hidden.
  */
 
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
@@ -101,7 +105,9 @@ export function PlotDock({
 
   const mode = useStore(studioStore, (s) => s.mode);
   const open = useStore(simStore, (s) => s.plot.open);
-  const xAxis = useStore(simStore, (s) => s.plot.xAxis);
+  const preferredXAxis = useStore(simStore, (s) => s.plot.xAxis);
+  const isDynamics = useStore(simStore, (s) => s.analysis === "dynamics");
+  const xAxis: PlotXAxis = isDynamics ? "time" : preferredXAxis;
   const quantityIds = useStore(simStore, (s) => s.plot.quantityIds);
   const session = useStore(simStore, (s) => s.session);
   const sweepTable = useStore(simStore, (s) => s.sweepTable);
@@ -215,16 +221,18 @@ export function PlotDock({
       }}
     >
       <Stack direction="row" spacing={1.5} alignItems="center" sx={{ px: 1.5, py: 0.5 }}>
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          value={xAxis}
-          aria-label={t("sim.plots.xAxis.label")}
-          onChange={handleXAxisChange}
-        >
-          <ToggleButton value="input">{t("sim.plots.xAxis.input")}</ToggleButton>
-          <ToggleButton value="time">{t("sim.plots.xAxis.time")}</ToggleButton>
-        </ToggleButtonGroup>
+        {isDynamics ? null : (
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={xAxis}
+            aria-label={t("sim.plots.xAxis.label")}
+            onChange={handleXAxisChange}
+          >
+            <ToggleButton value="input">{t("sim.plots.xAxis.input")}</ToggleButton>
+            <ToggleButton value="time">{t("sim.plots.xAxis.time")}</ToggleButton>
+          </ToggleButtonGroup>
+        )}
 
         <FormControl size="small" sx={{ minWidth: 260 }}>
           <Select

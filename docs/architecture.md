@@ -27,8 +27,12 @@ store/         Mechanism store: one execute() path, patch-based undo/redo,
 persistence/   .simup.json save/open, autosave and restore through localStorage.
 kinematics/    Pure solver: constraints, LU and damped Newton, velocity and
                acceleration, assembly, mobility, singularity, drag IK.
+dynamics/      Pure dynamics over kinematics: mass matrix and forces, the
+               augmented solve (forward/inverse dynamics, velocity
+               projection), reactions, energy, RK4 with projection.
 sim/           Simulation orchestration: session, runtime (play/scrub/drag),
-               sweeps, traces, plots, CSV, DOF, auto-layout and mobility range.
+               sweeps, traces, plots, CSV, DOF, auto-layout and mobility range,
+               and the dynamics session and trajectory buffer.
   sim/react/   React glue for sim: hooks, controllers, DEV-only test hook.
 canvas/        Viewport transform, grid, snapping, hit-testing, render model,
                Konva layers.
@@ -82,8 +86,8 @@ Import boundaries are ESLint rules (`eslint.config.js`), so `npm run check` fail
 
 | Rule | Effect |
 |------|--------|
-| `src/kinematics/**` is pure | No React, Zustand, Immer, Konva, MUI or matter.js, and no browser globals. It may import only `geom` and `model`. |
-| Kinematics seam | Only `src/sim/**` may import `src/kinematics`. UI, canvas and tools get poses and readouts from `sim`. |
+| `src/kinematics/**` and `src/dynamics/**` are pure | No React, Zustand, Immer, Konva, MUI or matter.js, and no browser globals. Kinematics may import only `geom` and `model`; dynamics also `kinematics`, and kinematics may not import dynamics. |
+| Kinematics seam | Only `src/sim/**` may import `src/kinematics` or `src/dynamics`. UI, canvas and tools get poses and readouts from `sim`. |
 | Pure logic globs | `tools/*.ts`, `canvas/*.ts`, `uiState/*.ts`, `graph/**`, `interchange/**` may not import React, Konva, MUI or kinematics. |
 | `src/sim/*.ts` | Pure orchestration. React glue goes in `src/sim/react/`. |
 | No mirrored Konva nodes | A negative `scaleX`/`scaleY` is forbidden. The y-flip happens once, in `canvas/viewport.ts` (`worldToScreen`). |
@@ -92,13 +96,15 @@ The interchange code reaches the solver (for import verification and auto-layout
 
 ## Mechanism document (`src/model/schema.ts`)
 
-The document is a single Zod schema (`CURRENT_SCHEMA_VERSION = 1`) and contains:
+The document is a single Zod schema (`CURRENT_SCHEMA_VERSION = 2`) and contains:
 
-- **Links:** each has a `pose` (reference/build pose), a `shape` (`bar` or `plate`), `sites` (joint attachment points in link-local coordinates), an `isGround` flag, a name and a color.
+- **Links:** each has a `pose` (reference/build pose), a `shape` (`bar` or `plate`; a bar is the polyline through the site ids in its `path`, so sites off the path, such as spring attachments, do not change its drawing or mass; optional `edges` make any bar segment or plate edge an arc or a Bézier curve, see `model/shapeGeometry.ts`), `sites` (joint attachment points in link-local coordinates), an `isGround` flag, a name and a color.
 - **Joints:** a discriminated union of `revolute` and `prismatic` (the latter with a link-local `axis`), connecting sites on two links.
 - **Motors:** rotary or linear, driven by the scrubber or by time (a constant, or an expression in `t`).
-- **Markers** (trace points) and **loads** (stored for v2 dynamics).
-- **Units:** `mm` (default) or `m`. Angles are radians internally and degrees in the UI.
+- **Markers** (trace points) and **loads** (constant forces and torques at sites).
+- **Dynamics data (v2):** optional link `massProperties`, a per-motor `dynamics` mode (follow motion, or an effort expression), `springs` (linear and torsional) and document `dynamics` settings (gravity, densities). See [dynamics.md](dynamics.md).
+- **Annotations:** freehand strokes drawn with Draw mode's Brush: world points, a named color (each theme picks the shade) and a width in model units. They belong to no link, never move in simulation, and are included in image export and share links.
+- **Units:** `mm` (default) or `m`. Angles are radians internally and degrees in the UI. Dynamics values are SI; dynamics converts lengths with `metersPerUnit`.
 
 Coordinates are world y-up in model units. A `superRefine` checks referential integrity.
 
@@ -109,7 +115,7 @@ Coordinates are world y-up in model units. A `superRefine` checks referential in
 - **The mechanism store** (`store/mechanismStore.ts`) is a vanilla Zustand store. Every mutation goes through `execute(label, recipe)`, which runs one Immer `produceWithPatches`. A multi-object edit is therefore one undo step.
 - **Undo and redo** apply inverse and forward patches, with a 500-step limit. Rapid edits within one gesture (a joint drag, typing in a field) are merged into a single undo step.
 - **Selection** lives outside the undo history.
-- **Other UI state** lives in separate stores and never enters undo: `studioStore` (mode, dialogs, hover, graph layout), `preferences` (language, theme, dock size) and `simStore` (poses, readouts).
+- **Other UI state** lives in separate stores and never enters undo: `studioStore` (Build/Draw/Simulate mode, dialogs, hover, graph layout), `preferences` (language, theme, dock size, brush color and width) and `simStore` (poses, readouts).
 
 ## Testing
 

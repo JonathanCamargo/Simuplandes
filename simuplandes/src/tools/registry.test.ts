@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { TOOL_REGISTRY, EDIT_SHORTCUTS, toolById, type ToolId } from "./registry";
+import { TOOL_REGISTRY, EDIT_SHORTCUTS, toolById, toolsForMode, type ToolId } from "./registry";
 import { collectKeys, loadLocaleResources } from "../i18n/i18n";
 
 describe("TOOL_REGISTRY", () => {
-  it("has 9 tools in the UX.md rail order", () => {
+  it("has 10 tools in the UX.md rail order (plus the dynamics spring tool and Draw's Edit shape, Brush and Eraser)", () => {
     const ids = TOOL_REGISTRY.map((t) => t.id);
     expect(ids).toEqual([
       "select",
@@ -13,9 +13,19 @@ describe("TOOL_REGISTRY", () => {
       "groundPivot",
       "pin",
       "slider",
+      "spring",
       "motor",
       "marker",
+      "vertex",
+      "brush",
+      "eraser",
     ]);
+  });
+
+  it("splits the rail by mode: Draw shows Pan, Edit shape, Brush and Eraser; Build everything else", () => {
+    expect(toolsForMode("draw").map((t) => t.id)).toEqual(["pan", "vertex", "brush", "eraser"]);
+    expect(toolsForMode("build").map((t) => t.id)).not.toContain("vertex");
+    expect(toolsForMode("build")).toHaveLength(TOOL_REGISTRY.length - 3);
   });
 
   it("has unique tool ids", () => {

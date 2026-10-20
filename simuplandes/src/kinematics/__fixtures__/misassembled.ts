@@ -75,7 +75,7 @@ export function openFourBar(): MechanismDocument {
   const jointO2Id = createId("joint");
 
   return makeDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "open-four-bar",
     links: [ground.link, crank.link, coupler.link, rocker.link],
     joints: [
@@ -170,7 +170,7 @@ function buildImpossibleFourBar(unnamedJoints: boolean): MechanismDocument {
   const jointName = (name: string): string => (unnamedJoints ? "" : name);
 
   return makeDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: unnamedJoints ? "unnamed-impossible-four-bar" : "impossible-four-bar",
     links: [ground.link, crank.link, coupler.link, rocker.link],
     joints: [
@@ -250,7 +250,7 @@ export function groundPairViolation(): MechanismDocument {
   });
 
   return makeDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "ground-pair-violation",
     links: [ground1.link, ground2.link],
     joints: [

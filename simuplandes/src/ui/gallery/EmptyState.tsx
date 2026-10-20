@@ -11,16 +11,23 @@ import { Box, Button, IconButton, Paper, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import type { MechanismStore } from "../../store";
 import type { StudioState } from "../../uiState/studioStore";
-import { ExamplesGallery } from "./ExamplesGallery";
+import { ExamplesGallery, type ExamplesGalleryProps } from "./ExamplesGallery";
 
 export interface EmptyStateProps {
   store: MechanismStore;
   studio: StoreApi<StudioState>;
+  /** Passed through to the inline examples gallery. */
+  onAnalysis?: ExamplesGalleryProps["onAnalysis"];
   /** Extra actions after the import and atlas buttons. */
   extraActions?: ReactNode;
 }
 
-export function EmptyState({ store, studio, extraActions }: EmptyStateProps): ReactNode {
+export function EmptyState({
+  store,
+  studio,
+  extraActions,
+  onAnalysis,
+}: EmptyStateProps): ReactNode {
   const { t } = useTranslation();
   const [dismissed, setDismissed] = useState(false);
   const linkCount = useStore(store, (s) => s.document.links.length);
@@ -61,7 +68,7 @@ export function EmptyState({ store, studio, extraActions }: EmptyStateProps): Re
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
           {t("gallery.empty.text")}
         </Typography>
-        <ExamplesGallery store={store} studio={studio} variant="inline" />
+        <ExamplesGallery store={store} studio={studio} variant="inline" onAnalysis={onAnalysis} />
         <Box sx={{ display: "flex", gap: 1, mt: 1.5, justifyContent: "center" }}>
           <Button
             size="small"

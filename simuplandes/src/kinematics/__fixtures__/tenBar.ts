@@ -223,7 +223,7 @@ export function build(): TenBarFixture {
   const jointO2Id = createId("joint");
 
   const doc = makeDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "ten-bar",
     links: [
       ground.link,

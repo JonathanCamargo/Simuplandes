@@ -11,6 +11,7 @@
  */
 
 import type { ThemeMode } from "../../uiState/preferences";
+import type { AnnotationColor } from "../../model";
 
 export interface CanvasTokens {
   paper: string;
@@ -35,6 +36,8 @@ export interface CanvasTokens {
   hover: string;
   /** GRF-03: the Baranov-offending-link outline color. Meets WCAG 1.4.11 (>=3:1) against `paper`/`panel` in both themes. */
   issue: string;
+  /** Each annotation color's shade in this theme (an annotation stores the name, not the shade). */
+  annotation: Record<AnnotationColor, string>;
 }
 
 export const CANVAS_TOKENS: Record<ThemeMode, CanvasTokens> = {
@@ -57,6 +60,13 @@ export const CANVAS_TOKENS: Record<ThemeMode, CanvasTokens> = {
     selection: "#C4503A",
     hover: "#1967D2",
     issue: "#C62828",
+    annotation: {
+      ink: "#142430",
+      red: "#C62828",
+      blue: "#1967D2",
+      green: "#2E7D32",
+      orange: "#E65100",
+    },
   },
   dark: {
     paper: "#142430",
@@ -77,6 +87,13 @@ export const CANVAS_TOKENS: Record<ThemeMode, CanvasTokens> = {
     selection: "#EE826D",
     hover: "#8AB4F8",
     issue: "#EF5350",
+    annotation: {
+      ink: "#FFFFFF",
+      red: "#FF8A80",
+      blue: "#8AB4F8",
+      green: "#81C995",
+      orange: "#FFB74D",
+    },
   },
 };
 

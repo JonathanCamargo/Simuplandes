@@ -2,7 +2,8 @@
 /// <reference types="node" />
 /**
  * Executable proof of the Phase 5 kinematics import seam: only `src/sim/**`
- * may import `src/kinematics`. Two independent checks:
+ * may import `src/kinematics` or `src/dynamics` (which itself builds on
+ * kinematics). Two independent checks:
  * 1. The effective ESLint config for a representative set of non-sim paths
  *    blocks `**\/kinematics` imports, while `src/sim/**` paths do not (and
  *    `src/sim/*.ts` additionally blocks `react`).
@@ -103,6 +104,26 @@ describe("kinematics import seam (ESLint config)", () => {
     expect(blocksSpecifier(groups, "**/kinematics")).toBe(false);
   });
 
+  it.each(NON_SIM_PATHS)("blocks **/dynamics for %s", async (path) => {
+    const eslint = new ESLint({ cwd: PROJECT_ROOT });
+    const groups = patternGroups(await resolveConfig(eslint, path));
+    expect(blocksSpecifier(groups, "**/dynamics"), path).toBe(true);
+  });
+
+  it("lets src/dynamics import kinematics but nothing impure", async () => {
+    const eslint = new ESLint({ cwd: PROJECT_ROOT });
+    const groups = patternGroups(await resolveConfig(eslint, "src/dynamics/X.ts"));
+    expect(blocksSpecifier(groups, "**/kinematics")).toBe(false);
+    expect(blocksSpecifier(groups, "react")).toBe(true);
+    expect(blocksSpecifier(groups, "../sim")).toBe(true);
+  });
+
+  it("keeps src/kinematics from importing dynamics", async () => {
+    const eslint = new ESLint({ cwd: PROJECT_ROOT });
+    const groups = patternGroups(await resolveConfig(eslint, "src/kinematics/X.ts"));
+    expect(blocksSpecifier(groups, "../dynamics")).toBe(true);
+  });
+
   it("blocks react for src/sim/X.ts (pure orchestration)", async () => {
     const eslint = new ESLint({ cwd: PROJECT_ROOT });
     const config = await resolveConfig(eslint, "src/sim/X.ts");
@@ -111,9 +132,9 @@ describe("kinematics import seam (ESLint config)", () => {
   });
 });
 
-const ALLOWED_DIR_PREFIXES = ["src/kinematics", "src/sim", "src/legacy"];
+const ALLOWED_DIR_PREFIXES = ["src/kinematics", "src/dynamics", "src/sim", "src/legacy"];
 const KINEMATICS_IMPORT_PATTERN =
-  /\bfrom\s+["'][^"']*\/kinematics(\/[^"']*)?["']|\bimport\(\s*["'][^"']*\/kinematics(\/[^"']*)?["']\s*\)/;
+  /\bfrom\s+["'][^"']*\/(kinematics|dynamics)(\/[^"']*)?["']|\bimport\(\s*["'][^"']*\/(kinematics|dynamics)(\/[^"']*)?["']\s*\)/;
 
 /** Recursively collects every `.ts`/`.tsx` file under `dir`, relative to `PROJECT_ROOT`, skipping `__fixtures__` and the allowed seam directories. */
 function collectSourceFiles(dir: string): string[] {
@@ -136,7 +157,7 @@ function collectSourceFiles(dir: string): string[] {
 }
 
 describe("kinematics import seam (filesystem scan)", () => {
-  it("no file outside src/kinematics, src/sim or src/legacy imports .../kinematics", () => {
+  it("no file outside src/kinematics, src/dynamics, src/sim or src/legacy imports .../kinematics or .../dynamics", () => {
     const srcDir = join(PROJECT_ROOT, "src");
     const offenders: string[] = [];
     for (const file of collectSourceFiles(srcDir)) {

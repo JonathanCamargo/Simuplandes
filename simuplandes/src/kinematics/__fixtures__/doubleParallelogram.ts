@@ -71,7 +71,7 @@ export function build(): MechanismDocument {
   const jointO2Id = createId("joint");
 
   return makeDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "double-parallelogram",
     links: [ground.link, crank.link, idler.link, rocker.link, coupler.link],
     joints: [

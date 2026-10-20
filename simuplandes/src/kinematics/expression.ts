@@ -12,7 +12,7 @@
  * to closures instead: no `eval`, no `new Function`, no `expr-eval`.
  *
  * Identifiers are resolved ONLY through `Map`s built with `new Map([...])`
- * (`VARIABLES`, `CONSTANTS`, `FUNCTIONS`) — never a plain object indexed by
+ * (the compile-time variable list, `CONSTANTS`, `FUNCTIONS`) — never a plain object indexed by
  * user text, never `in`/`hasOwnProperty`, never `eval`/`new Function`/`with`.
  * `.` is legal only inside a number literal, so there is no member access;
  * `constructor`, `__proto__` and other non-whitelisted names are simply
@@ -33,14 +33,17 @@ export class ExpressionError extends Error {
 /** A compiled expression: the original source and a closure that evaluates it at a given `t`. */
 export interface CompiledExpression {
   readonly source: string;
+  /** Evaluates with the first variable (`t` by default) set to `t` and any others set to 0. */
   evaluate(t: number): number;
+  /** Evaluates with `values[i]` bound to the i-th name of the compile-time `variables` list. */
+  evaluateWith(values: ArrayLike<number>): number;
 }
 
 const MAX_SOURCE_LENGTH = 1000;
 const MAX_NESTING_DEPTH = 64;
 
-/** The only free variable an expression may reference: time (or the driven scrubber value), in seconds/units. */
-const VARIABLES = new Map<string, true>([["t", true]]);
+/** The default free variable list: time (or the driven scrubber value), in seconds/units. */
+const DEFAULT_VARIABLES: readonly string[] = ["t"];
 
 /** Named numeric constants. */
 const CONSTANTS = new Map<string, number>([
@@ -173,7 +176,7 @@ function tokenize(source: string): Token[] {
 
 type AstNode =
   | { readonly kind: "num"; readonly value: number }
-  | { readonly kind: "var" }
+  | { readonly kind: "var"; readonly index: number }
   | { readonly kind: "const"; readonly value: number }
   | { readonly kind: "neg"; readonly arg: AstNode }
   | {
@@ -196,7 +199,10 @@ class Parser {
   private pos = 0;
   private depth = 0;
 
-  constructor(private readonly tokens: readonly Token[]) {}
+  constructor(
+    private readonly tokens: readonly Token[],
+    private readonly variables: ReadonlyMap<string, number>,
+  ) {}
 
   private peek(): Token {
     return this.tokens[this.pos];
@@ -313,7 +319,8 @@ class Parser {
         return { kind: "call", name, args };
       }
 
-      if (VARIABLES.has(name)) return { kind: "var" };
+      const variableIndex = this.variables.get(name);
+      if (variableIndex !== undefined) return { kind: "var", index: variableIndex };
       if (CONSTANTS.has(name)) return { kind: "const", value: CONSTANTS.get(name)! };
       throw new ExpressionError(`unknown identifier "${name}"`, tok.pos);
     }
@@ -325,38 +332,42 @@ class Parser {
   }
 }
 
-/** Compiles an AST node into a closure `(t) => number`. Never throws at evaluation time. */
-function compileNode(node: AstNode): (t: number) => number {
+type Vars = ArrayLike<number>;
+
+/** Compiles an AST node into a closure `(vars) => number`. Never throws at evaluation time. */
+function compileNode(node: AstNode): (v: Vars) => number {
   switch (node.kind) {
     case "num": {
       const value = node.value;
       return () => value;
     }
-    case "var":
-      return (t: number) => t;
+    case "var": {
+      const index = node.index;
+      return (v: Vars) => v[index];
+    }
     case "const": {
       const value = node.value;
       return () => value;
     }
     case "neg": {
       const arg = compileNode(node.arg);
-      return (t: number) => -arg(t);
+      return (v: Vars) => -arg(v);
     }
     case "bin": {
       const left = compileNode(node.left);
       const right = compileNode(node.right);
       const op = node.op;
-      if (op === "+") return (t: number) => left(t) + right(t);
-      if (op === "-") return (t: number) => left(t) - right(t);
-      if (op === "*") return (t: number) => left(t) * right(t);
-      if (op === "/") return (t: number) => left(t) / right(t);
-      return (t: number) => Math.pow(left(t), right(t)); // op === "^"
+      if (op === "+") return (v: Vars) => left(v) + right(v);
+      if (op === "-") return (v: Vars) => left(v) - right(v);
+      if (op === "*") return (v: Vars) => left(v) * right(v);
+      if (op === "/") return (v: Vars) => left(v) / right(v);
+      return (v: Vars) => Math.pow(left(v), right(v)); // op === "^"
     }
     case "call": {
       const entry = FUNCTIONS.get(node.name)!;
       const argFns = node.args.map(compileNode);
       const fn = entry.fn;
-      return (t: number) => fn(...argFns.map((argFn) => argFn(t)));
+      return (v: Vars) => fn(...argFns.map((argFn) => argFn(v)));
     }
   }
 }
@@ -366,9 +377,14 @@ function compileNode(node: AstNode): (t: number) => number {
  * `CompiledExpression`. Throws `ExpressionError` for any parse/validation
  * failure; `evaluate` itself never throws (non-finite results, e.g. from
  * `1/0` or `sqrt(-1)`, are returned as-is — callers such as `drives.ts`
- * decide whether a non-finite value makes the motor invalid).
+ * decide whether a non-finite value makes the motor invalid). `variables`
+ * names the free variables the expression may use, in `evaluateWith` order
+ * (default: just `t`).
  */
-export function compileExpression(source: string): CompiledExpression {
+export function compileExpression(
+  source: string,
+  variables: readonly string[] = DEFAULT_VARIABLES,
+): CompiledExpression {
   if (source.trim().length === 0) {
     throw new ExpressionError("expression is empty", 0);
   }
@@ -379,15 +395,21 @@ export function compileExpression(source: string): CompiledExpression {
     );
   }
 
+  const variableIndex = new Map<string, number>(variables.map((name, i) => [name, i]));
   const tokens = tokenize(source);
-  const parser = new Parser(tokens);
+  const parser = new Parser(tokens, variableIndex);
   const ast = parser.parseProgram();
   const evaluateNode = compileNode(ast);
+  const single = new Float64Array(Math.max(variables.length, 1));
 
   return {
     source,
     evaluate(t: number): number {
-      return evaluateNode(t);
+      single[0] = t;
+      return evaluateNode(single);
+    },
+    evaluateWith(values: ArrayLike<number>): number {
+      return evaluateNode(values);
     },
   };
 }

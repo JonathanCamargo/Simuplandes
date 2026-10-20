@@ -48,7 +48,9 @@ export function buildLink(input: BuildLinkInput): BuiltLink {
   });
 
   const shape: LinkShape =
-    sites.length >= 3 ? { kind: "plate", outline: sites.map((s) => s.local) } : { kind: "bar" };
+    sites.length >= 3
+      ? { kind: "plate", outline: sites.map((s) => s.local) }
+      : { kind: "bar", path: sites.map((s) => s.id) };
 
   const link: Link = {
     id: input.id ?? createId("link"),

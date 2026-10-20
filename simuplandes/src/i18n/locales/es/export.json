@@ -11,7 +11,11 @@
     "copy": "Copiar",
     "copied": "Copiado",
     "download": "Descargar",
-    "jsonPreview": "Vista previa del JSON de mecanismo de GraphThe"
+    "jsonPreview": "Vista previa del JSON de mecanismo de GraphThe",
+    "imagesHeading": "Imágenes",
+    "imagesHint": "Lo que muestra el lienzo ahora, en la pose actual.",
+    "graphtheHeading": "GraphThe (JSON)",
+    "graphtheHint": "El mecanismo como grafo, para el flujo de investigación de GraphThe."
   },
   "report": {
     "ready": "Listo para exportar.",

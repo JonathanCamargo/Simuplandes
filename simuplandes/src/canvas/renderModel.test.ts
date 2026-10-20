@@ -4,6 +4,7 @@ import { createMechanismStore } from "../store/mechanismStore";
 import { buildExampleFourBar } from "../store/examples";
 import { fourBarFixtureParsed } from "../model/__fixtures__/fourBar";
 import { LINK_TYPE_COLORS } from "../ui/theme/tokens";
+import { MechanismDocumentSchema } from "../model";
 
 describe("buildRenderModel: geometrically-valid four-bar (store example)", () => {
   const store = createMechanismStore();
@@ -246,5 +247,55 @@ describe("buildRenderModel: sliders", () => {
     expect(slider.axisWorld.x).toBeCloseTo(0, 9);
     expect(slider.axisWorld.y).toBeCloseTo(1, 9);
     expect(slider.blockAngle).toBeCloseTo(Math.PI / 2, 9);
+  });
+});
+
+describe("buildRenderModel: springs and loads", () => {
+  const doc = MechanismDocumentSchema.parse({
+    ...fourBarFixtureParsed,
+    springs: [
+      {
+        id: "spring-1",
+        kind: "linear",
+        siteA: "site-2",
+        siteB: "site-6",
+        stiffness: 1,
+        freeLength: 10,
+      },
+      { id: "spring-2", kind: "torsional", jointId: "joint-3", stiffness: 1 },
+    ],
+    loads: [
+      { id: "load-1", siteId: "site-6", force: [0, -1], torque: 0 },
+      { id: "load-2", siteId: "site-4", force: [0, 0], torque: -2 },
+      { id: "load-3", siteId: "site-4", force: [0, 0], torque: 3 },
+    ],
+  });
+
+  it("draws a linear spring between its sites and a torsional one at its joint", () => {
+    const model = buildRenderModel(doc, new Set(["spring-2"]));
+    expect(model.springs).toEqual([
+      {
+        springId: "spring-1",
+        kind: "linear",
+        a: { x: 140, y: 0 },
+        b: { x: 90, y: 0 },
+        selected: false,
+      },
+      { springId: "spring-2", kind: "torsional", point: { x: 110, y: 40 }, selected: true },
+    ]);
+  });
+
+  it("follows posed geometry", () => {
+    const poses = new Map([["link-3", { position: [40, 10] as [number, number], angle: 0 }]]);
+    const spring = buildRenderModel(doc, new Set(), { poses }).springs[0];
+    expect(spring.kind === "linear" && spring.b).toEqual({ x: 90, y: 10 });
+  });
+
+  it("describes each load's force direction and torque sign", () => {
+    const model = buildRenderModel(doc, new Set());
+    expect(model.loads[0]).toMatchObject({ loadId: "load-1", torqueSign: 0 });
+    expect(model.loads[0].forceAngle).toBeCloseTo(-Math.PI / 2, 12);
+    expect(model.loads[1]).toMatchObject({ forceAngle: null, torqueSign: -1 });
+    expect(model.loads[2].torqueSign).toBe(1);
   });
 });

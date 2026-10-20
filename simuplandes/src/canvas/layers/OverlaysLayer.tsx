@@ -6,6 +6,8 @@
 
 import type { ReactNode } from "react";
 import { Layer, Circle, Line, RegularPolygon } from "react-konva";
+import { AnnotationStrokes } from "./AnnotationStrokes";
+import type { AnnotationPrimitive } from "../renderModel";
 import { worldToScreen, type Viewport } from "../viewport";
 import type { SnapResult } from "../snapping";
 import type { CanvasTokens } from "../../ui/theme/tokens";
@@ -14,14 +16,23 @@ export interface OverlaysLayerProps {
   viewport: Viewport;
   tokens: CanvasTokens;
   snap: SnapResult | null;
+  /** Hand-drawn annotations, drawn on top of the mechanism but under snap marks and tool previews. */
+  annotations?: readonly AnnotationPrimitive[];
   children?: ReactNode;
 }
 
-export function OverlaysLayer({ viewport, tokens, snap, children }: OverlaysLayerProps): ReactNode {
+export function OverlaysLayer({
+  viewport,
+  tokens,
+  snap,
+  annotations = [],
+  children,
+}: OverlaysLayerProps): ReactNode {
   const screen = snap ? worldToScreen(viewport, snap.point) : null;
 
   return (
     <Layer>
+      <AnnotationStrokes viewport={viewport} tokens={tokens} annotations={annotations} />
       {screen && snap?.kind === "site" && (
         <Circle
           x={screen.x}

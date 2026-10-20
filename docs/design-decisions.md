@@ -7,7 +7,7 @@ These are the main choices made during v0.1, with the reason for each. Smaller i
 | Decision | Rationale |
 |----------|-----------|
 | Rebuild Simuplandes in place, under a new `src/`, carrying over ideas rather than code | Keeps the repo history and the license. The v0.1 classes mixed model, Konva rendering and matter.js, and could not be serialized. |
-| Kinematics before dynamics | GraphThe is purely kinematic (coupler curves). Masses, forces and contact come in v2. |
+| Kinematics before dynamics | GraphThe is purely kinematic (coupler curves). Masses, forces and springs came afterwards, built on the same solver; contact is still out of scope. |
 | A custom exact solver instead of matter.js | Mechanisms need exact loop closure, prescribed motors and control over which branch the mechanism follows. matter.js is soft-constraint and drifts. |
 | Rewrite `constraint-solver-js` rather than recover it | Its source is lost. The geometry half became `src/geom`, and the solver half became `src/kinematics`. |
 | Spanish and English from day one; Spanish is the default | The audience is Uniandes students plus readers of publications. |
@@ -35,6 +35,20 @@ These are the main choices made during v0.1, with the reason for each. Smaller i
 | An in-repo expression parser for motor laws | `expr-eval` has unpatched code-execution advisories, and expressions come from user files. |
 | Solve on the main thread | Systems with 12 links or fewer solve at well over 60 steps/s. A Worker would only be added if profiling showed a need. |
 | Only `src/sim` may import `src/kinematics`, and both stay free of React (lint-enforced) | Keeps the solver pure and testable, and keeps per-frame work out of React. |
+
+## Dynamics
+
+| Decision | Rationale |
+|----------|-----------|
+| Dynamics reuses the kinematic coordinates, constraints, Jacobian and `γ` | One constraint model to validate. Joints and motion drivers behave identically in both analyses. |
+| One augmented solve `[M Jᵀ; J 0]` for forward dynamics, inverse dynamics and velocity projection | Inverse dynamics is the same system with a known acceleration, so the two always agree, and forward dynamics needed no second formulation. |
+| Assemble in SI coordinates (`colScale`/`rowScale`) | mm documents otherwise mix 1e-8 kg·mm² inertias with O(1) Jacobian entries. Multipliers come out directly in N and N·m. |
+| Drift control by projection (Newton on positions, kinetic-energy projection on velocities), not Baumgarte | No gains to tune, and the existing Newton solver does the position half. |
+| Fixed-step RK4 (≤ 1 ms) | Simple and accurate for the stiffness of classroom mechanisms. Energy is conserved to 1e-6 over seconds. |
+| Pre-integrated trajectory, computed in time slices, then played and scrubbed | A dynamic pose depends on its history, so time can't be jumped to. Time-slicing keeps the UI responsive without a Worker. |
+| Redundant constraints fall back to minimum-norm multipliers, flagged in the UI | Accelerations stay exact; only the (genuinely indeterminate) reactions are a choice. |
+| Effort expressions use the existing safe parser, with `t`, `q`, `dq` | Enough for torque laws and PD controllers, with no new attack surface. |
+| Kinematics analysis ignores effort settings | Every motor follows its motion there; dynamics only reports what that motion needs. One document serves both analyses. |
 
 ## Graph and interchange
 

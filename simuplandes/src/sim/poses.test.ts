@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { compileSystem } from "../kinematics";
 import { build as buildFourBar } from "../kinematics/__fixtures__/fourBar";
-import { posesFromState } from "./poses";
+import { posesFromState, sampleSweepPoses } from "./poses";
 
 describe("posesFromState", () => {
   it("returns one entry per link, ground included, matching the document's reference poses at q0", () => {
@@ -43,5 +43,34 @@ describe("posesFromState", () => {
       expect(pose.position).toHaveLength(2);
       expect(typeof pose.angle).toBe("number");
     }
+  });
+});
+
+describe("sampleSweepPoses", () => {
+  const doc = buildFourBar();
+  const system = compileSystem(doc);
+  const samples = Array.from({ length: 101 }, () => ({ q: system.q0 }));
+
+  it("keeps at most maxSamples entries, one pose map per kept sample", () => {
+    const picked = sampleSweepPoses(system, samples, 10);
+    expect(picked).toHaveLength(10);
+    for (const poses of picked) expect(poses.size).toBe(doc.links.length);
+  });
+
+  it("keeps every sample when there are fewer than maxSamples", () => {
+    expect(sampleSweepPoses(system, samples.slice(0, 5), 48)).toHaveLength(5);
+  });
+
+  it("always includes the first and last samples", () => {
+    const marked = samples.map((s, i) => ({
+      q: i === 100 ? Float64Array.from(s.q, (v) => v + 1) : s.q,
+    }));
+    const picked = sampleSweepPoses(system, marked, 7);
+    expect(picked[picked.length - 1]).toEqual(posesFromState(system, marked[100].q));
+    expect(picked[0]).toEqual(posesFromState(system, marked[0].q));
+  });
+
+  it("returns [] with no samples", () => {
+    expect(sampleSweepPoses(system, [])).toEqual([]);
   });
 });

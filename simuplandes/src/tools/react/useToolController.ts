@@ -16,6 +16,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useStore, type StoreApi } from "zustand";
 import type { Vec2 } from "../../geom";
+import { indexDocument } from "../../model";
 import type { MechanismStore } from "../../store";
 import { selectModalOpen, type StatusHint, type StudioState } from "../../uiState/studioStore";
 import type { PreferencesState } from "../../uiState/preferences";
@@ -27,7 +28,14 @@ import { formatNumber, type Language } from "../../i18n/numberFormat";
 import { TOOL_MACHINES, type AnyToolMachine } from "../machines";
 import { applyToolEffects } from "../effects";
 import type { DynamicInputState } from "../dynamicInput";
-import type { HintMessage, PreviewShape, ToolContext, ToolEvent } from "../types";
+import type {
+  EdgeMenu,
+  HintMessage,
+  PreviewShape,
+  ToolContext,
+  ToolEvent,
+  ToolHandle,
+} from "../types";
 import type { ToolId } from "../registry";
 
 export interface UseToolControllerOptions {
@@ -51,6 +59,11 @@ export interface DynamicInputOverlay {
 export interface UseToolControllerResult {
   onPointer: (event: CanvasPointerEvent) => void;
   preview: PreviewShape[];
+  handles: ToolHandle[];
+  /** The active tool's edge toolbar, if it wants one shown. */
+  edgeMenu?: EdgeMenu;
+  /** Sends a toolbar button press to the active tool (see `ToolEvent`'s `command`). */
+  sendCommand: (command: string) => void;
   dynamicInput?: DynamicInputOverlay;
   cursorWorld: Vec2 | null;
 }
@@ -63,11 +76,18 @@ interface MachineEntry {
 
 interface RenderState {
   preview: PreviewShape[];
+  handles: ToolHandle[];
+  edgeMenu?: EdgeMenu;
   dynamicInput?: DynamicInputOverlay;
   cursorWorld: Vec2 | null;
 }
 
-const EMPTY_RENDER_STATE: RenderState = { preview: [], dynamicInput: undefined, cursorWorld: null };
+const EMPTY_RENDER_STATE: RenderState = {
+  preview: [],
+  handles: [],
+  dynamicInput: undefined,
+  cursorWorld: null,
+};
 
 function formatHint(hint: HintMessage, lang: Language): StatusHint {
   if (!hint.values) return { key: hint.key };
@@ -117,6 +137,10 @@ export function useToolController(options: UseToolControllerOptions): UseToolCon
       selection: store.getState().selection,
       radiusWorld: 8 / view.getState().viewport.zoom,
       gestureSeed: `${gestureMountPrefix}-${gestureCounterRef.current}`,
+      brush: {
+        color: preferences.getState().brushColor,
+        widthPx: preferences.getState().brushWidthPx,
+      },
     };
   }
 
@@ -127,6 +151,8 @@ export function useToolController(options: UseToolControllerOptions): UseToolCon
     const dyn = entry.machine.dynamicInput(entry.state);
     setRenderState({
       preview: entry.machine.preview(entry.state),
+      handles: entry.machine.handles?.(entry.state, ctx) ?? [],
+      edgeMenu: entry.machine.edgeMenu?.(entry.state, ctx),
       dynamicInput: dyn ? { state: dyn, screenAt } : undefined,
       cursorWorld,
     });
@@ -143,6 +169,7 @@ export function useToolController(options: UseToolControllerOptions): UseToolCon
         ground: t("tools.defaultNames.ground"),
         slider: t("tools.defaultNames.slider"),
         marker: t("tools.defaultNames.marker"),
+        spring: t("tools.defaultNames.spring"),
       };
       const results = applyToolEffects(store, result.effects, { defaultNames });
       for (const r of results) {
@@ -188,10 +215,19 @@ export function useToolController(options: UseToolControllerOptions): UseToolCon
       alt: event.altKey,
     });
 
+    // The same label values `CanvasStage` sets, or the status bar would show
+    // a raw "{{link}}" placeholder for site and midpoint snaps.
+    const index = indexDocument(store.getState().document);
+    const snapLink = snap.linkId ? index.links.get(snap.linkId) : undefined;
+    const snapSite = snap.siteId ? index.sites.get(snap.siteId) : undefined;
     studio.getState().setSnapStatus({
       kind: snap.kind,
       labelKey: `canvas.snap.${snap.kind}`,
-      values: { deg: snap.angleDeg !== undefined ? String(Math.round(snap.angleDeg)) : "" },
+      values: {
+        link: snapLink?.name || snapLink?.id || "",
+        site: snapSite?.site.name || snapSite?.site.id || "",
+        deg: snap.angleDeg !== undefined ? String(Math.round(snap.angleDeg)) : "",
+      },
     });
     studio.getState().setCursorWorld(snap.point);
     publish(entry, event.screen, snap.point);
@@ -237,6 +273,18 @@ export function useToolController(options: UseToolControllerOptions): UseToolCon
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTool]);
 
+  // Handles are drawn from the document, so redraw them whenever it or the
+  // selection changes outside a tool event (undo/redo, the Inspector).
+  useEffect(() => {
+    return store.subscribe((next, prev) => {
+      const entry = entryRef.current;
+      if (!entry?.machine.handles) return;
+      if (next.document === prev.document && next.selection === prev.selection) return;
+      publish(entry, lastScreenRef.current, renderStateRef.current.cursorWorld);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store]);
+
   useEffect(() => {
     function onKeyDown(evt: KeyboardEvent): void {
       if (isEditableTarget(evt.target)) return;
@@ -261,6 +309,14 @@ export function useToolController(options: UseToolControllerOptions): UseToolCon
   return {
     onPointer,
     preview: renderState.preview,
+    handles: renderState.handles,
+    edgeMenu: renderState.edgeMenu,
+    sendCommand(command: string) {
+      const entry = entryRef.current;
+      if (!entry) return;
+      dispatch(entry, { type: "command", command });
+      publish(entry, lastScreenRef.current, renderStateRef.current.cursorWorld);
+    },
     dynamicInput: renderState.dynamicInput,
     cursorWorld: renderState.cursorWorld,
   };

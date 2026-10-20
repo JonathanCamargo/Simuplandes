@@ -6,7 +6,7 @@ The engine is in `simuplandes/src/kinematics/` (pure TypeScript) and is driven f
 
 v0.1 used matter.js, which enforces joints with soft, iterative constraints. Pins drift, and there is no way to prescribe a motor angle. That is fine for games but not for mechanism analysis. GraphThe also works purely kinematically, with coupler curves.
 
-So kinematics came first, with an exact solver. Dynamics (masses, forces, contact) is deferred to v2. matter.js is still a dependency, but only the legacy code uses it.
+So kinematics came first, with an exact solver. Dynamics (masses, forces, springs) now builds on it: see [dynamics.md](dynamics.md). Contact is still out of scope. matter.js is still a dependency, but only the legacy code uses it.
 
 Accuracy target: a loop-closure residual below 1e-9 (in model units) on every converged frame.
 

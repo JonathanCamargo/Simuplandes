@@ -19,6 +19,7 @@ import {
   type MobilityReport,
   type SolvedState,
 } from "../kinematics";
+import { compileDynamics, type DynamicSystem } from "../dynamics";
 import { indexDocument, type Id, type Joint, type MechanismDocument, type Motor } from "../model";
 
 /** The synthetic motor id used for a document with no motor but a drivable rank-1 DOF. */
@@ -57,11 +58,17 @@ export interface SimSessionSummary {
   readonly errorMessage: string | null;
 }
 
-/** A classified simulation session: the source document, its summary, and (when compilable) the compiled system and its assembled/reference start state. */
+/**
+ * A classified simulation session: the source document, its summary, and
+ * (when compilable) the compiled system, its dynamics layer and its
+ * assembled/reference start state. `dynamics` reports the forces the
+ * prescribed motion needs (inverse dynamics); effort motors are ignored.
+ */
 export interface SimSession {
   readonly document: MechanismDocument;
   readonly summary: SimSessionSummary;
   readonly system: KinematicSystem | null;
+  readonly dynamics: DynamicSystem | null;
   readonly start: SolvedState | null;
   readonly motorIndex: number;
 }
@@ -139,10 +146,11 @@ function chooseDrivenInput(doc: MechanismDocument): DrivenInputChoice {
   const kind: "rotary" | "linear" = tempJoint.type === "R" ? "rotary" : "linear";
   const tempMotor: Motor = {
     id: TEMP_DRIVER_ID,
-    name: "",
+    name: tempJoint.name || tempJoint.id,
     jointId: tempJoint.id,
     kind,
     drive: { mode: "constant", speed: 1 },
+    dynamics: { mode: "motion" },
   };
   return {
     simDoc: { ...doc, motors: [tempMotor] },
@@ -235,6 +243,7 @@ function emptySession(doc: MechanismDocument): SimSession {
       errorMessage: null,
     },
     system: null,
+    dynamics: null,
     start: null,
     motorIndex: -1,
   };
@@ -261,6 +270,7 @@ function invalidSession(
       errorMessage: message,
     },
     system: null,
+    dynamics: null,
     start: null,
     motorIndex,
   };
@@ -301,6 +311,7 @@ export function createSimSession(doc: MechanismDocument): SimSession {
     return invalidSession(doc, choice, motorIndex, err);
   }
 
+  const dynamics = compileDynamics(doc, system);
   const inputs = new Float64Array(system.motors.length);
   const initialViolations = jointResiduals(system, system.q0, inputs);
 
@@ -340,6 +351,7 @@ export function createSimSession(doc: MechanismDocument): SimSession {
         errorMessage: null,
       },
       system,
+      dynamics,
       start: null,
       motorIndex,
     };
@@ -360,6 +372,7 @@ export function createSimSession(doc: MechanismDocument): SimSession {
       errorMessage: null,
     },
     system,
+    dynamics,
     start,
     motorIndex,
   };

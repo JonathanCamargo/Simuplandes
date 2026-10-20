@@ -7,7 +7,7 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
 import type { MechanismDocument } from "../model";
 import type { Vec2 } from "../geom";
-import { documentBounds } from "./bounds";
+import { documentBounds, type Bounds, type DocumentBoundsOptions } from "./bounds";
 import {
   defaultViewport,
   fitToBounds,
@@ -22,8 +22,13 @@ export interface ViewState {
   setSize(widthPx: number, heightPx: number): void;
   zoomAtScreen(screenPt: Vec2, factor: number): void;
   panByScreen(d: { dx: number; dy: number }): void;
-  /** Fits the viewport to `doc`'s bounds, or `defaultViewport` for an empty document. */
-  fitDocument(doc: MechanismDocument): void;
+  /**
+   * Fits the viewport to `doc`'s bounds, or `defaultViewport` for an empty document.
+   * `options` frames what the canvas currently shows (Simulate-mode poses and traces).
+   */
+  fitDocument(doc: MechanismDocument, options?: DocumentBoundsOptions): void;
+  /** Fits the viewport to `bounds`, or `defaultViewport` for `null`. */
+  fitBounds(bounds: Bounds | null): void;
   /** Resets to `defaultViewport` at the current screen size. */
   reset(): void;
 }
@@ -48,8 +53,11 @@ export function createViewStore(initialSize?: { widthPx: number; heightPx: numbe
     panByScreen(d) {
       set({ viewport: panViewportByScreen(get().viewport, d) });
     },
-    fitDocument(doc) {
-      const bounds = documentBounds(doc);
+    fitDocument(doc, options) {
+      const bounds = documentBounds(doc, options);
+      set({ viewport: fitToBounds(get().viewport, bounds) });
+    },
+    fitBounds(bounds) {
       set({ viewport: fitToBounds(get().viewport, bounds) });
     },
     reset() {

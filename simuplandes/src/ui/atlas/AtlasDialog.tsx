@@ -252,7 +252,17 @@ function AtlasDialogBody({
                     <Typography variant="subtitle2" component="div" noWrap>
                       {entry.id}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" component="div" noWrap>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      component="div"
+                      sx={{
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
                       {[entryName(entry), entry.assortmentLabel]
                         .filter((s) => s !== "")
                         .join(" · ")}

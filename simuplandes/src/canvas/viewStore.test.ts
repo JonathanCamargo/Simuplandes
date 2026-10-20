@@ -57,6 +57,14 @@ describe("createViewStore", () => {
     expect(v.panWorld).toEqual({ x: 70, y: 15 });
   });
 
+  it("fitBounds frames the given bounds, and null resets to defaultViewport", () => {
+    const store = createViewStore({ widthPx: 800, heightPx: 600 });
+    store.getState().fitBounds({ min: { x: 0, y: 0 }, max: { x: 200, y: 100 } });
+    expect(store.getState().viewport.panWorld).toEqual({ x: 100, y: 50 });
+    store.getState().fitBounds(null);
+    expect(store.getState().viewport).toEqual(defaultViewport(800, 600));
+  });
+
   it("reset returns to defaultViewport at the current size", () => {
     const store = createViewStore({ widthPx: 800, heightPx: 600 });
     store.getState().setSize(1000, 400);

@@ -8,11 +8,12 @@
  */
 
 import { Fragment, type ReactNode } from "react";
-import { Circle, Line, Text } from "react-konva";
+import { Circle, Group, Line, Rect, Text } from "react-konva";
 import { distance, type Vec2 } from "../../geom";
 import { formatNumber, type Language } from "../../i18n/numberFormat";
-import type { PreviewShape } from "../../tools/types";
+import type { PreviewShape, ToolHandle } from "../../tools/types";
 import { worldToScreen, type Viewport } from "../viewport";
+import { StrokeShape } from "./AnnotationStrokes";
 import type { CanvasTokens } from "../../ui/theme/tokens";
 
 export interface ToolPreviewProps {
@@ -20,7 +21,13 @@ export interface ToolPreviewProps {
   tokens: CanvasTokens;
   language: Language;
   shapes: readonly PreviewShape[];
+  /** The active tool's grab handles (Draw mode's shape editing); none by default. */
+  handles?: readonly ToolHandle[];
 }
+
+/** Half the side of a vertex handle's square, in screen px. */
+const VERTEX_HANDLE_HALF = 5;
+const MIDPOINT_HANDLE_RADIUS = 3.5;
 
 /** Long enough to always cross the visible viewport at any zoom this app supports. */
 const RAY_LENGTH_WORLD = 1_000_000;
@@ -34,9 +41,102 @@ function flat(viewport: Viewport, points: readonly Vec2[]): number[] {
   return out;
 }
 
-export function ToolPreview({ viewport, tokens, language, shapes }: ToolPreviewProps): ReactNode {
+/** One grab handle: a square vertex, a round midpoint, a diamond arc apex, or a control point with its tangent line. */
+function HandleGlyph({
+  handle,
+  viewport,
+  tokens,
+}: {
+  handle: ToolHandle;
+  viewport: Viewport;
+  tokens: CanvasTokens;
+}): ReactNode {
+  const screen = worldToScreen(viewport, handle.at);
+  const fill = handle.active ? tokens.accent : tokens.panel;
+  switch (handle.kind) {
+    case "vertex":
+      return (
+        <Rect
+          name="tool-handle-vertex"
+          x={screen.x - VERTEX_HANDLE_HALF}
+          y={screen.y - VERTEX_HANDLE_HALF}
+          width={VERTEX_HANDLE_HALF * 2}
+          height={VERTEX_HANDLE_HALF * 2}
+          fill={fill}
+          stroke={tokens.accent}
+          strokeWidth={1.5}
+          listening={false}
+        />
+      );
+    case "bulge":
+      return (
+        <Rect
+          name="tool-handle-bulge"
+          x={screen.x}
+          y={screen.y}
+          offsetX={VERTEX_HANDLE_HALF}
+          offsetY={VERTEX_HANDLE_HALF}
+          rotation={45}
+          width={VERTEX_HANDLE_HALF * 2}
+          height={VERTEX_HANDLE_HALF * 2}
+          fill={fill}
+          stroke={tokens.accent}
+          strokeWidth={1.5}
+          listening={false}
+        />
+      );
+    case "control": {
+      const from = handle.from ? worldToScreen(viewport, handle.from) : screen;
+      return (
+        <Group name="tool-handle-control" listening={false}>
+          <Line
+            points={[from.x, from.y, screen.x, screen.y]}
+            stroke={tokens.accent}
+            strokeWidth={1}
+            dash={[3, 3]}
+            listening={false}
+          />
+          <Circle
+            x={screen.x}
+            y={screen.y}
+            radius={VERTEX_HANDLE_HALF}
+            fill={fill}
+            stroke={tokens.accent}
+            strokeWidth={1.5}
+            listening={false}
+          />
+        </Group>
+      );
+    }
+    case "midpoint":
+      return (
+        <Circle
+          name="tool-handle-midpoint"
+          x={screen.x}
+          y={screen.y}
+          radius={MIDPOINT_HANDLE_RADIUS}
+          fill={fill}
+          stroke={tokens.accent}
+          strokeWidth={1}
+          opacity={0.8}
+          listening={false}
+        />
+      );
+  }
+}
+
+export function ToolPreview({
+  viewport,
+  tokens,
+  language,
+  shapes,
+  handles = [],
+}: ToolPreviewProps): ReactNode {
   return (
     <>
+      {handles.map((handle, i) => (
+        <HandleGlyph key={`handle-${i}`} handle={handle} viewport={viewport} tokens={tokens} />
+      ))}
       {shapes.map((shape, i) => {
         switch (shape.kind) {
           case "segment": {
@@ -114,6 +214,18 @@ export function ToolPreview({ viewport, tokens, language, shapes }: ToolPreviewP
               />
             );
           }
+          case "stroke":
+            return (
+              <StrokeShape
+                key={i}
+                name="tool-preview-stroke"
+                viewport={viewport}
+                tokens={tokens}
+                points={shape.points}
+                color={shape.color}
+                width={shape.width}
+              />
+            );
           case "point": {
             const screen = worldToScreen(viewport, shape.at);
             return (

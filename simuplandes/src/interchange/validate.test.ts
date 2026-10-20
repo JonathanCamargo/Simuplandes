@@ -30,7 +30,7 @@ function cleanFourBar(): MechanismDocument {
     createId("joint"),
   ];
   return makeDoc({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "clean four-bar",
     links: [ground.link, crank.link, coupler.link, rocker.link],
     joints: [
@@ -72,7 +72,7 @@ describe("buildExportReport: merged ground", () => {
     });
     const [j1, j2, j3] = [createId("joint"), createId("joint"), createId("joint")];
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "merged",
       links: [g1.link, g2.link, crank.link, rocker.link],
       joints: [
@@ -120,7 +120,7 @@ describe("buildExportReport: can't-simulate errors (warn but allow)", () => {
       { id: createId("joint"), name: "e", type: "R", siteA: l5.siteIds.e, siteB: ground.siteIds.e },
     ];
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "five-bar",
       links: [ground.link, l2.link, l3.link, l4.link, l5.link],
       joints,
@@ -197,7 +197,7 @@ describe("buildExportReport: can't-simulate errors (warn but allow)", () => {
     const block = buildLink({ name: "block", origin: [50, 20], sites: { s: [50, 20] } });
     const jP = createId("joint");
     const linear = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "linear",
       links: [rail.link, block.link],
       joints: [
@@ -239,7 +239,7 @@ describe("buildExportReport: structural notes", () => {
     const first = createId("joint");
     const second = createId("joint");
     const parsed = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "parallel",
       links: [ground.link, link.link],
       joints: [
@@ -265,7 +265,7 @@ describe("buildExportReport: structural notes", () => {
 
     // No ground: error.
     const noGroundDoc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "no ground",
       links: [link.link],
       joints: [],
@@ -299,7 +299,7 @@ describe("buildExportReport: structural notes", () => {
     const g2 = buildLink({ name: "g2", isGround: true, origin: [0, 0], sites: { b: [10, 0] } });
     const loopId = createId("joint");
     const loopDoc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "loop",
       links: [g1.link, g2.link],
       joints: [{ id: loopId, name: "loop", type: "R", siteA: g1.siteIds.a, siteB: g2.siteIds.b }],
@@ -322,7 +322,7 @@ describe("buildExportReport: structural notes", () => {
     const danglingLink = buildLink({ name: "dangler", origin: [30, 0], sites: { r: [30, 0] } });
     const [j1, j2] = [createId("joint"), createId("joint")];
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "degree-1",
       links: [ground.link, crank.link, danglingLink.link],
       joints: [
@@ -355,7 +355,7 @@ describe("buildExportReport: multi-joint", () => {
     const D = buildLink({ name: "D", origin: [0, 0], sites: { p: [10, 10], s: [-25, 10] } });
     const [jBC, jCD] = [createId("joint"), createId("joint")];
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "chain",
       links: [B.link, C.link, D.link],
       joints: [
@@ -393,7 +393,7 @@ describe("buildExportReport: ordering and keys", () => {
       createId("joint"),
     ];
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "everything",
       links: [g1.link, g2.link, B.link, C.link, D.link],
       joints: [
@@ -443,7 +443,7 @@ describe("buildExportReport: ordering and keys", () => {
     const D = buildLink({ name: "D", origin: [0, 0], sites: { p: [10, 10], s: [-25, 10] } });
     const [jBC, jCD, jBD] = [createId("joint"), createId("joint"), createId("joint")];
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "triangle",
       links: [B.link, C.link, D.link],
       joints: [

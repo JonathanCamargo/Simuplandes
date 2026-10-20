@@ -50,7 +50,7 @@ function fourBarDoc(): { doc: MechanismDocument; ground: ReturnType<typeof build
 
   const [j01, j12, j23, j30] = jointIds(4);
   const doc = makeDoc({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "four-bar",
     links: [ground.link, crank.link, coupler.link, rocker.link],
     joints: [
@@ -175,7 +175,7 @@ describe("exportGraphthe: merged ground", () => {
     const j1 = createId("joint");
     const j2 = createId("joint");
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "merged",
       links: [groundA.link, groundB.link, crank.link, rocker.link],
       joints: [
@@ -211,7 +211,7 @@ describe("exportGraphthe: merged ground", () => {
     const a = buildLink({ name: "a", origin: [0, 0], sites: { p: [0, 0], q: [30, 0] } });
     const b = buildLink({ name: "b", origin: [0, 0], sites: { r: [0, 0], s: [30, 40] } });
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "floating",
       links: [a.link, b.link],
       joints: [
@@ -241,7 +241,7 @@ describe("exportGraphthe: prismatic joints", () => {
     });
     const slider = buildLink({ name: "slider", origin: [0, 0], sites: { t: [50, 20] } });
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "slider",
       links: [railOwner.link, slider.link],
       joints: [
@@ -296,7 +296,7 @@ describe("exportGraphthe: structural notes", () => {
     const first = createId("joint");
     const second = createId("joint");
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "parallel",
       links: [ground.link, link.link],
       joints: [
@@ -332,7 +332,7 @@ describe("exportGraphthe: structural notes", () => {
     const loop = createId("joint");
     const dangling = createId("joint");
     const parsed = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "warned",
       links: [ground.link, ground2.link],
       joints: [
@@ -404,7 +404,7 @@ describe("exportGraphthe: multi-joint star split", () => {
     const jBC = createId("joint");
     const jCD = createId("joint");
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "chain",
       links: [B.link, C.link, D.link],
       joints: [
@@ -463,7 +463,7 @@ describe("exportGraphthe: multi-joint star split", () => {
     const D = buildLink({ name: "D", origin: [0, 0], sites: { p: [10, 10], s: [-25, 10] } });
     const [jBC, jCD, jBD] = [createId("joint"), createId("joint"), createId("joint")];
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "triangle",
       links: [B.link, C.link, D.link],
       joints: [
@@ -496,7 +496,7 @@ describe("exportGraphthe: multi-joint star split", () => {
     const D = buildLink({ name: "D", origin: [0, 0], sites: { p: [10, 10], s: [-25, 10] } });
     const [jGC, jGD] = [createId("joint"), createId("joint")];
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "ground hub",
       links: [ground.link, C.link, D.link],
       joints: [
@@ -546,7 +546,7 @@ describe("exportGraphthe: multi-joint star split", () => {
     const D = buildLink({ name: "D", origin: [0, 0], sites: { p: [10, 10], s: [-25, 10] } });
     const [jBC, jCD, jBD] = [createId("joint"), createId("joint"), createId("joint")];
     return makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "triangle",
       links: [B.link, C.link, D.link],
       joints: [
@@ -574,7 +574,7 @@ describe("exportGraphthe: multi-joint star split", () => {
     });
     const [jR, jP] = [createId("joint"), createId("joint")];
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "slider-crank",
       links: [ground.link, crank.link, slider.link],
       joints: [
@@ -651,7 +651,7 @@ describe("serializeGraphthe: contract key order", () => {
     const slider = buildLink({ name: "slider", origin: [0, 0], sites: { t: [50, 20] } });
     const jointId = createId("joint");
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "slider-motor",
       links: [railOwner.link, slider.link],
       joints: [

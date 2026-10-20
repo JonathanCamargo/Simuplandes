@@ -80,12 +80,64 @@
       "needLink": "Click on a link that isn't ground"
     }
   },
+  "vertex": {
+    "label": "Edit shape",
+    "description": "Reshape a plate's outline or bend a bar: move vertices, add arcs and curves",
+    "hint": {
+      "idle": "Click a plate or a bar to edit its shape",
+      "plateSelected": "Drag a vertex to move it; drag an edge's midpoint to add a vertex, Shift+drag to bend it",
+      "barSelected": "Drag a segment's midpoint to bend it; click it for more options",
+      "vertexSelected": "Drag to move; Delete removes the vertex",
+      "minVertices": "A plate needs at least 3 vertices",
+      "edgeSelected": "Choose Line, Arc or Curve above the edge; Delete straightens it",
+      "dragging": "Release to place the vertex",
+      "bending": "Release to finish the curve"
+    },
+    "edge": {
+      "label": "Edge type",
+      "line": "Line",
+      "arc": "Arc",
+      "bezier": "Curve",
+      "split": "Split"
+    }
+  },
+  "brush": {
+    "label": "Brush",
+    "description": "Draw freehand notes on top of the mechanism",
+    "hint": {
+      "idle": "Drag to draw a note; pick its color and width at the top left",
+      "painting": "Release to finish the stroke; Esc discards it"
+    },
+    "toolbar": "Brush",
+    "color": "Brush color",
+    "width": "Brush width",
+    "widthPx": "{{px}} px",
+    "colors": {
+      "ink": "Ink",
+      "red": "Red",
+      "blue": "Blue",
+      "green": "Green",
+      "orange": "Orange"
+    }
+  },
+  "eraser": {
+    "label": "Eraser",
+    "description": "Erase freehand notes",
+    "hint": {
+      "idle": "Click or drag across notes to erase them",
+      "erasing": "Drag across the notes to erase",
+      "empty": "There are no notes to erase"
+    },
+    "clearAll": "Clear all notes",
+    "toolbar": "Clear all notes"
+  },
   "defaultNames": {
     "bar": "Bar",
     "plate": "Plate",
     "ground": "Ground",
     "slider": "Slider",
-    "marker": "Point"
+    "marker": "Point",
+    "spring": "Spring"
   },
   "shortcuts": {
     "undo": "Undo",
@@ -102,5 +154,14 @@
     "middleDragPan": "Middle-drag: pan",
     "shiftClickAddSelection": "Shift+click: add to selection",
     "toggleMode": "Toggle Build/Simulate"
+  },
+  "spring": {
+    "label": "Spring",
+    "description": "Connect two links with a spring-damper",
+    "hint": {
+      "idle": "Click a joint or a link to start a spring; empty space anchors it to ground",
+      "pickSecond": "Click a point on another link, or empty space for ground",
+      "differentLink": "Pick a point on a different link"
+    }
   }
 }

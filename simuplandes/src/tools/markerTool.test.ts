@@ -35,7 +35,7 @@ function pointermove(world: { x: number; y: number }): ToolEvent {
 }
 
 const GROUND_AND_COUPLER: MechanismDocument = MechanismDocumentSchema.parse({
-  schemaVersion: 1,
+  schemaVersion: 2,
   links: [
     {
       id: "link-ground",
@@ -168,6 +168,7 @@ describe("markerTool", () => {
         ground: "Bancada",
         slider: "Corredera",
         marker: "Punto",
+        spring: "Resorte",
       },
     });
 

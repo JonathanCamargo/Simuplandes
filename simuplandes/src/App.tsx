@@ -1,6 +1,6 @@
 import { useEffect, useMemo, type ReactNode } from "react";
 import { useStore, type StoreApi } from "zustand";
-import { ThemeProvider, CssBaseline } from "@mui/material";
+import { ThemeProvider, CssBaseline, ScopedCssBaseline } from "@mui/material";
 import { I18nextProvider } from "react-i18next";
 import type { i18n as I18nInstance } from "i18next";
 import { createStudioTheme } from "./ui/theme/studioTheme";
@@ -14,6 +14,14 @@ export interface AppProps {
   preferences: StoreApi<PreferencesState>;
   studio: StoreApi<StudioState>;
   i18n: I18nInstance;
+  /**
+   * Rendered inside a host page (`src/lib.tsx`) rather than owning the
+   * document: the CSS baseline is scoped to the studio and `<html>` is left
+   * untouched.
+   */
+  embedded?: boolean;
+  /** CSS height of the studio shell; defaults to the full viewport. */
+  height?: string;
 }
 
 /**
@@ -21,7 +29,14 @@ export interface AppProps {
  * preferences store (Pattern 7 -- theme/language live outside the document
  * and outside undo history), then renders the studio shell.
  */
-export default function App({ session, preferences, studio, i18n }: AppProps): ReactNode {
+export default function App({
+  session,
+  preferences,
+  studio,
+  i18n,
+  embedded = false,
+  height,
+}: AppProps): ReactNode {
   const themeMode = useStore(preferences, (s) => s.themeMode);
   const language = useStore(preferences, (s) => s.language);
 
@@ -32,15 +47,31 @@ export default function App({ session, preferences, studio, i18n }: AppProps): R
   }, [i18n, language]);
 
   useEffect(() => {
+    if (embedded) return;
     document.documentElement.lang = language;
     document.documentElement.dataset.theme = themeMode;
-  }, [language, themeMode]);
+  }, [embedded, language, themeMode]);
+
+  const shell = (
+    <StudioShell
+      session={session}
+      preferencesStore={preferences}
+      studioStore={studio}
+      height={height}
+    />
+  );
 
   return (
     <I18nextProvider i18n={i18n}>
       <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <StudioShell session={session} preferencesStore={preferences} studioStore={studio} />
+        {embedded ? (
+          <ScopedCssBaseline sx={{ fontVariantNumeric: "tabular-nums" }}>{shell}</ScopedCssBaseline>
+        ) : (
+          <>
+            <CssBaseline />
+            {shell}
+          </>
+        )}
       </ThemeProvider>
     </I18nextProvider>
   );

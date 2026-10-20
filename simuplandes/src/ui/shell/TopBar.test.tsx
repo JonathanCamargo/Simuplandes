@@ -14,6 +14,7 @@ import { serializeDocument } from "../../model";
 import { fourBarFixtureParsed } from "../../model/__fixtures__/fourBar";
 import { saveDocumentToFile, openTextFromFile } from "../../persistence/fileIO";
 import { installDomStubs } from "../../test/domStubs";
+import { buildShareUrl } from "../../persistence/shareLink";
 import type { Session } from "../../persistence/session";
 
 vi.mock("../../persistence/fileIO", async (importOriginal) => {
@@ -25,7 +26,15 @@ vi.mock("../../persistence/fileIO", async (importOriginal) => {
   };
 });
 
+// jsdom has no Blob.stream()/CompressionStream; the encoding itself is covered
+// by shareLink.test.ts (Node), so here only the wiring is checked.
+vi.mock("../../persistence/shareLink", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../persistence/shareLink")>();
+  return { ...actual, buildShareUrl: vi.fn() };
+});
+
 const mockSave = vi.mocked(saveDocumentToFile);
+const mockBuildShareUrl = vi.mocked(buildShareUrl);
 const mockOpen = vi.mocked(openTextFromFile);
 
 beforeAll(() => {
@@ -398,5 +407,62 @@ describe("TopBar DofBadge placement", () => {
     fireEvent.click(screen.getByRole<HTMLButtonElement>("button", { name: "Simular" }));
     expect(studioStore.getState().mode).toBe("simulate");
     expect(screen.getByTestId("dof-badge")).toBeTruthy();
+  });
+});
+
+describe("TopBar sharing and file shortcuts", () => {
+  it("Copy share link copies the share URL of the current document", async () => {
+    const session = freshSession();
+    session.store.getState().loadDocument(fourBarFixtureParsed);
+    mockBuildShareUrl.mockResolvedValue("https://example.test/#m=abc");
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    renderTopBar(session, "es");
+
+    await openFileMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Copiar enlace para compartir" }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("https://example.test/#m=abc"));
+    expect(mockBuildShareUrl.mock.calls[0][0]).toEqual(fourBarFixtureParsed);
+    expect((await screen.findByRole("alert")).textContent).toContain("Enlace copiado");
+  });
+
+  it("a failed clipboard write shows an error toast", async () => {
+    const session = freshSession();
+    mockBuildShareUrl.mockResolvedValue("https://example.test/#m=abc");
+    const writeText = vi.fn().mockRejectedValue(new Error("denied"));
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    renderTopBar(session, "es");
+
+    await openFileMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Copiar enlace para compartir" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("No se pudo copiar");
+  });
+
+  it("Export image switches the dock to the Export tab", async () => {
+    const session = freshSession();
+    const { studioStore } = renderTopBar(session, "es");
+
+    await openFileMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Exportar imagen…" }));
+    expect(studioStore.getState().rightDockTab).toBe("export");
+  });
+
+  it("Ctrl+S saves the current document", async () => {
+    const session = freshSession();
+    mockSave.mockResolvedValue({ kind: "cancelled" });
+    renderTopBar(session, "es");
+
+    fireEvent.keyDown(document.body, { key: "s", code: "KeyS", ctrlKey: true });
+    await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1));
+  });
+
+  it("menu items keep plain accessible names even with a shortcut hint", async () => {
+    const session = freshSession();
+    renderTopBar(session, "es");
+
+    await openFileMenu();
+    expect(screen.getByRole("menuitem", { name: "Guardar" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Abrir" })).toBeTruthy();
   });
 });

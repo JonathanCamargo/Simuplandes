@@ -391,7 +391,7 @@ export function gtmToDocument(fx: GtmFixture): MechanismDocument {
   });
 
   return makeDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: fx.name,
     links,
     joints,

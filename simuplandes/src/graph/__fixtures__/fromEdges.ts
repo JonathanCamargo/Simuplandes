@@ -157,7 +157,7 @@ export function documentFromEdges(
 
     const shape: MechanismDocument["links"][number]["shape"] =
       degree <= 2
-        ? { kind: "bar" }
+        ? { kind: "bar", path: incident.map(({ siteId }) => siteId) }
         : (() => {
             const distinct = dedupe(localPoints);
             const hull = distinct.length < 3 ? [] : convexHull(distinct);
@@ -200,7 +200,7 @@ export function documentFromEdges(
   });
 
   const doc = MechanismDocumentSchema.parse({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: options.name ?? "fromEdges",
     units: { length: "mm" },
     links,

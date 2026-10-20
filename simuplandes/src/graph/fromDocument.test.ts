@@ -146,7 +146,7 @@ describe("fromDocument", () => {
 
   it("reports a danglingJoint warning for a site id that does not resolve", () => {
     const input: MechanismDocumentInput = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "dangling",
       units: { length: "mm" },
       links: [
@@ -215,7 +215,7 @@ describe("fromDocument", () => {
   });
 
   it("returns an empty graph for an empty document", () => {
-    const doc = MechanismDocumentSchema.parse({ schemaVersion: 1 });
+    const doc = MechanismDocumentSchema.parse({ schemaVersion: 2 });
     const g = fromDocument(doc);
     expect(g.nodes).toEqual([]);
     expect(g.edges).toEqual([]);

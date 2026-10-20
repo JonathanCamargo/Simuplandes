@@ -156,7 +156,7 @@ describe("round trip of synthetic documents", () => {
     });
     const [j1, j2, j3] = [createId("joint"), createId("joint"), createId("joint")];
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "merged four-bar",
       links: [groundA.link, groundB.link, crank.link, rocker.link],
       joints: [
@@ -213,7 +213,7 @@ describe("round trip of synthetic documents", () => {
     });
     const [jr, jc, js] = [createId("joint"), createId("joint"), createId("joint")];
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "rotated rail",
       links: [ground.link, rail.link, crank.link, slider.link],
       joints: [

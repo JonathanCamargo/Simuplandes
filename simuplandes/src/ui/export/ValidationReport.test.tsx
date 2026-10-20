@@ -22,7 +22,7 @@ function badMotorDoc() {
   const link = buildLink({ name: "link", origin: [30, 0], sites: { r: [30, 0], s: [60, 30] } });
   const [j1, j2] = [createId("joint"), createId("joint")];
   const doc = makeDoc({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "bad-motor",
     links: [ground.link, crank.link, link.link],
     joints: [

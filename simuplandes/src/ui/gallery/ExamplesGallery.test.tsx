@@ -35,7 +35,7 @@ function setup(variant: "dialog" | "inline", lang: "en" | "es" = "en") {
 }
 
 describe("ExamplesGallery", () => {
-  it("renders five localized cards inline", () => {
+  it("renders the seven localized cards inline", () => {
     setup("inline");
     const cards = screen.getAllByTestId("example-card");
     expect(cards.map((c) => c.getAttribute("data-example-id"))).toEqual([
@@ -44,6 +44,8 @@ describe("ExamplesGallery", () => {
       "watt",
       "stephenson",
       "eight-bar",
+      "double-pendulum",
+      "mass-spring",
     ]);
     expect(screen.getByText("Four-bar")).toBeTruthy();
     expect(within(cards[0]).getByTestId("drawing-svg")).toBeTruthy();
@@ -62,7 +64,7 @@ describe("ExamplesGallery", () => {
   it("opens, lists the cards and closes from the close button", async () => {
     const { studio } = setup("dialog");
     studio.getState().openDialog("examples");
-    expect(await screen.findAllByTestId("example-card")).toHaveLength(5);
+    expect(await screen.findAllByTestId("example-card")).toHaveLength(7);
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(studio.getState().dialog).toBeNull();
   });
@@ -73,6 +75,29 @@ describe("ExamplesGallery", () => {
     expect(store.getState().document.links).toHaveLength(4);
     expect(store.getState().document.motors).toHaveLength(1);
     expect(store.getState().canUndo).toBe(false);
+    expect(studio.getState().mode).toBe("simulate");
+  });
+
+  it("reports a dynamics example's analysis before opening it", () => {
+    const { store, studio } = setup("inline");
+    cleanup();
+    const analyses: string[] = [];
+    render(
+      <I18nextProvider i18n={createI18n("en")}>
+        <ThemeProvider theme={createStudioTheme("light", "en")}>
+          <ExamplesGallery
+            store={store}
+            studio={studio}
+            variant="inline"
+            onAnalysis={(analysis) => analyses.push(analysis)}
+          />
+        </ThemeProvider>
+      </I18nextProvider>,
+    );
+    fireEvent.click(screen.getAllByTestId("example-card")[5]);
+    expect(analyses).toEqual(["dynamics"]);
+    expect(store.getState().document.springs).toHaveLength(0);
+    expect(store.getState().document.links).toHaveLength(3);
     expect(studio.getState().mode).toBe("simulate");
   });
 

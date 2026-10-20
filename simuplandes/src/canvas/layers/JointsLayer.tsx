@@ -1,10 +1,12 @@
 /**
  * Drafting-style joint glyphs: hatched ground pivots, white pin circles
  * with an ink ring, slider blocks on hatched rails, motor arc-arrows,
- * marker crosshairs and hollow free-site dots.
+ * marker crosshairs, hollow free-site dots, zigzag and spiral springs, and
+ * load arrows.
  *
  * Every glyph carries a stable id (`pin:<jointId>`, `slider:<jointId>`,
- * `motor:<jointId>`, `marker:<markerId>`, `site:<siteId>`, `ground:<siteId>`)
+ * `motor:<jointId>`, `marker:<markerId>`, `site:<siteId>`, `ground:<siteId>`,
+ * `spring:<springId>`, `load:<loadId>`)
  * -- the Phase 5 posed-rendering seam (`applyRenderModelToLayers`) finds
  * these nodes by id and repositions them imperatively. Forwards its ref to
  * the underlying Konva `Layer` so `CanvasStage` can pass it to that seam.
@@ -18,9 +20,10 @@
  */
 
 import { forwardRef, type ReactNode } from "react";
-import { Layer, Circle, Line, Rect, Arc, Group } from "react-konva";
+import { Layer, Circle, Line, Rect, Arc, Arrow, Group } from "react-konva";
 import type Konva from "konva";
 import { worldToScreen, angleToKonvaRotationDeg, type Viewport } from "../viewport";
+import { springZigzag, torsionalSpiral, LOAD_ARROW_LENGTH } from "../springGlyph";
 import type { RenderModel } from "../renderModel";
 import type { CanvasTokens } from "../../ui/theme/tokens";
 
@@ -179,6 +182,85 @@ export const JointsLayer = forwardRef<Konva.Layer, JointsLayerProps>(function Jo
               strokeWidth={1.5}
               listening={false}
             />
+          </Group>
+        );
+      })}
+
+      {model.springs.map((spring) => {
+        const stroke = spring.selected ? tokens.selection : tokens.ok;
+        const strokeWidth = spring.selected ? 2.5 : 1.5;
+        if (spring.kind === "linear") {
+          const a = worldToScreen(viewport, spring.a);
+          const b = worldToScreen(viewport, spring.b);
+          return (
+            <Group
+              key={spring.springId}
+              id={`spring:${spring.springId}`}
+              name={haloNames({ selected: spring.selected, hovered: false })}
+              listening={false}
+            >
+              <Line
+                points={springZigzag(a, b)}
+                stroke={stroke}
+                strokeWidth={strokeWidth}
+                lineJoin="round"
+                listening={false}
+              />
+            </Group>
+          );
+        }
+        const s = worldToScreen(viewport, spring.point);
+        return (
+          <Group
+            key={spring.springId}
+            id={`spring:${spring.springId}`}
+            name={haloNames({ selected: spring.selected, hovered: false })}
+            x={s.x}
+            y={s.y}
+            listening={false}
+          >
+            <Line
+              points={torsionalSpiral()}
+              stroke={stroke}
+              strokeWidth={strokeWidth}
+              listening={false}
+            />
+          </Group>
+        );
+      })}
+
+      {model.loads.map((load) => {
+        const s = worldToScreen(viewport, load.point);
+        return (
+          <Group
+            key={load.loadId}
+            id={`load:${load.loadId}`}
+            x={s.x}
+            y={s.y}
+            rotation={load.forceAngle === null ? 0 : angleToKonvaRotationDeg(load.forceAngle)}
+            listening={false}
+          >
+            {load.forceAngle !== null ? (
+              <Arrow
+                points={[0, 0, LOAD_ARROW_LENGTH, 0]}
+                stroke={tokens.err}
+                fill={tokens.err}
+                strokeWidth={2}
+                pointerLength={7}
+                pointerWidth={7}
+                listening={false}
+              />
+            ) : null}
+            {load.torqueSign !== 0 ? (
+              <Arc
+                innerRadius={14}
+                outerRadius={16}
+                angle={240}
+                rotation={load.torqueSign > 0 ? 150 : -30}
+                fill={tokens.err}
+                listening={false}
+              />
+            ) : null}
           </Group>
         );
       })}

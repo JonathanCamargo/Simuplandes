@@ -49,6 +49,7 @@ All 52 v1 requirements were met. The last full run was on 2026-09-30:
 |------|----------|
 | [architecture.md](architecture.md) | Module layout, data flow, enforced import boundaries, document model, stores and undo, persistence, testing |
 | [kinematics.md](kinematics.md) | How the solver works: formulation, continuation, lock-up, drag-to-drive, mobility |
+| [dynamics.md](dynamics.md) | Masses, gravity, springs and loads; inverse dynamics in Kinematics; forward dynamics (RK4 with projection) in Dynamics |
 | [graphthe-bridge.md](graphthe-bridge.md) | Graph model, the interchange format, export rules, import and auto-layout, the atlas, and the dms and GraphThe changes |
 | [design-decisions.md](design-decisions.md) | Decision log: what was chosen, what was rejected, and why |
 | [status.md](status.md) | Feature checklist, known limitations, and ideas for v0.2 and v2 |

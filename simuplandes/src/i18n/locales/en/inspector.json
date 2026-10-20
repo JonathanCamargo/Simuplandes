@@ -11,7 +11,20 @@
     "title": "Document",
     "name": "Name",
     "units": "Units",
-    "counts": "{{links}} links · {{joints}} joints · {{motors}} motors"
+    "linkCount_one": "{{count}} link",
+    "linkCount_other": "{{count}} links",
+    "jointCount_one": "{{count}} joint",
+    "jointCount_other": "{{count}} joints",
+    "motorCount_one": "{{count}} motor",
+    "motorCount_other": "{{count}} motors",
+    "untitled": "Untitled mechanism",
+    "dynamics": "Dynamics",
+    "gravityX": "Gravity x",
+    "gravityY": "Gravity y",
+    "barDensity": "Bar density",
+    "plateDensity": "Plate density",
+    "springCount_one": "{{count}} spring",
+    "springCount_other": "{{count}} springs"
   },
   "multi": {
     "count": "{{count}} objects selected"
@@ -22,14 +35,32 @@
     "resetColor": "Reset to link-type colour",
     "ground": "Ground",
     "length": "Length",
-    "sites": "Sites"
+    "sites": "Sites",
+    "mass": "Mass properties",
+    "massComputed": "From shape",
+    "massCustom": "Custom",
+    "massValue": "Mass",
+    "comX": "Center of mass x",
+    "comY": "Center of mass y",
+    "inertia": "Inertia about the center of mass",
+    "massHint": "Computed from the shape with the document densities",
+    "loads": "Loads",
+    "addLoad": "Add load",
+    "loadSite": "Site",
+    "loadFx": "Fx",
+    "loadFy": "Fy",
+    "loadTorque": "Torque",
+    "removeLoad": "Remove load",
+    "noLoads": "No loads on this link"
   },
   "joint": {
     "title": "Joint",
     "typeR": "Revolute (R)",
     "typeP": "Prismatic (P)",
     "axis": "Axis angle",
-    "addMotor": "Add motor"
+    "addMotor": "Add motor",
+    "addTorsionalSpring": "Add torsional spring",
+    "torsionalSprings": "Torsional springs"
   },
   "motor": {
     "title": "Motor",
@@ -39,7 +70,14 @@
     "speed": "Speed",
     "expression": "Expression",
     "expressionPlaceholder": "e.g. sin(t)",
-    "expressionRequired": "The expression cannot be empty"
+    "expressionRequired": "The expression cannot be empty",
+    "dynamics": "In dynamics",
+    "dynamicsMotion": "Follows its motion",
+    "dynamicsEffortRotary": "Applies a torque",
+    "dynamicsEffortLinear": "Applies a force",
+    "effortRotary": "Torque",
+    "effortLinear": "Force",
+    "effortHelp": "Use t (s), q (joint angle or position) and dq (its rate)"
   },
   "site": {
     "title": "Site"
@@ -47,5 +85,32 @@
   "marker": {
     "title": "Marker",
     "link": "Link"
+  },
+  "motion": {
+    "title": "Motion",
+    "hint": "How the mechanism moves over its whole range.",
+    "input": "Input",
+    "inputFullTurn": "full turn",
+    "inputBetween": "from {{min}} to {{max}}",
+    "linkN": "Link {{n}}",
+    "marker": "Marker",
+    "rotates_one": "turns fully",
+    "rotates_other": "turns {{count}} times",
+    "oscillates": "rocks {{span}}",
+    "oscillatesRange": "between {{min}} and {{max}}",
+    "translates": "only translates",
+    "curveSize": "{{width}} × {{height}} {{unit}} curve",
+    "motorN": "Motor {{n}}",
+    "markerN": "Marker {{n}}"
+  },
+  "spring": {
+    "title": "Spring",
+    "titleTorsional": "Torsional spring",
+    "stiffness": "Stiffness",
+    "damping": "Damping",
+    "freeLength": "Free length",
+    "freeAngle": "Free angle",
+    "length": "Current length: {{length}}",
+    "joint": "Joint {{joint}}"
   }
 }

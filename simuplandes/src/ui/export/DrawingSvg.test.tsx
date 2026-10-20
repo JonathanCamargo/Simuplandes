@@ -145,3 +145,83 @@ describe("renderDrawingSvgText", () => {
     expect(light).not.toContain(`fill="${darkTokens.pin}"`);
   });
 });
+
+describe("renderDrawingSvgText: springs and loads", () => {
+  it("draws linear and torsional springs and force arrows", () => {
+    const withSprings = {
+      ...fourBarFixtureParsed,
+      springs: [
+        {
+          id: "spring-1",
+          name: "",
+          kind: "linear" as const,
+          siteA: "site-2",
+          siteB: "site-6",
+          stiffness: 1,
+          damping: 0,
+          freeLength: 10,
+        },
+        {
+          id: "spring-2",
+          name: "",
+          kind: "torsional" as const,
+          jointId: "joint-3",
+          stiffness: 1,
+          damping: 0,
+          freeAngle: 0,
+        },
+      ],
+      loads: [
+        ...fourBarFixtureParsed.loads,
+        { id: "load-2", name: "", siteId: "site-4", force: [0, 0] as [number, number], torque: 1 },
+      ],
+    };
+    const doc = parse(renderDrawingSvgText({ doc: withSprings, view: VIEW, themeMode: "light" }));
+    expect(doc.querySelectorAll('[data-kind="spring"]').length).toBe(2);
+    // The torque-only load has no force arrow.
+    expect(doc.querySelectorAll('[data-kind="load"]').length).toBe(1);
+  });
+
+  it("draws annotations at their world points, scaled by zoom, in the theme's shade, at any pose", () => {
+    const doc = {
+      ...fourBarFixtureParsed,
+      annotations: [
+        {
+          id: "note",
+          kind: "stroke" as const,
+          points: [
+            [0, 0],
+            [50, 20],
+          ] as [number, number][],
+          color: "red" as const,
+          width: 3,
+        },
+        {
+          id: "dot",
+          kind: "stroke" as const,
+          points: [[10, 10]] as [number, number][],
+          color: "ink" as const,
+          width: 4,
+        },
+      ],
+    };
+    const view: DrawingSvgView = { ...VIEW, viewport: { ...VIEW.viewport, zoom: 2 } };
+    const crank: Pose = { position: [5, 5], angle: 1 };
+    for (const themeMode of ["light", "dark"] as const) {
+      const svg = parse(
+        renderDrawingSvgText({ doc, view, themeMode, poses: new Map([["link-2", crank]]) }),
+      );
+      const tokens = canvasTokensFor(themeMode);
+      const line = svg.querySelector('[data-kind="annotation"][data-id="note"]')!;
+      expect(line.tagName).toBe("polyline");
+      expect(line.getAttribute("stroke")).toBe(tokens.annotation.red);
+      expect(line.getAttribute("stroke-width")).toBe("6");
+      const end = worldToScreen(view.viewport, { x: 50, y: 20 });
+      expect(line.getAttribute("points")!.trim().split(/\s+/).pop()).toBe(`${end.x},${end.y}`);
+      const dot = svg.querySelector('[data-kind="annotation"][data-id="dot"]')!;
+      expect(dot.tagName).toBe("circle");
+      expect(dot.getAttribute("r")).toBe("4");
+      expect(dot.getAttribute("fill")).toBe(tokens.annotation.ink);
+    }
+  });
+});

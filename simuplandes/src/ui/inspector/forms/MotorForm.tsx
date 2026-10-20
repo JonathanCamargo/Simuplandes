@@ -2,7 +2,8 @@
  * Motor Inspector form: name, constant/expression mode toggle, speed (°/s
  * for a rotary motor, `{unit}/s` for a linear one) or a non-empty expression
  * text field. Rendered inline by `JointForm`, or standalone when a motor id
- * is selected directly.
+ * is selected directly. A second toggle sets what the motor does in
+ * dynamics: follow that motion, or apply a torque/force expression.
  */
 
 import { useState, type ReactNode } from "react";
@@ -10,7 +11,12 @@ import { useTranslation } from "react-i18next";
 import { Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import { NumberField } from "../NumberField";
 import { motorSpeedDisplay, motorSpeedFromDisplay } from "../edits";
-import { defaultMotorDrive, rename, setMotorDrive } from "../../../store/commands";
+import {
+  defaultMotorDrive,
+  rename,
+  setMotorDrive,
+  setMotorDynamics,
+} from "../../../store/commands";
 import type { MechanismDocument, Motor } from "../../../model";
 import type { MechanismStore } from "../../../store";
 
@@ -26,6 +32,39 @@ export function MotorForm({ store, doc, motor }: MotorFormProps): ReactNode {
     motor.drive.mode === "expression" ? motor.drive.expression : "t",
   );
   const [expressionInvalid, setExpressionInvalid] = useState(false);
+  const [effortText, setEffortText] = useState(
+    motor.dynamics.mode === "effort" ? motor.dynamics.expression : "0",
+  );
+  const [effortInvalid, setEffortInvalid] = useState(false);
+  const rotary = motor.kind === "rotary";
+
+  function switchDynamics(mode: "motion" | "effort"): void {
+    if (mode === motor.dynamics.mode) return;
+    const expression = effortText.trim().length > 0 ? effortText : "0";
+    setEffortText(expression);
+    setEffortInvalid(false);
+    store
+      .getState()
+      .execute(
+        "inspector-motor-dynamics",
+        setMotorDynamics(motor.id, mode === "motion" ? { mode } : { mode, expression }),
+      );
+  }
+
+  function commitEffort(): void {
+    if (effortText.trim().length === 0) {
+      setEffortInvalid(true);
+      return;
+    }
+    setEffortInvalid(false);
+    if (motor.dynamics.mode === "effort" && motor.dynamics.expression === effortText) return;
+    store
+      .getState()
+      .execute(
+        "inspector-motor-dynamics",
+        setMotorDynamics(motor.id, { mode: "effort", expression: effortText }),
+      );
+  }
 
   function commitName(name: string): void {
     if (name !== motor.name) {
@@ -128,6 +167,46 @@ export function MotorForm({ store, doc, motor }: MotorFormProps): ReactNode {
           }}
         />
       )}
+      <Typography variant="caption" color="text.secondary">
+        {t("inspector.motor.dynamics")}
+      </Typography>
+      <ToggleButtonGroup
+        size="small"
+        exclusive
+        value={motor.dynamics.mode}
+        aria-label={t("inspector.motor.dynamics")}
+        onChange={(_event, value: "motion" | "effort" | null) => {
+          if (value !== null) switchDynamics(value);
+        }}
+      >
+        <ToggleButton value="motion">{t("inspector.motor.dynamicsMotion")}</ToggleButton>
+        <ToggleButton value="effort">
+          {rotary
+            ? t("inspector.motor.dynamicsEffortRotary")
+            : t("inspector.motor.dynamicsEffortLinear")}
+        </ToggleButton>
+      </ToggleButtonGroup>
+      {motor.dynamics.mode === "effort" ? (
+        <TextField
+          size="small"
+          label={`${rotary ? t("inspector.motor.effortRotary") : t("inspector.motor.effortLinear")} [${rotary ? "N·m" : "N"}]`}
+          value={effortText}
+          error={effortInvalid}
+          helperText={
+            effortInvalid
+              ? t("inspector.motor.expressionRequired")
+              : t("inspector.motor.effortHelp")
+          }
+          onChange={(event) => {
+            setEffortText(event.target.value);
+            setEffortInvalid(false);
+          }}
+          onBlur={commitEffort}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") commitEffort();
+          }}
+        />
+      ) : null}
     </Stack>
   );
 }

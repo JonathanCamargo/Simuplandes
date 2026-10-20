@@ -8,7 +8,7 @@ import {
 
 function doc(input: Partial<MechanismDocumentInput> = {}): MechanismDocument {
   return MechanismDocumentSchema.parse({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "test",
     units: { length: "mm" },
     links: [],

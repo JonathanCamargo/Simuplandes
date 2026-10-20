@@ -39,6 +39,16 @@
  * Drag-to-drive (SIM-03) and trace/sweep publishing (SIM-04) are thin calls
  * into `drag.ts`/`sweep.ts`/`traces.ts`/`plots.ts`; this module owns none of
  * their numerics.
+ *
+ * Kinematics analysis also reports the forces the motion needs (inverse
+ * dynamics, `inverseDynamicsFrame`) in every measurement row.
+ *
+ * Dynamics analysis (`simStore.analysis === "dynamics"`) integrates the
+ * equations of motion into a `Trajectory`. The frame loop then runs even
+ * while paused, integrating a few frames per tick (within
+ * `COMPUTE_BUDGET_MS`) until the duration is covered or integration stops;
+ * play, step, reset and the scrubber move a playhead over the frames that
+ * exist. Drag-to-drive is off in Dynamics.
  */
 
 import {
@@ -59,20 +69,23 @@ import {
   type SimSession,
   type SimSessionSummary,
 } from "./session";
-import { posesFromState } from "./poses";
+import { posesFromState, sampleSweepPoses } from "./poses";
 import { computeSweep } from "./sweep";
 import { buildTraces, type TraceData } from "./traces";
 import { dragToward, type DragTarget } from "./drag";
 import {
   buildSweepTable,
   defaultQuantityIds,
+  inverseDynamicsFrame,
   listQuantities,
   measureAll,
   TimeHistory,
   type MeasurementTable,
   type QuantityDef,
 } from "./plots";
-import type { SimReadout, SimStore, SolverReadoutStatus } from "./simStore";
+import { createDynamicsSession, type DynamicsSession } from "./dynamicsSession";
+import { Trajectory } from "./trajectory";
+import type { SimAnalysis, SimReadout, SimStore, SolverReadoutStatus } from "./simStore";
 
 /** One frame-scheduling abstraction: browsers use `requestAnimationFrame`; tests use a manual fake queue. */
 export interface FrameScheduler {
@@ -107,6 +120,12 @@ export const STEP_ROTARY = Math.PI / 180;
 export const READOUT_INTERVAL_MS = 50;
 /** The largest per-frame `dt` (seconds) ever fed to the solver, regardless of the real elapsed time (a tab coming back from background must not take one giant step). */
 export const MAX_FRAME_DT_S = 0.1;
+/** Wall-clock milliseconds per animation tick spent integrating a dynamics trajectory. */
+export const COMPUTE_BUDGET_MS = 8;
+/** Hard cap on trajectory frames integrated in one tick, whatever the clock says. */
+export const MAX_FRAMES_PER_TICK = 240;
+/** How often (ms) traces are republished while a trajectory is still being computed. */
+export const TRACE_INTERVAL_MS = 250;
 
 /** Everything Simulate mode's transport/drag/plot UI needs from the runtime. */
 export interface SimRuntime {
@@ -121,6 +140,10 @@ export interface SimRuntime {
   setSpeed(multiplier: number): void;
   setLoop(loop: boolean): void;
   scrubTo(display: number): void;
+  /** Switches between kinematic and dynamic analysis, rebuilding the session if simulating. */
+  setAnalysis(analysis: SimAnalysis): void;
+  /** Sets the dynamics duration (one of `DURATION_OPTIONS`), recomputing the trajectory in Dynamics. */
+  setDuration(seconds: number): void;
   beginDrag(grab: { linkId: Id; world: Vec2 }): boolean;
   dragTo(world: Vec2): void;
   endDrag(): void;
@@ -201,6 +224,12 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
   let accelsBuf = new Float64Array(0);
   let measureRow = new Float64Array(0);
 
+  let analysis: SimAnalysis = "kinematics";
+  let dynamicsSession: DynamicsSession | null = null;
+  let trajectory: Trajectory | null = null;
+  let playTime = 0;
+  let lastTracePublishMs: number | null = null;
+
   let lastSolverStatus: SolverReadoutStatus = "ok";
   let lastResidualNorm = 0;
   let lastNearSingular = false;
@@ -222,6 +251,7 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
   }
 
   function currentReadout(): SimReadout | null {
+    if (analysis === "dynamics") return dynamicsReadout();
     if (!session || !state) return null;
     const motorIndex = session.motorIndex;
     const input = motorIndex >= 0 ? state.inputs[motorIndex] : 0;
@@ -280,7 +310,19 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
     }
 
     const rateResult = solveVelocityAcceleration(system, currentState.q, ratesBuf, accelsBuf);
-    measureAll(system, currentState.q, rateResult.qDot, rateResult.qDDot, quantities, measureRow);
+    const dynamics = session!.dynamics;
+    const frame = dynamics
+      ? inverseDynamicsFrame(dynamics, simTime, currentState.q, rateResult.qDot, rateResult.qDDot)
+      : null;
+    measureAll(
+      system,
+      currentState.q,
+      rateResult.qDot,
+      rateResult.qDDot,
+      quantities,
+      measureRow,
+      frame,
+    );
     history!.push(simTime, measureRow);
 
     store.getState().setPoses(posesFromState(system, currentState.q));
@@ -297,6 +339,7 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
   /** True while `play`/`step`/`scrubTo` are permitted: a real motor (not a temporary driver, not not-drivable). */
   function canDrive(): boolean {
     return (
+      analysis === "kinematics" &&
       !!session &&
       !!state &&
       session.summary.status === "ready" &&
@@ -423,7 +466,12 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
 
   function frameTick(nowMs: number): void {
     frameHandle = null;
-    if (!entered || !store.getState().playing) return;
+    if (!entered) return;
+    if (analysis === "dynamics") {
+      dynamicsTick(nowMs);
+      return;
+    }
+    if (!store.getState().playing) return;
     const last = lastFrameMs ?? nowMs;
     const rawDt = Math.max(0, (nowMs - last) / 1000);
     const dt = Math.min(rawDt, MAX_FRAME_DT_S) * store.getState().speed;
@@ -436,7 +484,167 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
     }
   }
 
+  // ---------------------------------------------------------------- dynamics
+
+  function dynamicsReadout(): SimReadout | null {
+    if (!dynamicsSession) return null;
+    const index = trajectory ? trajectory.indexAt(playTime) : 0;
+    return {
+      input: playTime,
+      display: playTime,
+      time: playTime,
+      direction: 1,
+      lockUp: null,
+      nearSingular: trajectory ? trajectory.frameSingular(index) : false,
+      solver: { status: trajectory?.stop ? "no-convergence" : "ok", residualNorm: 0 },
+    };
+  }
+
+  function publishDynamicsState(): void {
+    if (!dynamicsSession) {
+      store.getState().setDynamics(null);
+      return;
+    }
+    store.getState().setDynamics({
+      summary: dynamicsSession.summary,
+      status: trajectory ? trajectory.status : null,
+      computedTime: trajectory ? trajectory.computedTime : 0,
+      duration: store.getState().dynamicsDuration,
+      stop: trajectory ? trajectory.stop : null,
+      singular: trajectory ? trajectory.singular : false,
+    });
+  }
+
+  function publishTraces(): void {
+    store.getState().setSweepData({
+      traces: trajectory ? trajectory.traces() : [],
+      sweepTable: null,
+      quantities,
+      sweepPoses: [],
+    });
+  }
+
+  /** Publishes the poses at the playhead, and (throttled unless `force`) the readout. */
+  function publishPlayhead(nowMs: number, force: boolean): void {
+    if (!trajectory || !dynamicsSession?.system) return;
+    const frame = trajectory.frame(trajectory.indexAt(playTime));
+    store.getState().setPoses(posesFromState(dynamicsSession.system, frame.q));
+    maybePublishReadout(nowMs, force);
+  }
+
+  function ensureLoop(): void {
+    if (frameHandle === null) scheduleFrame();
+  }
+
+  function dynamicsTick(nowMs: number): void {
+    const playing = store.getState().playing;
+
+    if (trajectory && trajectory.status === "computing") {
+      const budgetStart = scheduler.now();
+      let added = 0;
+      while (
+        trajectory.status === "computing" &&
+        added < MAX_FRAMES_PER_TICK &&
+        (added === 0 || scheduler.now() - budgetStart < COMPUTE_BUDGET_MS)
+      ) {
+        added += trajectory.compute(1);
+      }
+      const done = trajectory.status !== "computing";
+      const bumpDue =
+        done || lastHistoryBumpMs === null || nowMs - lastHistoryBumpMs >= readoutIntervalMs;
+      if (bumpDue) {
+        store.getState().bumpHistoryVersion();
+        publishDynamicsState();
+        lastHistoryBumpMs = nowMs;
+      }
+      if (done || lastTracePublishMs === null || nowMs - lastTracePublishMs >= TRACE_INTERVAL_MS) {
+        publishTraces();
+        lastTracePublishMs = nowMs;
+      }
+    }
+
+    if (playing && trajectory) {
+      const last = lastFrameMs ?? nowMs;
+      const rawDt = Math.max(0, (nowMs - last) / 1000);
+      lastFrameMs = nowMs;
+      playTime += Math.min(rawDt, MAX_FRAME_DT_S) * store.getState().speed;
+      const end = trajectory.computedTime;
+      if (playTime >= end) {
+        if (trajectory.status === "computing") {
+          playTime = end;
+        } else if (store.getState().loop && trajectory.status === "complete" && end > 0) {
+          playTime = 0;
+        } else {
+          playTime = end;
+          store.getState().setPlaying(false);
+        }
+      }
+      publishPlayhead(nowMs, !store.getState().playing);
+    }
+
+    if (store.getState().playing || trajectory?.status === "computing") {
+      scheduleFrame();
+    } else {
+      publishDynamicsState();
+      publishReadoutForce();
+    }
+  }
+
+  function buildDynamicsSessionFor(doc: MechanismDocument): void {
+    const kinematicSession = createSimSession(doc);
+    session = kinematicSession;
+    state = null;
+    dynamicsSession = createDynamicsSession(doc);
+    playTime = 0;
+    direction = 1;
+    simTime = 0;
+    lockUp = null;
+    dragTarget = null;
+    lastFrameMs = null;
+    lastReadoutMs = null;
+    lastHistoryBumpMs = null;
+    lastTracePublishMs = null;
+    history = null;
+
+    const { system, dynamics, start } = dynamicsSession;
+    quantities = system ? listQuantities(system, dynamics) : [];
+    trajectory =
+      system && dynamics && start && dynamicsSession.summary.status === "ready"
+        ? new Trajectory(system, dynamics, start, quantities, {
+            duration: store.getState().dynamicsDuration,
+          })
+        : null;
+
+    if (system) {
+      const validIds = new Set(quantities.map((q) => q.id));
+      const currentIds = store.getState().plot.quantityIds;
+      if (currentIds.length === 0 || !currentIds.every((id) => validIds.has(id))) {
+        store.getState().setPlotQuantities(defaultQuantityIds(system, []));
+      }
+    }
+
+    store.getState().setSession(kinematicSession.summary, null);
+    publishTraces();
+    store.getState().setPlaying(false);
+    store.getState().setDragging(null);
+    const q = trajectory ? trajectory.frame(0).q : system ? system.q0 : null;
+    store.getState().setPoses(system && q ? posesFromState(system, q) : null);
+    publishDynamicsState();
+    store.getState().setReadout(currentReadout());
+    lastReadoutMs = scheduler.now();
+    store.getState().bumpHistoryVersion();
+    if (trajectory?.status === "computing") ensureLoop();
+  }
+
   function buildSessionFor(doc: MechanismDocument): void {
+    analysis = store.getState().analysis;
+    if (analysis === "dynamics") {
+      buildDynamicsSessionFor(doc);
+      return;
+    }
+    dynamicsSession = null;
+    trajectory = null;
+    store.getState().setDynamics(null);
     const newSession = createSimSession(doc);
     session = newSession;
     state = newSession.start
@@ -466,9 +674,10 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
     let range = null as ReturnType<SimStore["getState"]>["range"];
     let traces: TraceData[] = [];
     let sweepTable: MeasurementTable | null = null;
+    let sweepPoses: ReturnType<typeof sampleSweepPoses> = [];
 
     if (newSession.system) {
-      quantities = listQuantities(newSession.system);
+      quantities = listQuantities(newSession.system, newSession.dynamics);
       ratesBuf = new Float64Array(newSession.system.motors.length);
       accelsBuf = new Float64Array(newSession.system.motors.length);
       measureRow = new Float64Array(quantities.length);
@@ -497,11 +706,13 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
               fullRotation: sweep.kind === "full-rotation",
             };
       traces = buildTraces(newSession.system, sweep);
+      sweepPoses = sampleSweepPoses(newSession.system, sweep.samples);
       // `inputKind` is only ever null for drivingMode "none", which never
       // reaches "ready" (classifyDrivability), so it's always set here.
       sweepTable = buildSweepTable(newSession.system, quantities, sweep.samples, {
         inputKind: newSession.summary.inputKind!,
         inputDisplayOffset: newSession.summary.inputDisplayOffset,
+        dynamics: newSession.dynamics,
       });
 
       const validIds = new Set(quantities.map((q) => q.id));
@@ -514,7 +725,7 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
     }
 
     store.getState().setSession(newSession.summary, range);
-    store.getState().setSweepData({ traces, sweepTable, quantities });
+    store.getState().setSweepData({ traces, sweepTable, quantities, sweepPoses });
     store.getState().setPlaying(false);
     store.getState().setDragging(null);
 
@@ -544,6 +755,9 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
     entered = false;
     session = null;
     state = null;
+    dynamicsSession = null;
+    trajectory = null;
+    playTime = 0;
     quantities = [];
     history = null;
     dragTarget = null;
@@ -557,6 +771,14 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
   }
 
   function play(): void {
+    if (entered && analysis === "dynamics") {
+      if (!trajectory || store.getState().playing) return;
+      if (playTime >= trajectory.computedTime && trajectory.status !== "computing") playTime = 0;
+      lastFrameMs = scheduler.now();
+      store.getState().setPlaying(true);
+      ensureLoop();
+      return;
+    }
     if (!entered || !canDrive()) return;
     if (store.getState().playing) return;
     playStartInput = state!.inputs[session!.motorIndex];
@@ -567,6 +789,12 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
 
   function pause(): void {
     if (!store.getState().playing) return;
+    if (analysis === "dynamics") {
+      // Keep the loop alive if the trajectory is still being computed.
+      store.getState().setPlaying(false);
+      publishReadoutForce();
+      return;
+    }
     cancelFrame();
     store.getState().setPlaying(false);
     publishReadoutForce();
@@ -581,6 +809,17 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
   }
 
   function step(dir: 1 | -1 = 1): void {
+    if (analysis === "dynamics") {
+      if (!trajectory) return;
+      store.getState().setPlaying(false);
+      const index = Math.min(
+        Math.max(trajectory.indexAt(playTime) + dir, 0),
+        trajectory.frameCount - 1,
+      );
+      playTime = trajectory.frame(index).t;
+      publishPlayhead(scheduler.now(), true);
+      return;
+    }
     if (!canDrive()) return;
     stopPlaybackIfAny();
     const system = session!.system!;
@@ -614,6 +853,13 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
   }
 
   function reset(): void {
+    if (analysis === "dynamics") {
+      if (!trajectory) return;
+      store.getState().setPlaying(false);
+      playTime = 0;
+      publishPlayhead(scheduler.now(), true);
+      return;
+    }
     if (!session || !session.start || !session.system) return;
     stopPlaybackIfAny();
     state = {
@@ -637,6 +883,13 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
   }
 
   function scrubTo(display: number): void {
+    if (analysis === "dynamics") {
+      if (!trajectory || !Number.isFinite(display)) return;
+      store.getState().setPlaying(false);
+      playTime = Math.min(Math.max(display, 0), trajectory.computedTime);
+      publishPlayhead(scheduler.now(), true);
+      return;
+    }
     if (!canDrive()) return;
     stopPlaybackIfAny();
     const system = session!.system!;
@@ -669,6 +922,7 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
   }
 
   function beginDrag(grab: { linkId: Id; world: Vec2 }): boolean {
+    if (analysis === "dynamics") return false;
     if (!entered || !session?.system || !state) return false;
     if (session.summary.status !== "ready") return false;
     const linkIndex = session.system.linkIndexById.get(grab.linkId);
@@ -715,7 +969,30 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
     publishReadoutForce();
   }
 
+  function setAnalysis(next: SimAnalysis): void {
+    if (store.getState().analysis === next && analysis === next) return;
+    store.getState().setAnalysis(next);
+    if (!entered || !session) {
+      analysis = next;
+      return;
+    }
+    cancelFrame();
+    const doc = session.document;
+    buildSessionFor(doc);
+  }
+
+  function setDuration(seconds: number): void {
+    const before = store.getState().dynamicsDuration;
+    store.getState().setDynamicsDuration(seconds);
+    if (store.getState().dynamicsDuration === before) return;
+    if (entered && analysis === "dynamics" && session) {
+      cancelFrame();
+      buildSessionFor(session.document);
+    }
+  }
+
   function getHistoryTable(): MeasurementTable | null {
+    if (analysis === "dynamics") return trajectory ? trajectory.table() : null;
     if (!history) return null;
     return history.toTable(quantities);
   }
@@ -725,6 +1002,13 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
     display: number;
     poses: ReadonlyMap<Id, import("../model").Pose> | null;
   } | null {
+    if (analysis === "dynamics") {
+      if (!dynamicsSession) return null;
+      const system = dynamicsSession.system;
+      const frame = trajectory ? trajectory.frame(trajectory.indexAt(playTime)) : null;
+      const poses = system ? posesFromState(system, frame ? frame.q : system.q0) : null;
+      return { input: playTime, display: playTime, poses };
+    }
     if (!session || !state) return null;
     const motorIndex = session.motorIndex;
     const input = motorIndex >= 0 ? state.inputs[motorIndex] : 0;
@@ -749,6 +1033,8 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
     setSpeed,
     setLoop,
     scrubTo,
+    setAnalysis,
+    setDuration,
     beginDrag,
     dragTo,
     endDrag,

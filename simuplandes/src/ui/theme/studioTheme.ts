@@ -19,6 +19,13 @@ export function canvasTokensFor(mode: ThemeMode): CanvasTokens {
 const TABULAR_NUMS = { fontVariantNumeric: "tabular-nums" } as const;
 
 /**
+ * Size of the Studio chrome relative to MUI's defaults. Scales text and icons
+ * (both derive from `typography.fontSize`) and the spacing unit together; the
+ * canvas is unaffected. This is the one knob for "the buttons are too small".
+ */
+export const UI_SCALE = 1.2;
+
+/**
  * `createStudioTheme(mode, lang)`: an MUI theme whose palette is derived
  * from `CANVAS_TOKENS[mode]` and whose locale (`esES`/`enUS`, from
  * `@mui/material/locale`) matches `lang`. Body typography is the robiolab
@@ -57,7 +64,12 @@ export function createStudioTheme(mode: ThemeMode, lang: Language): Theme {
       },
       typography: {
         fontFamily: '"Roboto",Arial,sans-serif',
+        fontSize: 14 * UI_SCALE,
+        // Sentence case for buttons, toggles and tabs: calmer than MUI's
+        // all-caps default, and long Spanish labels stay readable.
+        button: { textTransform: "none", fontWeight: 600 },
       },
+      spacing: 8 * UI_SCALE,
       components: {
         MuiCssBaseline: {
           styleOverrides: {

@@ -26,6 +26,55 @@ Last gates (2026-09-30):
 - dms pytest: 190/190
 - GraphThe contract tests: 78 passed
 
+## Unreleased (dynamics, 2026-10-06)
+
+Inverse and forward dynamics, from the v2 backlog. Details are in [dynamics.md](dynamics.md).
+
+- **Schema v2:** link mass properties (custom, or computed from the shape and document densities), gravity, linear and torsional spring-dampers, and a dynamics mode per motor (follow its motion, or apply a torque/force expression in `t`, `q`, `dq`). Loads are now used. v1 files migrate.
+- **`src/dynamics/`:** a pure module over the kinematic engine. It does the augmented `[M Jᵀ; J 0]` solve in SI coordinates for forward dynamics, inverse dynamics and velocity projection, gives joint reactions and motor efforts, and integrates with RK4 plus position/velocity projection.
+- **Kinematics analysis** now reports the forces the motion needs. Plots gain joint reactions, motor torque/force and power, spring states and energy.
+- **Dynamics analysis:** a Kinematics/Dynamics switch on the transport. Dynamics integrates a trajectory in the background (2–60 s), then plays, steps and scrubs over it, and plots it against time. It accepts multi-DOF mechanisms.
+- **Editing:** a spring tool (K), torsional springs from the joint form, and Inspector sections for gravity and densities, mass properties, loads and motor dynamics. Springs and loads are drawn on the canvas and in SVG/PNG export.
+- **Examples:** a double pendulum and a damped mass-spring, which open in Dynamics.
+
+Gates: `npm run check` passes (2,871 tests, coverage thresholds met, including 95% for `src/dynamics`). The E2E suite passes (78, including a Dynamics spec). `npm run build` is OK.
+
+## Unreleased (interface pass, 2026-10-06)
+
+Interface and usability work after v0.1. `npm run check` (2,677 tests) and the E2E suite (74) pass.
+
+**Layout and navigation**
+
+- The top bar stays on one line from laptop widths down to an embedded studio. The document name, the "Studio" suffix and the mode labels drop out at narrower breakpoints; every control keeps its accessible name.
+- The File menu is grouped (file, examples and atlas, share and export) with icons and shortcut hints.
+- New shortcuts: Ctrl+S, Ctrl+Shift+S and Ctrl+O (⌘ on macOS).
+- Buttons, toggles and tabs use sentence case (theme `typography.button`).
+- Status messages are toasts, so they no longer push the canvas down.
+- The status bar leads with the next-step hint. The snap status shows only while snapping, and the coordinates hide at narrow widths.
+- The transport bar has a filled Play button, a wider scrubber, a compact speed select, and a Plots toggle that shows when it is on.
+- The command palette styles its group headings and highlights the keyboard-selected command. New commands: switch to Build or Simulate, show the graph, export an image.
+
+**Canvas**
+
+- Fit to view frames what the canvas shows when it is clicked: in Simulate, the current pose and the coupler-curve traces.
+- A mechanism opened straight into Simulate (example, shared link) is framed for its whole motion (`sweepPoses` in `simStore`, `motionBounds` in `canvas/bounds.ts`). A later Build/Simulate toggle never moves the camera.
+
+**Export**
+
+- Drawing and graph images match the canvas (the export dock shares the canvas's view store). Before, they used a fixed 480 × 320 default view.
+- The Export tab puts images first (a 2 × 2 grid, PNG first), then the GraphThe JSON with its report.
+
+**New features**
+
+- **Share links.** File > Copy share link packs the whole document into the URL fragment (`#m=…`, deflate + base64url; `persistence/shareLink.ts`). Opening the link loads the mechanism in Simulate. If the current drawing is not empty, the studio asks first. This also works when the link is pasted into a tab that already shows the studio. The fragment never reaches a server.
+- **Motion card.** In Simulate, with nothing selected, the Inspector summarizes the motion over the whole sweep: the input range, whether each link turns fully, oscillates (and by how much) or only translates, and the size of each coupler curve (`sim/motionSummary.ts`).
+
+**Smaller fixes**
+
+- The document counts use singular and plural forms ("1 motor").
+- The default document name and the four-bar example name are shown in the interface language.
+- Example and atlas card subtitles wrap to two lines instead of being cut off.
+
 ## Known limitations and loose ends
 
 ### Bugs
@@ -37,7 +86,6 @@ Last gates (2026-09-30):
 - **Auto-layouts can look messy.** They are valid, but plates often overlap and links cross. A layout-quality term (overlap and crossing penalties) would help.
 - **Two mismatched angles.** The `layout-applied` note shows the mobility gate's early-exit range (for example 76°), while the verdict chip shows the full range (for example 262°). The degrees should be dropped from the note.
 - **Misleading wording.** The verdict chip says "Se mueve, pero solo N°" even for large ranges. "Solo" should appear only below the target.
-- **Truncated Spanish text.** Six-bar atlas card subtitles are cut off.
 
 ### Scope gaps
 
@@ -61,6 +109,6 @@ Last gates (2026-09-30):
 
 **v2 (from the requirements backlog):**
 
-- **Dynamics:** masses, inertias, gravity, forces, torques, springs and dampers (Lagrange multipliers with stabilization); reaction-force and motor-torque plots; an optional matter.js contact mode.
+- **Dynamics follow-ups:** contact and friction (an optional matter.js mode), joint limits, time-varying loads, a user-set integration step, and drag-to-drive in Dynamics (a "mouse spring" with live integration). The core dynamics shipped in the unreleased dynamics work above.
 - **GraphThe in the loop:** draw a target curve, call a GraphThe inference service, and import ranked candidate mechanisms; overlay the target and generated curves with an error metric; in-browser dimensional optimization.
 - **Sharing:** compressed URL sharing, and an embeddable read-only player for course pages.

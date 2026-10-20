@@ -4,7 +4,7 @@
  * busy, no effects, hint = the registry's own `hintKey`) -- panning is
  * handled directly by `CanvasStage`, not a tool machine. Every other tool
  * (Bar/Plate/GroundPivot/Pin/Slider from 04-04; Select/Motor/Marker from
- * 04-05) is a real machine.
+ * 04-05; Spring for dynamics) is a real machine.
  */
 
 import { barTool } from "./barTool";
@@ -15,6 +15,10 @@ import { sliderTool } from "./sliderTool";
 import { selectTool } from "./selectTool";
 import { motorTool } from "./motorTool";
 import { markerTool } from "./markerTool";
+import { springTool } from "./springTool";
+import { vertexTool } from "./vertexTool";
+import { brushTool } from "./brushTool";
+import { eraserTool } from "./eraserTool";
 import { toolById, type ToolId } from "./registry";
 import type { ToolMachine } from "./types";
 
@@ -48,6 +52,10 @@ export const TOOL_MACHINES: Readonly<Record<ToolId, AnyToolMachine>> = {
   groundPivot: erase(groundPivotTool),
   pin: erase(pinTool),
   slider: erase(sliderTool),
+  spring: erase(springTool),
   motor: erase(motorTool),
   marker: erase(markerTool),
+  vertex: erase(vertexTool),
+  brush: erase(brushTool),
+  eraser: erase(eraserTool),
 };

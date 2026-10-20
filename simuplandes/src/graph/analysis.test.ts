@@ -157,7 +157,7 @@ describe("analyzeDocument", () => {
   });
 
   it("empty document -> empty graph, gruebler null, topology none/empty, baranov pass", () => {
-    const doc = MechanismDocumentSchema.parse({ schemaVersion: 1 });
+    const doc = MechanismDocumentSchema.parse({ schemaVersion: 2 });
     const analysis = analyzeDocument(doc);
     expect(analysis.graph.nodes).toHaveLength(0);
     expect(analysis.mobility.gruebler).toBeNull();

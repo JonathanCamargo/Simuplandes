@@ -145,6 +145,60 @@ describe("mode / toggleMode / setMode", () => {
   });
 });
 
+describe("Draw mode", () => {
+  it("setMode('draw') swaps a Build-only tool for Edit shape; Pan survives", () => {
+    const store = createStudioStore();
+    store.getState().setActiveTool("bar");
+    store.getState().setMode("draw");
+    expect(store.getState()).toMatchObject({
+      mode: "draw",
+      editMode: "draw",
+      activeTool: "vertex",
+    });
+
+    store.getState().setActiveTool("pan");
+    store.getState().setMode("build");
+    expect(store.getState()).toMatchObject({ mode: "build", activeTool: "pan" });
+    store.getState().setMode("draw");
+    expect(store.getState().activeTool).toBe("pan");
+  });
+
+  it("setMode('build') from Draw swaps Edit shape for Select", () => {
+    const store = createStudioStore();
+    store.getState().setMode("draw");
+    store.getState().setMode("build");
+    expect(store.getState()).toMatchObject({
+      mode: "build",
+      editMode: "build",
+      activeTool: "select",
+    });
+  });
+
+  it("picking a tool from the other editing mode switches to it", () => {
+    const store = createStudioStore();
+    store.getState().setActiveTool("vertex");
+    expect(store.getState()).toMatchObject({ mode: "draw", editMode: "draw" });
+    store.getState().setActiveTool("plate");
+    expect(store.getState()).toMatchObject({ mode: "build", editMode: "build" });
+  });
+
+  it("Space returns from Simulate to the last editing mode", () => {
+    const store = createStudioStore();
+    store.getState().setMode("draw");
+    store.getState().toggleMode();
+    expect(store.getState().mode).toBe("simulate");
+    store.getState().toggleMode();
+    expect(store.getState()).toMatchObject({ mode: "draw", activeTool: "vertex" });
+  });
+
+  it("setMode('draw') is a no-op mid-gesture", () => {
+    const store = createStudioStore();
+    store.getState().setToolBusy(true);
+    store.getState().setMode("draw");
+    expect(store.getState().mode).toBe("build");
+  });
+});
+
 describe("selectCanToggleMode", () => {
   it("is true iff toolBusy, paletteOpen and shortcutSheetOpen are all false", () => {
     expect(

@@ -27,7 +27,7 @@ function pointermove(world: { x: number; y: number }, snap: SnapResult): ToolEve
 
 function twoLinkDoc(): MechanismDocument {
   return MechanismDocumentSchema.parse({
-    schemaVersion: 1,
+    schemaVersion: 2,
     links: [
       {
         id: "link-a",

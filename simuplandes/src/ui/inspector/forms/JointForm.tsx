@@ -1,12 +1,22 @@
 /**
  * Joint Inspector form: name, R/P type chip, world X/Y (moving the whole
- * R-cluster of `siteA`), the slide axis angle for a P joint, and an inline
- * `MotorForm` or an "Add motor" button.
+ * R-cluster of `siteA`), the slide axis angle for a P joint, an inline
+ * `MotorForm` or an "Add motor" button, and (R joints) its torsional
+ * springs with an "Add torsional spring" button.
  */
 
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Chip, Stack, TextField, Typography } from "@mui/material";
+import {
+  Button,
+  Chip,
+  List,
+  ListItemButton,
+  ListItemText,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { NumberField } from "../NumberField";
 import { MotorForm } from "./MotorForm";
 import {
@@ -15,7 +25,7 @@ import {
   moveSiteClusterRecipes,
   setJointAxisFromWorldAngleRecipe,
 } from "../edits";
-import { defaultMotorDrive, rename } from "../../../store/commands";
+import { addSpring, defaultMotorDrive, rename } from "../../../store/commands";
 import type { Joint, MechanismDocument } from "../../../model";
 import type { MechanismStore } from "../../../store";
 
@@ -25,10 +35,31 @@ export interface JointFormProps {
   joint: Joint;
 }
 
+/** The stiffness of a new torsional spring, N·m/rad. */
+const DEFAULT_TORSIONAL_STIFFNESS = 1;
+
 export function JointForm({ store, doc, joint }: JointFormProps): ReactNode {
   const { t } = useTranslation();
   const world = jointWorldPosition(doc, joint);
   const motor = doc.motors.find((m) => m.jointId === joint.id);
+  const torsionalSprings = doc.springs.filter(
+    (spring) => spring.kind === "torsional" && spring.jointId === joint.id,
+  );
+
+  function addTorsionalSpring(): void {
+    const id = store.getState().newId("spring");
+    store.getState().execute(
+      "inspector-add-torsional-spring",
+      addSpring({
+        id,
+        kind: "torsional",
+        jointId: joint.id,
+        name: `${t("inspector.spring.titleTorsional")} ${joint.name || ""}`.trim(),
+        stiffness: DEFAULT_TORSIONAL_STIFFNESS,
+      }),
+    );
+    store.getState().select([id]);
+  }
 
   function commitName(name: string): void {
     if (name !== joint.name) {
@@ -97,6 +128,30 @@ export function JointForm({ store, doc, joint }: JointFormProps): ReactNode {
           {t("inspector.joint.addMotor")}
         </Button>
       )}
+      {joint.type === "R" ? (
+        <>
+          {torsionalSprings.length > 0 ? (
+            <>
+              <Typography variant="caption" color="text.secondary">
+                {t("inspector.joint.torsionalSprings")}
+              </Typography>
+              <List dense disablePadding>
+                {torsionalSprings.map((spring) => (
+                  <ListItemButton
+                    key={spring.id}
+                    onClick={() => store.getState().select([spring.id])}
+                  >
+                    <ListItemText primary={spring.name || spring.id} />
+                  </ListItemButton>
+                ))}
+              </List>
+            </>
+          ) : null}
+          <Button size="small" variant="outlined" onClick={addTorsionalSpring}>
+            {t("inspector.joint.addTorsionalSpring")}
+          </Button>
+        </>
+      ) : null}
     </Stack>
   );
 }

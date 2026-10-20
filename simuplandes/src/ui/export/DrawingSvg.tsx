@@ -30,6 +30,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactNode } from "react";
 import { buildRenderModel } from "../../canvas/renderModel";
 import { worldToScreen, angleToKonvaRotationDeg, type Viewport } from "../../canvas/viewport";
+import { springZigzag, torsionalSpiral, LOAD_ARROW_LENGTH } from "../../canvas/springGlyph";
 import type { TracePrimitive } from "../../canvas/posesSource";
 import type { Id, MechanismDocument, Pose } from "../../model";
 import { canvasTokensFor } from "../theme/studioTheme";
@@ -252,6 +253,87 @@ export function DrawingSvg({ doc, poses, traces, view, themeMode }: DrawingSvgPr
               strokeWidth={1.5}
             />
           </g>
+        );
+      })}
+
+      {model.springs.map((spring) => {
+        if (spring.kind === "linear") {
+          const flat = springZigzag(screenXY(viewport, spring.a), screenXY(viewport, spring.b));
+          return (
+            <polyline
+              key={spring.springId}
+              data-kind="spring"
+              data-id={spring.springId}
+              points={flat.join(" ")}
+              fill="none"
+              stroke={tokens.ok}
+              strokeWidth={1.5}
+              strokeLinejoin="round"
+            />
+          );
+        }
+        const s = screenXY(viewport, spring.point);
+        return (
+          <polyline
+            key={spring.springId}
+            data-kind="spring"
+            data-id={spring.springId}
+            transform={`translate(${s.x} ${s.y})`}
+            points={torsionalSpiral().join(" ")}
+            fill="none"
+            stroke={tokens.ok}
+            strokeWidth={1.5}
+          />
+        );
+      })}
+
+      {model.loads.map((load) => {
+        if (load.forceAngle === null) return null;
+        const s = screenXY(viewport, load.point);
+        const rotation = angleToKonvaRotationDeg(load.forceAngle);
+        const tip = LOAD_ARROW_LENGTH;
+        return (
+          <g
+            key={load.loadId}
+            data-kind="load"
+            data-id={load.loadId}
+            transform={`translate(${s.x} ${s.y}) rotate(${rotation})`}
+          >
+            <line x1={0} y1={0} x2={tip - 6} y2={0} stroke={tokens.err} strokeWidth={2} />
+            <polygon points={`${tip},0 ${tip - 7},-3.5 ${tip - 7},3.5`} fill={tokens.err} />
+          </g>
+        );
+      })}
+
+      {model.annotations.map((a) => {
+        const stroke = tokens.annotation[a.color];
+        const widthPx = a.width * viewport.zoom;
+        if (a.points.length === 1) {
+          const s = screenXY(viewport, a.points[0]);
+          return (
+            <circle
+              key={a.annotationId}
+              data-kind="annotation"
+              data-id={a.annotationId}
+              cx={s.x}
+              cy={s.y}
+              r={widthPx / 2}
+              fill={stroke}
+            />
+          );
+        }
+        return (
+          <polyline
+            key={a.annotationId}
+            data-kind="annotation"
+            data-id={a.annotationId}
+            points={screenPolyline(viewport, a.points)}
+            fill="none"
+            stroke={stroke}
+            strokeWidth={widthPx}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         );
       })}
     </svg>

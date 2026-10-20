@@ -139,3 +139,24 @@ describe("compileExpression — evaluate never throws at run time", () => {
     expect(Number.isNaN(f.evaluate(0))).toBe(true);
   });
 });
+
+describe("compileExpression — custom variables", () => {
+  it("binds each variable by position in evaluateWith", () => {
+    const expr = compileExpression("2*t - 3*q + dq", ["t", "q", "dq"]);
+    expect(expr.evaluateWith([1, 2, 5])).toBe(1);
+  });
+
+  it("evaluate sets the first variable and leaves the others at 0", () => {
+    const expr = compileExpression("t + q", ["t", "q"]);
+    expect(expr.evaluate(4)).toBe(4);
+  });
+
+  it("rejects a name that is not in the list", () => {
+    expect(() => compileExpression("q", ["t"])).toThrow(ExpressionError);
+    expect(() => compileExpression("t", ["q"])).toThrow(/unknown identifier "t"/);
+  });
+
+  it("still rejects prototype names", () => {
+    expect(() => compileExpression("constructor", ["t", "q"])).toThrow(ExpressionError);
+  });
+});

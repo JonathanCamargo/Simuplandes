@@ -64,7 +64,7 @@ export function build(): MechanismDocument {
   const strokeJointId = createId("joint");
 
   return makeDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "actuator-arm",
     links: [ground.link, cylinder.link, rod.link, arm.link],
     joints: [

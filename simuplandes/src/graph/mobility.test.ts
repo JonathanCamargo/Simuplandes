@@ -282,7 +282,7 @@ describe("graphMobility", () => {
     const { doc: onlyGroundDoc } = documentFromEdges([[0, 1]], { ground: [0, 1] });
     expect(graphMobility(fromDocument(onlyGroundDoc)).gruebler).toBeNull();
 
-    const emptyDoc = MechanismDocumentSchema.parse({ schemaVersion: 1 });
+    const emptyDoc = MechanismDocumentSchema.parse({ schemaVersion: 2 });
     expect(graphMobility(fromDocument(emptyDoc)).gruebler).toBeNull();
   });
 });

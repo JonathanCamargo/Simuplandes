@@ -14,7 +14,10 @@
 import { rotate, type Vec2 } from "../geom";
 import {
   indexDocument,
+  flattenBar,
+  flattenOutline,
   siteWorldPosition,
+  type AnnotationColor,
   type Id,
   type Link,
   type MechanismDocument,
@@ -98,6 +101,29 @@ export interface FreeSitePrimitive {
   point: Vec2;
 }
 
+/** A linear spring between two world points, or a torsional spring drawn as a coil at its joint. */
+export type SpringPrimitive =
+  | { springId: Id; kind: "linear"; a: Vec2; b: Vec2; selected: boolean }
+  | { springId: Id; kind: "torsional"; point: Vec2; selected: boolean };
+
+/** A freehand annotation stroke: world points, its color name and its width (model units). Never posed. */
+export interface AnnotationPrimitive {
+  annotationId: Id;
+  points: Vec2[];
+  color: AnnotationColor;
+  width: number;
+}
+
+/** A load: a force arrow (world direction, N) and/or a torque at a site. */
+export interface LoadPrimitive {
+  loadId: Id;
+  point: Vec2;
+  /** Force direction angle (radians, world), or `null` for a zero force. */
+  forceAngle: number | null;
+  /** Torque sign: 1 CCW, -1 CW, 0 none. */
+  torqueSign: -1 | 0 | 1;
+}
+
 export interface RenderModel {
   bars: BarPrimitive[];
   plates: PlatePrimitive[];
@@ -107,6 +133,9 @@ export interface RenderModel {
   motors: MotorPrimitive[];
   markers: MarkerPrimitive[];
   freeSites: FreeSitePrimitive[];
+  springs: SpringPrimitive[];
+  loads: LoadPrimitive[];
+  annotations: AnnotationPrimitive[];
 }
 
 export interface BuildRenderModelOptions {
@@ -153,12 +182,13 @@ export function buildRenderModel(
     const selected = selection.has(link.id);
     const hovered = options?.hoverId === link.id;
     const issue = options?.issueLinkIds?.has(link.id) ?? false;
-    const points = link.sites.map((site) => worldOf(link, site.local));
-
     if (link.shape.kind === "bar") {
+      const points = flattenBar(link).map((v) => worldOf(link, v));
       bars.push({ linkId: link.id, points, color, selected, hovered, issue });
     } else {
-      const outlinePoints = link.shape.outline.map((v) => worldOf(link, v));
+      const outlinePoints = flattenOutline(link.shape.outline, link.shape.edges).map((v) =>
+        worldOf(link, v),
+      );
       plates.push({ linkId: link.id, points: outlinePoints, color, selected, hovered, issue });
     }
 
@@ -240,5 +270,60 @@ export function buildRenderModel(
     markers.push({ markerId: marker.id, point: worldOf(link, marker.local) });
   }
 
-  return { bars, plates, groundPivots, pins, sliders, motors, markers, freeSites };
+  const springs: SpringPrimitive[] = [];
+  for (const spring of doc.springs) {
+    const selected = selection.has(spring.id);
+    if (spring.kind === "linear") {
+      const entryA = index.sites.get(spring.siteA)!;
+      const entryB = index.sites.get(spring.siteB)!;
+      springs.push({
+        springId: spring.id,
+        kind: "linear",
+        a: worldOf(entryA.link, entryA.site.local),
+        b: worldOf(entryB.link, entryB.site.local),
+        selected,
+      });
+    } else {
+      const joint = index.joints.get(spring.jointId)!;
+      const entryB = index.sites.get(joint.siteB)!;
+      springs.push({
+        springId: spring.id,
+        kind: "torsional",
+        point: worldOf(entryB.link, entryB.site.local),
+        selected,
+      });
+    }
+  }
+
+  const loads: LoadPrimitive[] = [];
+  for (const load of doc.loads) {
+    const entry = index.sites.get(load.siteId)!;
+    const [fx, fy] = load.force;
+    loads.push({
+      loadId: load.id,
+      point: worldOf(entry.link, entry.site.local),
+      forceAngle: fx === 0 && fy === 0 ? null : Math.atan2(fy, fx),
+      torqueSign: load.torque > 0 ? 1 : load.torque < 0 ? -1 : 0,
+    });
+  }
+
+  return {
+    bars,
+    plates,
+    groundPivots,
+    pins,
+    sliders,
+    motors,
+    markers,
+    freeSites,
+    springs,
+    loads,
+    // Annotations are static: drawn at their world points in every pose.
+    annotations: doc.annotations.map((a) => ({
+      annotationId: a.id,
+      points: a.points.map(([x, y]) => ({ x, y })),
+      color: a.color,
+      width: a.width,
+    })),
+  };
 }

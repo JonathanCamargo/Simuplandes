@@ -80,12 +80,64 @@
       "needLink": "Haz clic sobre un eslabón que no sea la bancada"
     }
   },
+  "vertex": {
+    "label": "Editar forma",
+    "description": "Cambia el contorno de una placa o curva una barra: mueve vértices, añade arcos y curvas",
+    "hint": {
+      "idle": "Haz clic en una placa o una barra para editar su forma",
+      "plateSelected": "Arrastra un vértice para moverlo; arrastra el punto medio de un lado para añadir un vértice, Mayús+arrastrar para curvarlo",
+      "barSelected": "Arrastra el punto medio de un tramo para curvarlo; haz clic en él para más opciones",
+      "vertexSelected": "Arrastra para mover; Supr elimina el vértice",
+      "minVertices": "Una placa necesita al menos 3 vértices",
+      "edgeSelected": "Elige Recta, Arco o Curva sobre el lado; Supr lo endereza",
+      "dragging": "Suelta para colocar el vértice",
+      "bending": "Suelta para terminar la curva"
+    },
+    "edge": {
+      "label": "Tipo de lado",
+      "line": "Recta",
+      "arc": "Arco",
+      "bezier": "Curva",
+      "split": "Dividir"
+    }
+  },
+  "brush": {
+    "label": "Pincel",
+    "description": "Dibuja notas a mano alzada sobre el mecanismo",
+    "hint": {
+      "idle": "Arrastra para dibujar una nota; elige su color y grosor arriba a la izquierda",
+      "painting": "Suelta para terminar el trazo; Esc lo descarta"
+    },
+    "toolbar": "Pincel",
+    "color": "Color del pincel",
+    "width": "Grosor del pincel",
+    "widthPx": "{{px}} px",
+    "colors": {
+      "ink": "Tinta",
+      "red": "Rojo",
+      "blue": "Azul",
+      "green": "Verde",
+      "orange": "Naranja"
+    }
+  },
+  "eraser": {
+    "label": "Borrador",
+    "description": "Borra notas a mano alzada",
+    "hint": {
+      "idle": "Haz clic o arrastra sobre las notas para borrarlas",
+      "erasing": "Arrastra sobre las notas para borrar",
+      "empty": "No hay notas que borrar"
+    },
+    "clearAll": "Borrar todas las notas",
+    "toolbar": "Borrar todas las notas"
+  },
   "defaultNames": {
     "bar": "Barra",
     "plate": "Placa",
     "ground": "Bancada",
     "slider": "Corredera",
-    "marker": "Punto"
+    "marker": "Punto",
+    "spring": "Resorte"
   },
   "shortcuts": {
     "undo": "Deshacer",
@@ -102,5 +154,14 @@
     "middleDragPan": "Arrastre con botón central: desplazar",
     "shiftClickAddSelection": "Mayús+clic: añadir a la selección",
     "toggleMode": "Alternar Construir/Simular"
+  },
+  "spring": {
+    "label": "Resorte",
+    "description": "Une dos eslabones con un resorte-amortiguador",
+    "hint": {
+      "idle": "Haz clic en una junta o un eslabón para empezar un resorte; el espacio vacío lo ancla a tierra",
+      "pickSecond": "Haz clic en otro eslabón, o en el espacio vacío para anclarlo a tierra",
+      "differentLink": "Elige un punto en otro eslabón"
+    }
   }
 }

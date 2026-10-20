@@ -16,7 +16,7 @@
 
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, FormControlLabel, Stack, Switch } from "@mui/material";
+import { Box, Button, FormControlLabel, Stack, Switch } from "@mui/material";
 import type { StoreApi } from "zustand";
 import type { i18n } from "i18next";
 import type { Id, MechanismDocument, Pose } from "../../model";
@@ -128,38 +128,49 @@ export function ImageExportActions({
 
   return (
     <Stack spacing={1} data-testid="export-image-actions">
-      <Button
-        data-testid="export-drawing-svg"
-        variant="outlined"
-        size="small"
-        onClick={() => void exportAs("drawing-svg")}
+      {/* Drawing on the first row, graph on the second; PNG (the common case) first. */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 1,
+          "& .MuiButton-root": { whiteSpace: "nowrap" },
+        }}
       >
-        {t("export.images.drawingSvg")}
-      </Button>
-      <Button
-        data-testid="export-drawing-png"
-        variant="outlined"
-        size="small"
-        onClick={() => void exportAs("drawing-png")}
-      >
-        {t("export.images.drawingPng")}
-      </Button>
-      <Button
-        data-testid="export-graph-svg"
-        variant="outlined"
-        size="small"
-        onClick={() => void exportAs("graph-svg")}
-      >
-        {t("export.images.graphSvg")}
-      </Button>
-      <Button
-        data-testid="export-graph-png"
-        variant="outlined"
-        size="small"
-        onClick={() => void exportAs("graph-png")}
-      >
-        {t("export.images.graphPng")}
-      </Button>
+        <Button
+          data-testid="export-drawing-png"
+          variant="contained"
+          disableElevation
+          size="small"
+          onClick={() => void exportAs("drawing-png")}
+        >
+          {t("export.images.drawingPng")}
+        </Button>
+        <Button
+          data-testid="export-drawing-svg"
+          variant="outlined"
+          size="small"
+          onClick={() => void exportAs("drawing-svg")}
+        >
+          {t("export.images.drawingSvg")}
+        </Button>
+        <Button
+          data-testid="export-graph-png"
+          variant="outlined"
+          size="small"
+          onClick={() => void exportAs("graph-png")}
+        >
+          {t("export.images.graphPng")}
+        </Button>
+        <Button
+          data-testid="export-graph-svg"
+          variant="outlined"
+          size="small"
+          onClick={() => void exportAs("graph-svg")}
+        >
+          {t("export.images.graphSvg")}
+        </Button>
+      </Box>
       <FormControlLabel
         control={
           <Switch

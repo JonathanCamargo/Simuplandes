@@ -24,6 +24,7 @@ import { ImportDialog } from "../import/ImportDialog";
 import { AtlasDialog } from "../atlas/AtlasDialog";
 import { CommandPalette } from "../palette/CommandPalette";
 import { ShortcutSheet } from "../palette/ShortcutSheet";
+import { ShareLinkLoader } from "./ShareLinkLoader";
 import type { Session } from "../../persistence/session";
 import {
   MIN_DOCK_SIZE_PCT,
@@ -34,17 +35,21 @@ import type { StudioState } from "../../uiState/studioStore";
 import { createSimStore } from "../../sim/simStore";
 import { createSimRuntime } from "../../sim/runtime";
 import { useSimRuntime } from "../../sim/react/useSimRuntime";
+import { createViewStore } from "../../canvas/viewStore";
 
 export interface StudioShellProps {
   session: Session;
   preferencesStore: StoreApi<PreferencesState>;
   studioStore: StoreApi<StudioState>;
+  /** CSS height of the grid; the full viewport unless a host page embeds the studio. */
+  height?: string;
 }
 
 export function StudioShell({
   session,
   preferencesStore,
   studioStore,
+  height = "100vh",
 }: StudioShellProps): ReactNode {
   const { t } = useTranslation();
   useStudioShortcuts(studioStore, session.store);
@@ -63,6 +68,9 @@ export function StudioShell({
   const [simStore] = useState(createSimStore);
   const [runtime] = useState(() => createSimRuntime({ store: simStore }));
   useSimRuntime({ studioStore, mechanismStore: session.store, simStore, runtime });
+  // One view store shared by the canvas and the export dock, so image exports
+  // use the canvas's real viewport and size (WYSIWYG) instead of a default view.
+  const [viewStore] = useState(() => createViewStore());
 
   function handleDockResize(panelSize: PanelSize): void {
     preferencesStore.getState().setDockSizePct(panelSize.asPercentage);
@@ -72,10 +80,10 @@ export function StudioShell({
     <Box
       sx={{
         display: "grid",
-        gridTemplateColumns: "52px minmax(0,1fr)",
+        gridTemplateColumns: (theme) => `${theme.spacing(6.5)} minmax(0,1fr)`,
         gridTemplateRows: "auto minmax(0,1fr) auto auto auto",
         gridTemplateAreas: `"top top" "rail main" "plots plots" "tx tx" "sb sb"`,
-        height: "100vh",
+        height,
         width: "100%",
         bgcolor: "background.default",
       }}
@@ -96,6 +104,7 @@ export function StudioShell({
               store={session.store}
               studio={studioStore}
               preferences={preferencesStore}
+              view={viewStore}
               sim={{ store: simStore, runtime }}
             />
           </Panel>
@@ -117,6 +126,7 @@ export function StudioShell({
               studioStore={studioStore}
               mechanismStore={session.store}
               preferencesStore={preferencesStore}
+              view={viewStore}
               sim={{ store: simStore }}
             />
           </Panel>
@@ -153,6 +163,7 @@ export function StudioShell({
       <ShortcutSheet studioStore={studioStore} />
       <ImportDialog studioStore={studioStore} mechanismStore={session.store} />
       <AtlasDialog studioStore={studioStore} mechanismStore={session.store} />
+      <ShareLinkLoader mechanismStore={session.store} studioStore={studioStore} />
       {dragging ? (
         <Box
           data-testid="drop-overlay"

@@ -15,17 +15,32 @@ import { JointForm } from "./forms/JointForm";
 import { SiteForm } from "./forms/SiteForm";
 import { MotorForm } from "./forms/MotorForm";
 import { MarkerForm } from "./forms/MarkerForm";
+import { SpringForm } from "./forms/SpringForm";
 import { MultiSelectionForm } from "./forms/MultiSelectionForm";
+import { MotionCard } from "./MotionCard";
 import type { MechanismStore } from "../../store";
+import type { SimStore } from "../../sim/simStore";
 
-export function InspectorPanel({ store }: { store: MechanismStore }): ReactNode {
+export function InspectorPanel({
+  store,
+  simStore,
+}: {
+  store: MechanismStore;
+  /** In Simulate, the empty-selection view adds a motion summary read from this store. */
+  simStore?: SimStore;
+}): ReactNode {
   const doc = useStore(store, (s) => s.document);
   const selection = useStore(store, (s) => s.selection);
   const target = resolveInspectorTarget(doc, selection);
 
   return (
     <Box sx={{ p: 2 }}>
-      {target.kind === "document" ? <DocumentForm store={store} doc={doc} /> : null}
+      {target.kind === "document" ? (
+        <>
+          <DocumentForm store={store} doc={doc} />
+          <MotionCard simStore={simStore} lengthUnit={doc.units.length} />
+        </>
+      ) : null}
       {target.kind === "multi" ? <MultiSelectionForm store={store} count={target.count} /> : null}
       {target.kind === "link" ? (
         <LinkForm key={target.link.id} store={store} doc={doc} link={target.link} />
@@ -47,6 +62,9 @@ export function InspectorPanel({ store }: { store: MechanismStore }): ReactNode 
       ) : null}
       {target.kind === "marker" ? (
         <MarkerForm key={target.marker.id} store={store} doc={doc} marker={target.marker} />
+      ) : null}
+      {target.kind === "spring" ? (
+        <SpringForm key={target.spring.id} store={store} doc={doc} spring={target.spring} />
       ) : null}
     </Box>
   );

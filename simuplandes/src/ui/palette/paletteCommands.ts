@@ -11,7 +11,7 @@
 
 import { EDIT_SHORTCUTS, TOOL_REGISTRY, type ToolId } from "../../tools/registry";
 import type { Language } from "../../i18n/numberFormat";
-import type { StudioDialog } from "../../uiState/studioStore";
+import type { RightDockTab, StudioDialog, StudioMode } from "../../uiState/studioStore";
 
 export type PaletteGroup = "file" | "tools" | "edit" | "view" | "preferences" | "help";
 
@@ -20,13 +20,16 @@ export type PaletteAction =
   | { type: "undo" }
   | { type: "redo" }
   | { type: "delete" }
+  | { type: "clearAnnotations" }
   | { type: "fit" }
   | { type: "toggleGrid" }
   | { type: "toggleSnap" }
   | { type: "toggleTheme" }
   | { type: "setLanguage"; language: Language }
   | { type: "openShortcutSheet" }
-  | { type: "openDialog"; dialog: StudioDialog };
+  | { type: "openDialog"; dialog: StudioDialog }
+  | { type: "setMode"; mode: StudioMode }
+  | { type: "showDockTab"; tab: RightDockTab };
 
 export interface PaletteCommand {
   id: string;
@@ -82,6 +85,13 @@ export function buildPaletteCommands(): PaletteCommand[] {
     fileCommand("file:importGraph", "import", "palette.commands.importGraph"),
     fileCommand("file:examples", "examples", "palette.commands.examples"),
     fileCommand("file:atlas", "atlas", "palette.commands.atlas"),
+    {
+      id: "file:exportImage",
+      group: "file",
+      labelKey: "palette.commands.exportImage",
+      keywordsKeys: ["palette.commands.exportImageKeywords"],
+      action: { type: "showDockTab", tab: "export" },
+    },
     ...toolCommands,
     {
       id: "edit:undo",
@@ -108,12 +118,47 @@ export function buildPaletteCommands(): PaletteCommand[] {
       action: { type: "delete" },
     },
     {
+      id: "edit:clearAnnotations",
+      group: "edit",
+      labelKey: "palette.commands.clearAnnotations",
+      keywordsKeys: ["palette.commands.clearAnnotationsKeywords"],
+      action: { type: "clearAnnotations" },
+    },
+    {
       id: "view:fit",
       group: "view",
       labelKey: fit.labelKey,
       keywordsKeys: [],
       shortcut: fit.display,
       action: { type: "fit" },
+    },
+    {
+      id: "view:modeBuild",
+      group: "view",
+      labelKey: "palette.commands.modeBuild",
+      keywordsKeys: [],
+      action: { type: "setMode", mode: "build" },
+    },
+    {
+      id: "view:modeDraw",
+      group: "view",
+      labelKey: "palette.commands.modeDraw",
+      keywordsKeys: ["palette.commands.modeDrawKeywords"],
+      action: { type: "setMode", mode: "draw" },
+    },
+    {
+      id: "view:modeSimulate",
+      group: "view",
+      labelKey: "palette.commands.modeSimulate",
+      keywordsKeys: ["palette.commands.modeSimulateKeywords"],
+      action: { type: "setMode", mode: "simulate" },
+    },
+    {
+      id: "view:showGraph",
+      group: "view",
+      labelKey: "palette.commands.showGraph",
+      keywordsKeys: ["palette.commands.showGraphKeywords"],
+      action: { type: "showDockTab", tab: "graph" },
     },
     {
       id: "view:toggleGrid",

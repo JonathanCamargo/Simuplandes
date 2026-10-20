@@ -19,7 +19,13 @@
     "direction": {
       "forward": "Forward",
       "backward": "Backward"
-    }
+    },
+    "analysis": "Analysis",
+    "analysisKinematics": "Kinematics",
+    "analysisDynamics": "Dynamics",
+    "time": "Time",
+    "duration": "Duration",
+    "durationOption": "{{seconds}} s"
   },
   "status": {
     "notDrivable": {
@@ -44,7 +50,8 @@
   "hint": {
     "simulate": "Drag a link to drive it · Space returns to Build",
     "dragging": "Dragging {{link}}",
-    "notDrivable": "This mechanism does not move · Space returns to Build"
+    "notDrivable": "This mechanism does not move · Space returns to Build",
+    "dynamics": "Dynamics: Play integrates the motion in time · Space returns to Build"
   },
   "dof": {
     "badge": "F = {{f}}",
@@ -92,7 +99,42 @@
       "vx": "{{entity}} · vx",
       "vy": "{{entity}} · vy",
       "ax": "{{entity}} · ax",
-      "ay": "{{entity}} · ay"
+      "ay": "{{entity}} · ay",
+      "fx": "{{entity}} · reaction Fx",
+      "fy": "{{entity}} · reaction Fy",
+      "force": "{{entity}} · reaction |F|",
+      "couple": "{{entity}} · reaction couple",
+      "torque": "{{entity}} · torque",
+      "thrust": "{{entity}} · force",
+      "power": "{{entity}} · power",
+      "tension": "{{entity}} · spring force",
+      "length": "{{entity}} · length",
+      "springTorque": "{{entity}} · spring torque",
+      "twist": "{{entity}} · twist",
+      "kinetic": "Kinetic energy",
+      "potential": "Potential energy",
+      "total": "Total energy"
+    }
+  },
+  "dynamics": {
+    "computing": "Computing… {{time}} of {{duration}} s",
+    "stopped": "Stopped at {{time}} s: {{reason}}",
+    "stop": {
+      "invalid-drive": "a motor's motion expression is not a number",
+      "invalid-effort": "a motor's effort is not a number",
+      "projection-failed": "the joints could not be closed (the motion may be locked)",
+      "diverged": "the motion ran away",
+      "invalid-input": "invalid input"
+    },
+    "singular": "Redundant constraints: the reactions are not unique",
+    "status": {
+      "empty": "Draw a mechanism to simulate it",
+      "invalid": "This document cannot be simulated: {{message}}",
+      "invalidExpression": "Fix the motor expressions: {{motors}}",
+      "assemblyFailed": "Could not assemble: {{joints}}",
+      "overDriven": "More motors follow a motion than the mechanism has degrees of freedom",
+      "ready_one": "{{count}} free DOF under gravity, springs and motors",
+      "ready_other": "{{count}} free DOF under gravity, springs and motors"
     }
   }
 }

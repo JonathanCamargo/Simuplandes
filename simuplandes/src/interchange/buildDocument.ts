@@ -25,6 +25,7 @@ import {
   type MechanismDocumentInput,
   type Pose,
   type Site,
+  CURRENT_SCHEMA_VERSION,
 } from "../model";
 import type { Vec2Tuple } from "./importReport";
 import type { ReadMarker } from "./readGraph";
@@ -95,9 +96,9 @@ function triangleOutline(): [number, number][] {
   ];
 }
 
-function shapeFor(locals: readonly Vec2Tuple[]): LinkShape {
-  const distinct = distinctPoints(locals);
-  if (distinct.length <= 2) return { kind: "bar" };
+function shapeFor(sites: readonly Site[]): LinkShape {
+  const distinct = distinctPoints(sites.map((s) => s.local));
+  if (distinct.length <= 2) return { kind: "bar", path: sites.map((s) => s.id) };
   const hull = convexHull(distinct);
   return {
     kind: "plate",
@@ -161,7 +162,7 @@ function buildLink(
     name,
     isGround,
     pose,
-    shape: shapeFor(sites.map((s) => s.local)),
+    shape: shapeFor(sites),
     sites,
   };
   return { link, built: { pose, siteOfEdge } };
@@ -281,7 +282,7 @@ export function buildStudioDocumentDetailed(input: StudioBuildInput): {
   });
 
   const doc: MechanismDocumentInput = {
-    schemaVersion: 1,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     name: input.name,
     ...(input.units === "mm" || input.units === "m" ? { units: { length: input.units } } : {}),
     links,

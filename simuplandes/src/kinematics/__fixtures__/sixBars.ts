@@ -149,7 +149,7 @@ export function buildWattII(): SixBarFixture {
   const jointO2Id = createId("joint");
 
   const doc = makeDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "watt-ii",
     links: [ground.link, crank.link, coupler.link, rocker.link, l5.link, l6.link],
     joints: [
@@ -304,7 +304,7 @@ export function buildStephensonIII(): SixBarFixture {
   const jointO2Id = createId("joint");
 
   const doc = makeDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "stephenson-iii",
     links: [ground.link, crank.link, coupler.link, rocker.link, l5.link, l6.link],
     joints: [

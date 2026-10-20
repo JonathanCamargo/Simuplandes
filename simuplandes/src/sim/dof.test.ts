@@ -70,6 +70,7 @@ describe("computeDofReport: fourBar", () => {
           jointId: jointA.id,
           kind: "rotary",
           drive: { mode: "constant", speed: 1 },
+          dynamics: { mode: "motion" },
         },
       ],
     };
@@ -127,7 +128,7 @@ describe("computeDofReport: fourBar with a redundant bar pinned A-O4", () => {
 
     const jointO2Id = createId("joint");
     const doc = makeDocument({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "four-bar-redundant-bar",
       links: [ground.link, crank.link, coupler.link, rocker.link, extra.link],
       joints: [
@@ -175,6 +176,7 @@ describe("computeDofReport: fourBar with a redundant bar pinned A-O4", () => {
           jointId: jointO2Id,
           kind: "rotary",
           drive: { mode: "constant", speed: 1 },
+          dynamics: { mode: "motion" },
         },
       ],
       markers: [],
@@ -222,7 +224,7 @@ describe("computeDofReport: no moving links", () => {
   it("kind empty, severity neutral, gruebler null, headlineKey sim.dof.badgeEmpty", () => {
     const ground = defineLink({ name: "ground", isGround: true, origin: [0, 0], sites: {} });
     const doc = makeDocument({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "empty",
       links: [ground.link],
       joints: [],

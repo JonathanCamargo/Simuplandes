@@ -45,10 +45,18 @@ export function useSimRuntime(opts: UseSimRuntimeOptions): void {
     }
 
     function publishModeHint(): void {
-      const status = simStore.getState().session?.status;
+      const state = simStore.getState();
+      if (state.analysis === "dynamics") {
+        const ready = state.dynamics?.summary.status === "ready";
+        studioStore
+          .getState()
+          .setSimHint(ready ? { key: "sim.hint.dynamics" } : { key: "sim.hint.notDrivable" });
+        return;
+      }
+      const status = state.session?.status;
       studioStore
         .getState()
-        .setHint(
+        .setSimHint(
           status === "ready" ? { key: "sim.hint.simulate" } : { key: "sim.hint.notDrivable" },
         );
     }
@@ -68,7 +76,7 @@ export function useSimRuntime(opts: UseSimRuntimeOptions): void {
         enterSimulate();
       } else {
         runtime.exit();
-        studioStore.getState().setHint(null);
+        studioStore.getState().setSimHint(null);
       }
     });
 
@@ -83,13 +91,20 @@ export function useSimRuntime(opts: UseSimRuntimeOptions): void {
       if (state.dragging === prevState.dragging) return;
       if (studioStore.getState().mode !== "simulate") return;
       if (state.dragging) {
-        studioStore.getState().setHint({
+        studioStore.getState().setSimHint({
           key: "sim.hint.dragging",
           values: { link: linkNameOf(state.dragging.linkId) },
         });
       } else {
-        studioStore.getState().setHint({ key: "sim.hint.simulate" });
+        studioStore.getState().setSimHint({ key: "sim.hint.simulate" });
       }
+    });
+
+    const unsubscribeAnalysis = simStore.subscribe((state, prevState) => {
+      const sameSummary = state.dynamics?.summary === prevState.dynamics?.summary;
+      if (state.analysis === prevState.analysis && sameSummary) return;
+      if (studioStore.getState().mode !== "simulate") return;
+      publishModeHint();
     });
 
     const uninstallTestHook = installSimTestHook({ studioStore, simStore, runtime });
@@ -98,6 +113,7 @@ export function useSimRuntime(opts: UseSimRuntimeOptions): void {
       unsubscribeMode();
       unsubscribeDocument();
       unsubscribeDragging();
+      unsubscribeAnalysis();
       uninstallTestHook();
       runtime.dispose();
     };

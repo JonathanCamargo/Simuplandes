@@ -18,9 +18,14 @@ import {
 import {
   addLink,
   addSite,
+  setPlateOutline,
+  setBarEdges,
+  addAnnotation,
+  deleteEntities,
   addJoint,
   addMotor,
   addMarker,
+  addSpring,
   moveEntities,
   planDuplicate,
   defaultMotorDrive,
@@ -35,6 +40,7 @@ export interface DefaultNames {
   ground: string;
   slider: string;
   marker: string;
+  spring: string;
 }
 
 export interface ApplyToolEffectsOptions {
@@ -61,11 +67,64 @@ function nextIndexedMarkerName(doc: MechanismDocument, base: string): string {
   return `${base} ${count + 1}`;
 }
 
+/** The default stiffness of a drawn spring, N/m. */
+export const DEFAULT_SPRING_STIFFNESS = 100;
+
+function nextIndexedSpringName(doc: MechanismDocument, base: string): string {
+  const count = doc.springs.filter((s) => s.name === base || s.name.startsWith(`${base} `)).length;
+  return `${base} ${count + 1}`;
+}
+
+/**
+ * Resolves both ends of a drawn spring to sites (adding a site on a link,
+ * or a ground site, where the end is not already one) and adds the spring.
+ */
+function buildCommitSpring(
+  effect: Extract<ToolEffect, { kind: "commitSpring" }>,
+  doc: MechanismDocument,
+  idFactory: (kind: "link" | "site" | "joint" | "spring") => Id,
+  defaultNames: DefaultNames,
+): { label: string; recipes: Recipe[]; result: CommitResult } {
+  const recipes: Recipe[] = [];
+  const createdIds: Id[] = [];
+  // The tool never commits two ground ends, so at most one ground site is added.
+  const resolve = (end: typeof effect.a): Id => {
+    if (end.kind === "site") return end.siteId;
+    if (end.kind === "link") {
+      const link = doc.links.find((l) => l.id === end.linkId)!;
+      const siteId = idFactory("site");
+      recipes.push(addSite(link.id, { id: siteId, local: worldToLinkLocal(link.pose, end.at) }));
+      createdIds.push(siteId);
+      return siteId;
+    }
+    const step = groundSiteStep(doc, end.at, idFactory, defaultNames, recipes, false);
+    createdIds.push(...(step.createdLink ? [step.groundLinkId] : []), step.groundSiteId);
+    return step.groundSiteId;
+  };
+  const siteA = resolve(effect.a);
+  const siteB = resolve(effect.b);
+  const springId = idFactory("spring");
+  recipes.push(
+    addSpring({
+      id: springId,
+      kind: "linear",
+      name: nextIndexedSpringName(doc, defaultNames.spring),
+      siteA,
+      siteB,
+      stiffness: DEFAULT_SPRING_STIFFNESS,
+      freeLength: effect.freeLength,
+    }),
+  );
+  createdIds.push(springId);
+  return { label: "add-spring", recipes, result: { siteIds: [siteA, siteB], createdIds } };
+}
+
 /**
  * Resolves (or creates) the document's ground link and adds a new ground
- * site at world point `at`. Shared by `commitGroundPivot` and
- * `commitSlider`, both of which may need a brand-new ground link+site in
- * the SAME commit as everything else they create.
+ * site at world point `at`. Shared by `commitGroundPivot`, `commitSlider`
+ * and `commitSpring`, all of which may need a brand-new ground link+site in
+ * the SAME commit as everything else they create. `onPath` puts the site on
+ * the ground bar's drawn path (pivots do; a spring's ground anchor does not).
  */
 function groundSiteStep(
   doc: MechanismDocument,
@@ -73,12 +132,17 @@ function groundSiteStep(
   idFactory: (kind: "link" | "site" | "joint") => Id,
   defaultNames: DefaultNames,
   recipes: Recipe[],
+  onPath = true,
 ): { groundLinkId: Id; groundSiteId: Id; groundPose: Pose; createdLink: boolean } {
   const groundSiteId = idFactory("site");
   const existing = doc.links.find((l) => l.isGround);
   if (existing) {
     recipes.push(
-      addSite(existing.id, { id: groundSiteId, local: worldToLinkLocal(existing.pose, at) }),
+      addSite(
+        existing.id,
+        { id: groundSiteId, local: worldToLinkLocal(existing.pose, at) },
+        { onPath },
+      ),
     );
     return {
       groundLinkId: existing.id,
@@ -94,6 +158,7 @@ function groundSiteStep(
       name: defaultNames.ground,
       isGround: true,
       pose: IDENTITY_POSE,
+      shape: { kind: "bar", path: onPath ? [groundSiteId] : [] },
       sites: [{ id: groundSiteId, local: worldToLinkLocal(IDENTITY_POSE, at) }],
     }),
   );
@@ -113,7 +178,7 @@ function buildCommitBar(
     addLink({
       id: linkId,
       name: nextIndexedName(doc, defaultNames.bar),
-      shape: { kind: "bar" },
+      shape: { kind: "bar", path: [siteAId, siteBId] },
       pose: { position: [effect.start.x, effect.start.y], angle: effect.angle },
       sites: [
         { id: siteAId, local: [0, 0] },
@@ -395,6 +460,52 @@ export function applyToolEffects(
           }),
         );
         results.push({ siteIds: [], createdIds: [id] });
+        break;
+      }
+      case "commitSpring": {
+        const built = buildCommitSpring(
+          effect,
+          store.getState().document,
+          idFactory,
+          options.defaultNames,
+        );
+        store.getState().execute(built.label, built.recipes);
+        store.getState().select([built.result.createdIds[built.result.createdIds.length - 1]]);
+        results.push(built.result);
+        break;
+      }
+      case "setPlateOutline": {
+        store
+          .getState()
+          .execute("edit-outline", setPlateOutline(effect.linkId, effect.outline, effect.edges), {
+            coalesceKey: effect.gestureId,
+          });
+        results.push(NO_ENTITIES_RESULT);
+        break;
+      }
+      case "addAnnotation": {
+        const id = idFactory("annotation");
+        store
+          .getState()
+          .execute(
+            "add-annotation",
+            addAnnotation({ id, points: effect.points, color: effect.color, width: effect.width }),
+          );
+        results.push({ siteIds: [], createdIds: [id] });
+        break;
+      }
+      case "deleteAnnotations": {
+        store.getState().execute("erase-annotations", deleteEntities(new Set(effect.ids)), {
+          coalesceKey: effect.gestureId,
+        });
+        results.push(NO_ENTITIES_RESULT);
+        break;
+      }
+      case "setBarEdges": {
+        store.getState().execute("edit-outline", setBarEdges(effect.linkId, effect.edges), {
+          coalesceKey: effect.gestureId,
+        });
+        results.push(NO_ENTITIES_RESULT);
         break;
       }
       case "addMarker": {

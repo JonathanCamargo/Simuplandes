@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
-import { createSimStore, SPEED_OPTIONS } from "./simStore";
+import {
+  createSimStore,
+  SPEED_OPTIONS,
+  DURATION_OPTIONS,
+  DEFAULT_DYNAMICS_DURATION,
+} from "./simStore";
 import type { SimRange, SimSessionSummary } from "./session";
 import type { TraceData } from "./traces";
 import type { MeasurementTable, QuantityDef } from "./plots";
@@ -298,5 +303,51 @@ describe("subscribers fire exactly once per setter call", () => {
     store.subscribe(listener);
     store.getState().setSpeed(3);
     expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe("dynamics analysis state", () => {
+  it("defaults to kinematics, 10 s and no dynamics readout", () => {
+    const state = createSimStore().getState();
+    expect(state.analysis).toBe("kinematics");
+    expect(state.dynamicsDuration).toBe(DEFAULT_DYNAMICS_DURATION);
+    expect(state.dynamics).toBeNull();
+  });
+
+  it("accepts only the offered durations", () => {
+    const store = createSimStore();
+    for (const seconds of DURATION_OPTIONS) {
+      store.getState().setDynamicsDuration(seconds);
+      expect(store.getState().dynamicsDuration).toBe(seconds);
+    }
+    store.getState().setDynamicsDuration(3);
+    expect(store.getState().dynamicsDuration).toBe(DURATION_OPTIONS[DURATION_OPTIONS.length - 1]);
+  });
+
+  it("clear() drops the dynamics readout but keeps the analysis and duration", () => {
+    const store = createSimStore();
+    store.getState().setAnalysis("dynamics");
+    store.getState().setDynamicsDuration(5);
+    store.getState().setDynamics({
+      summary: {
+        status: "ready",
+        dof: 1,
+        motionMotorCount: 0,
+        effortMotorCount: 0,
+        violations: [],
+        invalidMotorIds: [],
+        errorMessage: null,
+      },
+      status: "computing",
+      computedTime: 1,
+      duration: 5,
+      stop: null,
+      singular: false,
+    });
+    expect(store.getState().dynamics?.computedTime).toBe(1);
+    store.getState().clear();
+    expect(store.getState().dynamics).toBeNull();
+    expect(store.getState().analysis).toBe("dynamics");
+    expect(store.getState().dynamicsDuration).toBe(5);
   });
 });

@@ -34,6 +34,14 @@
     "eight-bar": {
       "title": "Eight-bar",
       "description": "Atlas topology T15"
+    },
+    "double-pendulum": {
+      "title": "Double pendulum",
+      "description": "Two free rods (Dynamics)"
+    },
+    "mass-spring": {
+      "title": "Mass-spring",
+      "description": "Damped block on a vertical rail (Dynamics)"
     }
   }
 }

@@ -20,6 +20,10 @@ import {
   moveEntities,
   deleteEntities,
   planDuplicate,
+  setPlateOutline,
+  setBarEdges,
+  addAnnotation,
+  clearAnnotations,
   CommandError,
   type Recipe,
 } from "./commands";
@@ -62,7 +66,7 @@ describe("addLink", () => {
     const link = result.links.find((l) => l.id === "link-x");
     expect(link?.isGround).toBe(false);
     expect(link?.pose).toEqual({ position: [0, 0], angle: 0 });
-    expect(link?.shape).toEqual({ kind: "bar" });
+    expect(link?.shape).toEqual({ kind: "bar", path: ["site-x"] });
     expect(link?.sites[0]).toEqual({ id: "site-x", name: "", local: [1, 2] });
   });
 
@@ -610,5 +614,179 @@ describe("planDuplicate", () => {
       idFactory,
     );
     expect(newLinkIds[0]).toBe("link-dup-1");
+  });
+});
+
+describe("bar path", () => {
+  const crankPath = (doc: MechanismDocument, linkId = "link-2") => {
+    const shape = doc.links.find((l) => l.id === linkId)!.shape;
+    return shape.kind === "bar" ? shape.path : null;
+  };
+
+  it("addLink rejects a path naming a foreign or repeated site", () => {
+    const sites = [
+      { id: "a", local: [0, 0] as [number, number] },
+      { id: "b", local: [1, 0] as [number, number] },
+    ];
+    const bad = (path: string[]) =>
+      produce(
+        createEmptyDocument(),
+        addLink({ id: "l", name: "", shape: { kind: "bar", path }, sites }),
+      );
+    expect(() => bad(["a", "zz"])).toThrow(CommandError);
+    expect(() => bad(["a", "a"])).toThrow(CommandError);
+    expect(crankPath(bad(["b"]), "l")).toEqual(["b"]);
+  });
+
+  it("addSite keeps a new site off the path unless onPath is set", () => {
+    const next = applyRecipes(fourBarFixtureParsed, [
+      addSite("link-2", { id: "site-off", local: [20, 0] }),
+      addSite("link-2", { id: "site-on", local: [60, 0] }, { onPath: true }),
+    ]);
+    expect(crankPath(next)).toEqual(["site-3", "site-4", "site-on"]);
+    expect(MechanismDocumentSchema.safeParse(next).success).toBe(true);
+  });
+
+  it("deleteEntities drops a deleted site from the path", () => {
+    const next = produce(fourBarFixtureParsed, deleteEntities(new Set(["site-4"])));
+    expect(crankPath(next)).toEqual(["site-3"]);
+    expect(MechanismDocumentSchema.safeParse(next).success).toBe(true);
+  });
+
+  it("planDuplicate maps the path to the copy's site ids", () => {
+    let n = 0;
+    const { recipe, idMap } = planDuplicate(
+      fourBarFixtureParsed,
+      new Set(["link-2"]),
+      { x: 0, y: 0 },
+      (kind) => `${kind}-copy-${++n}`,
+    );
+    const next = produce(fourBarFixtureParsed, recipe);
+    expect(crankPath(next, idMap.get("link-2"))).toEqual([
+      idMap.get("site-3"),
+      idMap.get("site-4"),
+    ]);
+    expect(MechanismDocumentSchema.safeParse(next).success).toBe(true);
+  });
+});
+
+describe("setPlateOutline", () => {
+  it("replaces a plate's outline and stays schema-valid", () => {
+    const outline: [number, number][] = [
+      [0, 0],
+      [10, 0],
+      [5, 8],
+    ];
+    const next = produce(fourBarFixtureParsed, setPlateOutline("link-3", outline, undefined));
+    const shape = next.links.find((l) => l.id === "link-3")!.shape;
+    expect(shape).toEqual({ kind: "plate", outline });
+    expect(MechanismDocumentSchema.safeParse(next).success).toBe(true);
+  });
+
+  it("rejects a bar, an unknown link, fewer than 3 vertices or a non-finite one", () => {
+    const tri: [number, number][] = [
+      [0, 0],
+      [1, 0],
+      [0, 1],
+    ];
+    const run = (id: string, outline: [number, number][]) =>
+      produce(fourBarFixtureParsed, setPlateOutline(id, outline, undefined));
+    expect(() => run("link-2", tri)).toThrow(CommandError);
+    expect(() => run("nope", tri)).toThrow(CommandError);
+    expect(() => run("link-3", tri.slice(0, 2))).toThrow(CommandError);
+    expect(() => run("link-3", [...tri.slice(0, 2), [Number.NaN, 0]])).toThrow(CommandError);
+  });
+});
+
+describe("curved edges", () => {
+  const arc = { kind: "arc" as const, bulge: 0.5 };
+  const line = { kind: "line" as const };
+  const crankEdges = (doc: MechanismDocument) =>
+    doc.links.find((l) => l.id === "link-2")!.shape.edges;
+
+  it("setBarEdges sets one edge per path segment, and undefined straightens", () => {
+    const curved = produce(fourBarFixtureParsed, setBarEdges("link-2", [arc]));
+    expect(crankEdges(curved)).toEqual([arc]);
+    expect(MechanismDocumentSchema.safeParse(curved).success).toBe(true);
+    expect(crankEdges(produce(curved, setBarEdges("link-2", undefined)))).toBeUndefined();
+    expect(() => produce(fourBarFixtureParsed, setBarEdges("link-2", [arc, arc]))).toThrow(
+      CommandError,
+    );
+    expect(() => produce(fourBarFixtureParsed, setBarEdges("link-3", [arc]))).toThrow(CommandError);
+    expect(() =>
+      produce(fourBarFixtureParsed, setBarEdges("link-2", [{ kind: "arc", bulge: 99 }])),
+    ).toThrow(CommandError);
+  });
+
+  it("an added path site gets a straight edge; deleting a path site keeps surviving curves", () => {
+    const next = applyRecipes(fourBarFixtureParsed, [
+      setBarEdges("link-2", [arc]),
+      addSite("link-2", { id: "site-tip", local: [80, 0] }, { onPath: true }),
+    ]);
+    expect(crankEdges(next)).toEqual([arc, line]);
+    expect(MechanismDocumentSchema.safeParse(next).success).toBe(true);
+
+    const trimmed = produce(next, deleteEntities(new Set(["site-tip"])));
+    expect(crankEdges(trimmed)).toEqual([arc]);
+    const middle = produce(next, deleteEntities(new Set(["site-4"])));
+    expect(crankEdges(middle)).toEqual([line]);
+    expect(MechanismDocumentSchema.safeParse(middle).success).toBe(true);
+  });
+
+  it("setPlateOutline checks the edge count; duplicating keeps curves", () => {
+    const outline: [number, number][] = [
+      [0, 0],
+      [10, 0],
+      [5, 8],
+    ];
+    const next = produce(
+      fourBarFixtureParsed,
+      setPlateOutline("link-3", outline, [arc, line, line]),
+    );
+    expect(next.links.find((l) => l.id === "link-3")!.shape.edges).toEqual([arc, line, line]);
+    expect(() => produce(fourBarFixtureParsed, setPlateOutline("link-3", outline, [arc]))).toThrow(
+      CommandError,
+    );
+
+    let n = 0;
+    const curved = produce(fourBarFixtureParsed, setBarEdges("link-2", [arc]));
+    const { recipe, idMap } = planDuplicate(
+      curved,
+      new Set(["link-2"]),
+      { x: 0, y: 0 },
+      (kind) => `${kind}-c-${++n}`,
+    );
+    const copy = produce(curved, recipe).links.find((l) => l.id === idMap.get("link-2"))!;
+    expect(copy.shape.edges).toEqual([arc]);
+  });
+});
+
+describe("annotations", () => {
+  const stroke = {
+    id: "note-1",
+    points: [
+      [0, 0],
+      [10, 5],
+    ] as [number, number][],
+    color: "blue" as const,
+    width: 2,
+  };
+
+  it("addAnnotation adds a schema-valid stroke; deleteEntities and clearAnnotations remove them", () => {
+    const next = produce(fourBarFixtureParsed, addAnnotation(stroke));
+    expect(next.annotations).toEqual([{ ...stroke, kind: "stroke" }]);
+    expect(MechanismDocumentSchema.safeParse(next).success).toBe(true);
+    expect(produce(next, deleteEntities(new Set(["note-1"]))).annotations).toEqual([]);
+    expect(produce(next, clearAnnotations()).annotations).toEqual([]);
+    // Deleting a link leaves annotations alone.
+    expect(produce(next, deleteEntities(new Set(["link-2"]))).annotations).toHaveLength(1);
+  });
+
+  it("rejects a duplicate id, no points, non-finite points or a bad width", () => {
+    const run = (input: typeof stroke) => produce(fourBarFixtureParsed, addAnnotation(input));
+    expect(() => run({ ...stroke, id: "link-1" })).toThrow(CommandError);
+    expect(() => run({ ...stroke, points: [] })).toThrow(CommandError);
+    expect(() => run({ ...stroke, points: [[0, Number.NaN]] })).toThrow(CommandError);
+    expect(() => run({ ...stroke, width: 0 })).toThrow(CommandError);
   });
 });

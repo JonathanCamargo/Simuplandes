@@ -10,7 +10,8 @@
  * plotting -- every `MeasurementTable` this module produces is already in
  * display units (deg, deg/s, deg/s^2 for angular quantities; the document's
  * length unit is a LABEL only, per MDL-05, so linear quantities are never
- * rescaled here). `src/sim/csv.ts` (same plan) consumes these tables
+ * rescaled here). Dynamics quantities (joint reactions, motor efforts and
+ * power, spring states, energy) are SI and come from a `DynamicsFrame`. `src/sim/csv.ts` (same plan) consumes these tables
  * directly; no UI/React/Konva import here (pure orchestration, ESLint-
  * enforced).
  *
@@ -20,25 +21,65 @@
  */
 
 import { linkPose, pointKinematics, type KinematicSystem } from "../kinematics";
+import {
+  describeFrame,
+  inverseDynamics,
+  type DynamicSystem,
+  type DynamicsFrame,
+} from "../dynamics";
 
 const RAD_TO_DEG = 180 / Math.PI;
 
-/** A moving link's derived-quantity token. */
-export type QuantityToken = "angle" | "omega" | "alpha" | "x" | "y" | "vx" | "vy" | "ax" | "ay";
+/** A quantity token: kinematic (link/marker) or dynamic (joint, motor, spring, energy). */
+export type QuantityToken =
+  | "angle"
+  | "omega"
+  | "alpha"
+  | "x"
+  | "y"
+  | "vx"
+  | "vy"
+  | "ax"
+  | "ay"
+  | "fx"
+  | "fy"
+  | "force"
+  | "couple"
+  | "torque"
+  | "thrust"
+  | "power"
+  | "tension"
+  | "length"
+  | "springTorque"
+  | "twist"
+  | "kinetic"
+  | "potential"
+  | "total";
 
-/** The display unit for a quantity. Length-based units are labels only (MDL-05, no runtime conversion). */
-export type QuantityUnit = "deg" | "deg/s" | "deg/s^2" | "len" | "len/s" | "len/s^2";
+/** The display unit for a quantity. Length-based units are labels only (MDL-05); force, torque, power and energy are SI. */
+export type QuantityUnit =
+  "deg" | "deg/s" | "deg/s^2" | "len" | "len/s" | "len/s^2" | "N" | "N·m" | "W" | "J";
 
-/** One plottable quantity: a moving link's angle/omega/alpha, or a marker's x/y/vx/vy/ax/ay. */
+/** What a dynamics quantity reads: a joint reaction, a driving or effort motor, or a spring (energy has none). */
+export type QuantitySource = "joint" | "driver" | "actuator" | "linearSpring" | "torsionalSpring";
+
+/**
+ * One plottable quantity: a moving link's angle/omega/alpha, a marker's
+ * x/y/vx/vy/ax/ay, or (with dynamics) a joint reaction, motor effort or
+ * power, spring state, or energy. `linkIndex` is -1 for dynamics
+ * quantities; `source`/`index` locate them in a `DynamicsFrame`.
+ */
 export interface QuantityDef {
   readonly id: string;
-  readonly entityKind: "link" | "marker";
+  readonly entityKind: "link" | "marker" | "joint" | "motor" | "spring" | "system";
   readonly entityId: string;
   readonly entityLabel: string;
   readonly token: QuantityToken;
   readonly unit: QuantityUnit;
   readonly linkIndex: number;
   readonly local?: { readonly x: number; readonly y: number };
+  readonly source?: QuantitySource;
+  readonly index?: number;
 }
 
 /**
@@ -69,8 +110,17 @@ export interface MeasurementTable {
  * x/y/vx/vy/ax/ay. Ground links are never plotted (they never move).
  * `id` is `link:<id>:<token>` or `marker:<id>:<token>`; `entityLabel` is the
  * link/marker's own name when non-empty, otherwise its id.
+ *
+ * With `dynamics`, the dynamics quantities follow: each joint's reaction
+ * (`joint:<id>:fx|fy|force`, plus `couple` for a prismatic joint), each
+ * motor's effort and power (`motor:<id>:torque|thrust|power`), each
+ * spring's state (`spring:<id>:...`), and the energy
+ * (`system:energy:kinetic|potential|total`).
  */
-export function listQuantities(system: KinematicSystem): QuantityDef[] {
+export function listQuantities(
+  system: KinematicSystem,
+  dynamics: DynamicSystem | null = null,
+): QuantityDef[] {
   const defs: QuantityDef[] = [];
 
   system.links.forEach((slot, linkIndex) => {
@@ -98,12 +148,147 @@ export function listQuantities(system: KinematicSystem): QuantityDef[] {
     defs.push({ ...base, id: `marker:${marker.id}:ay`, token: "ay", unit: "len/s^2" });
   }
 
+  if (dynamics) defs.push(...listDynamicsQuantities(system, dynamics));
   return defs;
+}
+
+function listDynamicsQuantities(system: KinematicSystem, dynamics: DynamicSystem): QuantityDef[] {
+  const defs: QuantityDef[] = [];
+  let jointIndex = 0;
+  for (const c of system.constraints) {
+    if (c.kind !== "revolute" && c.kind !== "prismatic") continue;
+    const base = {
+      entityKind: "joint",
+      entityId: c.jointId,
+      entityLabel: c.label,
+      linkIndex: -1,
+      source: "joint",
+      index: jointIndex++,
+    } as const;
+    defs.push({ ...base, id: `joint:${c.jointId}:fx`, token: "fx", unit: "N" });
+    defs.push({ ...base, id: `joint:${c.jointId}:fy`, token: "fy", unit: "N" });
+    defs.push({ ...base, id: `joint:${c.jointId}:force`, token: "force", unit: "N" });
+    if (c.kind === "prismatic") {
+      defs.push({ ...base, id: `joint:${c.jointId}:couple`, token: "couple", unit: "N·m" });
+    }
+  }
+
+  const addMotor = (
+    id: string,
+    label: string,
+    kind: "rotary" | "linear",
+    source: "driver" | "actuator",
+    index: number,
+  ): void => {
+    const base = { entityKind: "motor", entityId: id, entityLabel: label, linkIndex: -1 } as const;
+    defs.push(
+      kind === "rotary"
+        ? { ...base, id: `motor:${id}:torque`, token: "torque", unit: "N·m", source, index }
+        : { ...base, id: `motor:${id}:thrust`, token: "thrust", unit: "N", source, index },
+    );
+    defs.push({ ...base, id: `motor:${id}:power`, token: "power", unit: "W", source, index });
+  };
+  system.motors.forEach((motor, k) => addMotor(motor.id, motor.label, motor.kind, "driver", k));
+  dynamics.actuators.forEach((actuator, k) =>
+    addMotor(actuator.motorId, actuator.label, actuator.kind, "actuator", k),
+  );
+
+  dynamics.linearSprings.forEach((spring, index) => {
+    const base = {
+      entityKind: "spring",
+      entityId: spring.id,
+      entityLabel: spring.label,
+      linkIndex: -1,
+      source: "linearSpring",
+      index,
+    } as const;
+    defs.push({ ...base, id: `spring:${spring.id}:tension`, token: "tension", unit: "N" });
+    defs.push({ ...base, id: `spring:${spring.id}:length`, token: "length", unit: "len" });
+  });
+  dynamics.torsionalSprings.forEach((spring, index) => {
+    const base = {
+      entityKind: "spring",
+      entityId: spring.id,
+      entityLabel: spring.label,
+      linkIndex: -1,
+      source: "torsionalSpring",
+      index,
+    } as const;
+    defs.push({
+      ...base,
+      id: `spring:${spring.id}:springTorque`,
+      token: "springTorque",
+      unit: "N·m",
+    });
+    defs.push({ ...base, id: `spring:${spring.id}:twist`, token: "twist", unit: "deg" });
+  });
+
+  const energyBase = {
+    entityKind: "system",
+    entityId: "energy",
+    entityLabel: "mechanism",
+    linkIndex: -1,
+  } as const;
+  defs.push({ ...energyBase, id: "system:energy:kinetic", token: "kinetic", unit: "J" });
+  defs.push({ ...energyBase, id: "system:energy:potential", token: "potential", unit: "J" });
+  defs.push({ ...energyBase, id: "system:energy:total", token: "total", unit: "J" });
+  return defs;
+}
+
+/**
+ * The inverse-dynamics frame for a kinematic solution `(q, qDot, qDDot)`:
+ * the reactions and efforts that motion needs. `null` when the solve fails.
+ */
+export function inverseDynamicsFrame(
+  dynamics: DynamicSystem,
+  t: number,
+  q: Float64Array,
+  qDot: Float64Array,
+  qDDot: Float64Array,
+): DynamicsFrame | null {
+  const solution = inverseDynamics(dynamics, t, q, qDot, qDDot);
+  if (solution.status !== "ok") return null;
+  return describeFrame(dynamics, t, q, qDot, solution.lambda);
+}
+
+/** The value of a dynamics quantity in `frame` (SI; twist in degrees), or NaN without a frame. */
+function measureDynamics(quantity: QuantityDef, frame: DynamicsFrame | null): number {
+  if (!frame) return NaN;
+  const index = quantity.index ?? 0;
+  switch (quantity.source) {
+    case "joint": {
+      const reaction = frame.reactions.joints[index];
+      if (quantity.token === "fx") return reaction.fx;
+      if (quantity.token === "fy") return reaction.fy;
+      if (quantity.token === "force") return Math.hypot(reaction.fx, reaction.fy);
+      return reaction.torque;
+    }
+    case "driver":
+    case "actuator": {
+      const motor = (quantity.source === "driver" ? frame.drivers : frame.actuators)[index];
+      return quantity.token === "power" ? motor.power : motor.effort;
+    }
+    case "linearSpring": {
+      const spring = frame.linearSprings[index];
+      return quantity.token === "length" ? spring.length : spring.force;
+    }
+    case "torsionalSpring": {
+      const spring = frame.torsionalSprings[index];
+      return quantity.token === "twist" ? spring.twist * RAD_TO_DEG : spring.torque;
+    }
+    default: {
+      const { kinetic, potential } = frame.energy;
+      if (quantity.token === "kinetic") return kinetic;
+      if (quantity.token === "potential") return potential;
+      return kinetic + potential;
+    }
+  }
 }
 
 /**
  * Writes `quantities[i]`'s value (in display units) into `out[i]` for the
  * solved frame `(q, qDot, qDDot)`. `out.length` must equal `quantities.length`.
+ * Dynamics quantities read `frame` (NaN when it is null).
  * Caches each distinct link's `linkPose` once per call (angle/omega/alpha
  * quantities on the same link share it); marker quantities each call
  * `pointKinematics` once (not further deduplicated -- not a hot path
@@ -116,6 +301,7 @@ export function measureAll(
   qDDot: Float64Array,
   quantities: readonly QuantityDef[],
   out: Float64Array,
+  frame: DynamicsFrame | null = null,
 ): void {
   const poseCache = new Map<number, { x: number; y: number; angle: number }>();
   const getPose = (linkIndex: number): { x: number; y: number; angle: number } => {
@@ -129,6 +315,10 @@ export function measureAll(
 
   for (let i = 0; i < quantities.length; i++) {
     const quantity = quantities[i];
+    if (quantity.linkIndex < 0) {
+      out[i] = measureDynamics(quantity, frame);
+      continue;
+    }
     if (quantity.entityKind === "link") {
       const slot = system.links[quantity.linkIndex];
       switch (quantity.token) {
@@ -194,10 +384,11 @@ export function unwrapDegrees(column: Float64Array): void {
   }
 }
 
-/** Options for `buildSweepTable`: whether the driving input is an angle or a length, and a display offset. */
+/** Options for `buildSweepTable`: whether the driving input is an angle or a length, a display offset, and the dynamics layer behind force quantities. */
 export interface BuildSweepTableOptions {
   readonly inputKind: "rotary" | "linear";
   readonly inputDisplayOffset: number;
+  readonly dynamics?: DynamicSystem | null;
 }
 
 /**
@@ -227,7 +418,10 @@ export function buildSweepTable(
       opts.inputKind === "rotary"
         ? (opts.inputDisplayOffset + sample.input) * RAD_TO_DEG
         : sample.input;
-    measureAll(system, sample.q, sample.qDot, sample.qDDot, quantities, row);
+    const frame = opts.dynamics
+      ? inverseDynamicsFrame(opts.dynamics, 0, sample.q, sample.qDot, sample.qDDot)
+      : null;
+    measureAll(system, sample.q, sample.qDot, sample.qDDot, quantities, row, frame);
     for (let j = 0; j < quantities.length; j++) columns[j][i] = row[j];
   }
 

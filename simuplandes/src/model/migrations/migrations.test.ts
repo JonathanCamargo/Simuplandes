@@ -98,13 +98,13 @@ describe("migrateDocument: not-a-document", () => {
 });
 
 describe("migrateDocument: version bounds", () => {
-  it("rejects a newer version, naming v2 and the supported v1", () => {
+  it("rejects a newer version, naming v3 and the supported v2", () => {
     const err = expectLoadError(
-      () => migrateDocument({ ...fourBarFixtureParsed, schemaVersion: 2 }),
+      () => migrateDocument({ ...fourBarFixtureParsed, schemaVersion: 3 }),
       "newer-version",
     );
+    expect(err.message).toContain("v3");
     expect(err.message).toContain("v2");
-    expect(err.message).toContain("v1");
   });
 
   it("rejects schemaVersion 0 as no-migration", () => {
@@ -128,11 +128,43 @@ describe("migrateDocument: schema validation", () => {
     expect(err.message).toContain("unknown site");
   });
 
-  it("migrates a v1 document missing units, defaulting units.length to mm", () => {
+  it("migrates a document missing units, defaulting units.length to mm", () => {
     const raw = structuredClone(fourBarFixtureParsed) as Record<string, unknown>;
     delete raw["units"];
     const doc = migrateDocument(raw);
     expect(doc.units.length).toBe("mm");
+  });
+});
+
+describe("migrateDocument: v1 -> v2 (dynamics)", () => {
+  /** The four-bar fixture as a v1 file wrote it: no springs, dynamics settings or motor dynamics. */
+  function v1FourBar(): Record<string, unknown> {
+    const raw = structuredClone(fourBarFixtureParsed) as Record<string, unknown>;
+    raw["schemaVersion"] = 1;
+    delete raw["springs"];
+    delete raw["dynamics"];
+    raw["motors"] = (raw["motors"] as Record<string, unknown>[]).map((motor) => {
+      const copy = { ...motor };
+      delete copy["dynamics"];
+      return copy;
+    });
+    return raw;
+  }
+
+  it("fills the v2 defaults", () => {
+    const doc = migrateDocument(v1FourBar());
+    expect(doc.schemaVersion).toBe(2);
+    expect(doc.springs).toEqual([]);
+    expect(doc.dynamics).toEqual({ gravity: [0, -9.81], barDensity: 0.5, plateDensity: 10 });
+    expect(doc.motors.every((motor) => motor.dynamics.mode === "motion")).toBe(true);
+    expect(doc.links.every((link) => link.massProperties === undefined)).toBe(true);
+  });
+
+  it("keeps every v1 entity unchanged", () => {
+    const doc = migrateDocument(v1FourBar());
+    expect(doc.links).toEqual(fourBarFixtureParsed.links);
+    expect(doc.joints).toEqual(fourBarFixtureParsed.joints);
+    expect(doc.loads).toEqual(fourBarFixtureParsed.loads);
   });
 });
 

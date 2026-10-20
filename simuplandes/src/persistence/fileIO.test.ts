@@ -122,7 +122,7 @@ describe("openDocumentFromFile", () => {
   });
 
   it("rejects a newer-version document with reason newer-version", async () => {
-    const newer = { ...fourBarFixtureParsed, schemaVersion: 2 };
+    const newer = { ...fourBarFixtureParsed, schemaVersion: 3 };
     const newerFile: FileWithHandle = new File([JSON.stringify(newer)], "newer.simup.json");
     mockFileOpen.mockResolvedValue(newerFile);
 

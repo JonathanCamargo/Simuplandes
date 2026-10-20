@@ -252,6 +252,15 @@ export function CanvasStage({
     const stage = evt.target.getStage();
     const pointer = stage?.getPointerPosition();
     if (!pointer) return;
+    // Only consecutive moves coalesce into one frame. A down or up must
+    // never be overwritten (a release followed by a move in the same frame
+    // would otherwise leave the active tool mid-drag), so deliver whatever
+    // is pending first.
+    const previous = pendingRef.current;
+    if (previous && (previous.type !== "pointermove" || type !== "pointermove")) {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      flush();
+    }
     pendingRef.current = {
       type,
       screen: { x: pointer.x, y: pointer.y },
@@ -341,7 +350,12 @@ export function CanvasStage({
         plates={renderModel.plates}
       />
       <JointsLayer ref={jointsLayerRef} viewport={viewport} tokens={tokens} model={renderModel} />
-      <OverlaysLayer viewport={viewport} tokens={tokens} snap={displaySnap}>
+      <OverlaysLayer
+        viewport={viewport}
+        tokens={tokens}
+        snap={displaySnap}
+        annotations={renderModel.annotations}
+      >
         {children}
       </OverlaysLayer>
       <RulersLayer viewport={viewport} tokens={tokens} language={language} />

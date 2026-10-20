@@ -19,7 +19,13 @@
     "direction": {
       "forward": "Avanza",
       "backward": "Retrocede"
-    }
+    },
+    "analysis": "Análisis",
+    "analysisKinematics": "Cinemática",
+    "analysisDynamics": "Dinámica",
+    "time": "Tiempo",
+    "duration": "Duración",
+    "durationOption": "{{seconds}} s"
   },
   "status": {
     "notDrivable": {
@@ -44,7 +50,8 @@
   "hint": {
     "simulate": "Arrastra un eslabón para moverlo · Espacio vuelve a Construir",
     "dragging": "Arrastrando {{link}}",
-    "notDrivable": "Este mecanismo no se mueve · Espacio vuelve a Construir"
+    "notDrivable": "Este mecanismo no se mueve · Espacio vuelve a Construir",
+    "dynamics": "Dinámica: Reproducir integra el movimiento en el tiempo · Espacio vuelve a Construir"
   },
   "dof": {
     "badge": "F = {{f}}",
@@ -92,7 +99,42 @@
       "vx": "{{entity}} · vx",
       "vy": "{{entity}} · vy",
       "ax": "{{entity}} · ax",
-      "ay": "{{entity}} · ay"
+      "ay": "{{entity}} · ay",
+      "fx": "{{entity}} · reacción Fx",
+      "fy": "{{entity}} · reacción Fy",
+      "force": "{{entity}} · reacción |F|",
+      "couple": "{{entity}} · par de reacción",
+      "torque": "{{entity}} · torque",
+      "thrust": "{{entity}} · fuerza",
+      "power": "{{entity}} · potencia",
+      "tension": "{{entity}} · fuerza del resorte",
+      "length": "{{entity}} · longitud",
+      "springTorque": "{{entity}} · torque del resorte",
+      "twist": "{{entity}} · giro",
+      "kinetic": "Energía cinética",
+      "potential": "Energía potencial",
+      "total": "Energía total"
+    }
+  },
+  "dynamics": {
+    "computing": "Calculando… {{time}} de {{duration}} s",
+    "stopped": "Se detuvo en {{time}} s: {{reason}}",
+    "stop": {
+      "invalid-drive": "la expresión de movimiento de un motor no es un número",
+      "invalid-effort": "el esfuerzo de un motor no es un número",
+      "projection-failed": "no se pudieron cerrar las juntas (el movimiento puede estar agarrotado)",
+      "diverged": "el movimiento se disparó",
+      "invalid-input": "entrada inválida"
+    },
+    "singular": "Restricciones redundantes: las reacciones no son únicas",
+    "status": {
+      "empty": "Dibuja un mecanismo para simularlo",
+      "invalid": "No se puede simular este documento: {{message}}",
+      "invalidExpression": "Corrige las expresiones de los motores: {{motors}}",
+      "assemblyFailed": "No se pudo ensamblar: {{joints}}",
+      "overDriven": "Hay más motores que siguen un movimiento que grados de libertad",
+      "ready_one": "{{count}} GDL libre bajo gravedad, resortes y motores",
+      "ready_other": "{{count}} GDL libres bajo gravedad, resortes y motores"
     }
   }
 }

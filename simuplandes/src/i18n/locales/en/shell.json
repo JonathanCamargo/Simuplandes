@@ -9,12 +9,15 @@
     "atlas": "Browse atlas…",
     "open": "Open",
     "save": "Save",
-    "saveAs": "Save as…"
+    "saveAs": "Save as…",
+    "share": "Copy share link",
+    "exportImage": "Export image…"
   },
   "undo": "Undo {{label}}",
   "redo": "Redo {{label}}",
   "mode": {
     "build": "Build",
+    "draw": "Draw",
     "simulate": "Simulate"
   },
   "language": "Language",
@@ -43,7 +46,11 @@
   "alerts": {
     "restored": "Restored last session",
     "restoreFailed": "Previous session could not be restored (kept as backup): {{message}}",
-    "saved": "Saved {{fileName}}"
+    "saved": "Saved {{fileName}}",
+    "linkCopied": "Link copied: anyone who opens it will see this mechanism",
+    "linkFailed": "Couldn't copy the link",
+    "shareLoaded": "Opened the shared mechanism",
+    "shareFailed": "Couldn't open the shared link: {{message}}"
   },
   "buttons": {
     "commandPalette": "Command palette",
@@ -52,5 +59,14 @@
   "rail": {
     "label": "Tools"
   },
-  "dropOverlay": "Drop to import"
+  "dropOverlay": "Drop to import",
+  "appNameShort": "Simuplandes",
+  "appNameSuffix": "Studio",
+  "share": {
+    "title": "Open the shared mechanism?",
+    "text": "The link contains a mechanism. Opening it replaces your current drawing and its undo history.",
+    "open": "Open",
+    "keep": "Keep mine"
+  },
+  "exampleFourBarName": "Four-bar example"
 }

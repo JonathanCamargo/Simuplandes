@@ -1,9 +1,33 @@
 import { defineConfig } from "vitest/config";
+import { esmExternalRequirePlugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { playwright } from "@vitest/browser-playwright";
 
-export default defineConfig({
-  plugins: [react()],
+export default defineConfig(({ mode }) => ({
+  // Bundled CommonJS dependencies `require("react")`; the plugin turns those
+  // into ESM imports (a bare `external` leaves a `require` shim that throws in
+  // the browser).
+  plugins: [
+    react(),
+    ...(mode === "lib" ? [esmExternalRequirePlugin({ external: [/^react(-dom)?(\/.*)?$/] })] : []),
+  ],
+  // `vite build --mode lib`: the embeddable studio the robiolab website
+  // consumes through `lib/`. React stays external so the host supplies the
+  // single copy; everything else is bundled.
+  build:
+    mode === "lib"
+      ? {
+          lib: {
+            entry: "src/lib.tsx",
+            formats: ["es"],
+            fileName: () => "simuplandes.js",
+            cssFileName: "simuplandes",
+          },
+          outDir: "lib/dist",
+          emptyOutDir: true,
+          copyPublicDir: false,
+        }
+      : undefined,
   optimizeDeps: { entries: ["index.html"] }, // never let the dep scanner crawl src/legacy/test.html
   test: {
     // Coverage stays at the root (thresholds below apply across every
@@ -45,6 +69,7 @@ export default defineConfig({
         "src/legacy/**",
         "src/**/*.test.{ts,tsx}",
         "src/main.tsx",
+        "src/lib.tsx",
         "src/**/*.d.ts",
         "src/**/__fixtures__/**",
         "src/test/**",
@@ -66,6 +91,7 @@ export default defineConfig({
         "src/store/**": { statements: 95, branches: 90, functions: 95, lines: 95 },
         "src/persistence/**": { statements: 95, branches: 90, functions: 95, lines: 95 },
         "src/kinematics/**": { statements: 95, branches: 90, functions: 95, lines: 95 },
+        "src/dynamics/**": { statements: 95, branches: 90, functions: 95, lines: 95 },
         // Phase 4 pure-logic globs (statements/branches/functions/lines).
         "src/tools/*.ts": { statements: 95, branches: 90, functions: 95, lines: 95 },
         "src/canvas/*.ts": { statements: 95, branches: 90, functions: 95, lines: 95 },
@@ -90,4 +116,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

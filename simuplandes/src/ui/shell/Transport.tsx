@@ -3,6 +3,11 @@
  * play/pause, step, reset, speed, loop, the input scrubber, lock-up/near
  * -singular chips, a status caption, and the "Gráficas ▾" plots toggle.
  *
+ * A Kinematics/Dynamics switch leads the bar. In Dynamics the scrubber is
+ * time over the computed trajectory, a duration select replaces nothing
+ * else, and the caption reports computing progress or why integration
+ * stopped.
+ *
  * Selectors are limited to `session`, `range`, `playing`, `speed`, `loop`,
  * `readout`, `plot.open` -- NEVER `poses` (that field is per-frame and read
  * imperatively by the canvas; selecting it here would re-render this
@@ -12,6 +17,7 @@
 
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useStore, type StoreApi } from "zustand";
 import {
   Chip,
@@ -22,19 +28,28 @@ import {
   Select,
   Slider,
   Stack,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
 // Imported from the `esm/` subpath: see TopBar.tsx's TSDoc.
 import PlayArrowIcon from "@mui/icons-material/esm/PlayArrow";
+import ShowChartIcon from "@mui/icons-material/esm/ShowChart";
 import PauseIcon from "@mui/icons-material/esm/Pause";
 import SkipPreviousIcon from "@mui/icons-material/esm/SkipPrevious";
 import NavigateBeforeIcon from "@mui/icons-material/esm/NavigateBefore";
 import NavigateNextIcon from "@mui/icons-material/esm/NavigateNext";
 import { formatNumber } from "../../i18n/numberFormat";
 import { inputDisplayValue } from "../../sim/session";
-import { SPEED_OPTIONS, type SimStore } from "../../sim/simStore";
+import {
+  DURATION_OPTIONS,
+  SPEED_OPTIONS,
+  type DynamicsReadout,
+  type SimAnalysis,
+  type SimStore,
+} from "../../sim/simStore";
 import type { SimRuntime } from "../../sim/runtime";
-import type { StudioState } from "../../uiState/studioStore";
+import type { StudioMode, StudioState } from "../../uiState/studioStore";
 import type { PreferencesState } from "../../uiState/preferences";
 
 export interface TransportProps {
@@ -47,10 +62,10 @@ export interface TransportProps {
 }
 
 function statusKeyAndValues(
-  mode: "build" | "simulate",
+  mode: StudioMode,
   session: import("../../sim/session").SimSessionSummary | null,
 ): { key: string; values?: Record<string, string | number> } | null {
-  if (mode === "build") return { key: "sim.transport.enterSimulate" };
+  if (mode !== "simulate") return { key: "sim.transport.enterSimulate" };
   if (!session) return null;
   switch (session.status) {
     case "invalid":
@@ -85,6 +100,58 @@ function statusKeyAndValues(
   }
 }
 
+/** The Dynamics caption: why the session cannot run, computing progress, or where integration stopped. */
+function dynamicsStatus(
+  dynamics: DynamicsReadout | null,
+  lang: "es" | "en",
+  t: TFunction,
+): { key: string; values?: Record<string, string | number> } | null {
+  if (!dynamics) return null;
+  const { summary } = dynamics;
+  switch (summary.status) {
+    case "empty":
+      return { key: "sim.dynamics.status.empty" };
+    case "invalid":
+      return {
+        key: "sim.dynamics.status.invalid",
+        values: { message: summary.errorMessage ?? "" },
+      };
+    case "invalid-expression":
+      return {
+        key: "sim.dynamics.status.invalidExpression",
+        values: { motors: summary.invalidMotorIds.join(", ") },
+      };
+    case "assembly-failed":
+      return {
+        key: "sim.dynamics.status.assemblyFailed",
+        values: { joints: summary.violations.map((v) => v.label).join(", ") },
+      };
+    case "over-driven":
+      return { key: "sim.dynamics.status.overDriven" };
+    default:
+      break;
+  }
+  if (dynamics.status === "computing") {
+    return {
+      key: "sim.dynamics.computing",
+      values: {
+        time: formatNumber(dynamics.computedTime, lang, 1),
+        duration: dynamics.duration,
+      },
+    };
+  }
+  if (dynamics.stop) {
+    return {
+      key: "sim.dynamics.stopped",
+      values: {
+        time: formatNumber(dynamics.stop.time, lang, 2),
+        reason: t(`sim.dynamics.stop.${dynamics.stop.reason}`),
+      },
+    };
+  }
+  return { key: "sim.dynamics.status.ready", values: { count: summary.dof ?? 0 } };
+}
+
 export function Transport({
   studioStore,
   simStore,
@@ -102,6 +169,10 @@ export function Transport({
   const loop = useStore(simStore, (s) => s.loop);
   const readout = useStore(simStore, (s) => s.readout);
   const plotOpen = useStore(simStore, (s) => s.plot.open);
+  const analysis = useStore(simStore, (s) => s.analysis);
+  const dynamics = useStore(simStore, (s) => s.dynamics);
+  const duration = useStore(simStore, (s) => s.dynamicsDuration);
+  const isDynamics = analysis === "dynamics";
 
   // Local scrub value, held only while the user is dragging the thumb (never
   // throttled -- research Pattern 2 says drive the motor synchronously on
@@ -109,15 +180,18 @@ export function Transport({
   // tracks the throttled `readout.display` again.
   const [localDisplay, setLocalDisplay] = useState<number | null>(null);
 
-  const canOperate = session?.status === "ready" && session?.drivingMode === "motor";
+  const canOperate = isDynamics
+    ? dynamics?.status != null
+    : session?.status === "ready" && session?.drivingMode === "motor";
   const playDisabled = mode === "simulate" && !canOperate;
-  const otherControlsDisabled = mode === "build" || !canOperate;
+  const otherControlsDisabled = mode !== "simulate" || !canOperate;
 
-  const isLinear = session?.inputKind === "linear";
-  const unitSuffix = isLinear ? ` ${lengthUnit}` : "°";
+  const isLinear = !isDynamics && session?.inputKind === "linear";
+  const unitSuffix = isDynamics ? " s" : isLinear ? ` ${lengthUnit}` : "°";
 
-  const sliderRange =
-    !session || !range
+  const sliderRange = isDynamics
+    ? { min: 0, max: duration }
+    : !session || !range
       ? { min: 0, max: 0 }
       : range.fullRotation
         ? { min: 0, max: 360 }
@@ -125,12 +199,16 @@ export function Transport({
             min: inputDisplayValue(session, range, range.min),
             max: inputDisplayValue(session, range, range.max),
           };
-  const stepSize = isLinear ? Math.max((sliderRange.max - sliderRange.min) / 200, 1e-6) : 1;
+  const stepSize = isDynamics
+    ? duration / 600
+    : isLinear
+      ? Math.max((sliderRange.max - sliderRange.min) / 200, 1e-6)
+      : 1;
 
   const displayValue = localDisplay ?? readout?.display ?? 0;
 
   function handlePlayClick(): void {
-    if (mode === "build") {
+    if (mode !== "simulate") {
       studioStore.getState().setMode("simulate");
     }
     runtime.togglePlay();
@@ -146,7 +224,15 @@ export function Transport({
     setLocalDisplay(null);
   }
 
-  const status = statusKeyAndValues(mode, session);
+  const status =
+    isDynamics && mode === "simulate"
+      ? dynamicsStatus(dynamics, lang, t)
+      : statusKeyAndValues(mode, session);
+  const fractionDigits = isDynamics ? 2 : 1;
+
+  function handleAnalysisChange(_event: unknown, value: SimAnalysis | null): void {
+    if (value) runtime.setAnalysis(value);
+  }
 
   return (
     <Stack
@@ -159,11 +245,29 @@ export function Transport({
       flexWrap="wrap"
       sx={{ gridArea: "tx", px: 1.5, py: 0.5, borderTop: 1, borderColor: "divider" }}
     >
+      <ToggleButtonGroup
+        exclusive
+        size="small"
+        value={analysis}
+        onChange={handleAnalysisChange}
+        aria-label={t("sim.transport.analysis")}
+        sx={{ "& .MuiToggleButton-root": { py: 0.25, px: 1, fontSize: "0.75rem" } }}
+      >
+        <ToggleButton value="kinematics">{t("sim.transport.analysisKinematics")}</ToggleButton>
+        <ToggleButton value="dynamics">{t("sim.transport.analysisDynamics")}</ToggleButton>
+      </ToggleButtonGroup>
+      {/* Play is the main action in Simulate: a filled primary button. */}
       <IconButton
         size="small"
         onClick={handlePlayClick}
         disabled={playDisabled}
         aria-label={t(playing ? "sim.transport.pause" : "sim.transport.play")}
+        sx={{
+          bgcolor: "primary.main",
+          color: "primary.contrastText",
+          "&:hover": { bgcolor: "primary.dark" },
+          "&.Mui-disabled": { bgcolor: "action.disabledBackground" },
+        }}
       >
         {playing ? <PauseIcon fontSize="small" /> : <PlayArrowIcon fontSize="small" />}
       </IconButton>
@@ -194,29 +298,49 @@ export function Transport({
 
       <Slider
         size="small"
-        aria-label={t("sim.transport.scrubber", { input: session?.inputLabel ?? "" })}
+        aria-label={
+          isDynamics
+            ? t("sim.transport.time")
+            : t("sim.transport.scrubber", { input: session?.inputLabel ?? "" })
+        }
         min={sliderRange.min}
         max={sliderRange.max}
         step={stepSize}
         value={displayValue}
         disabled={otherControlsDisabled}
         valueLabelDisplay="auto"
-        valueLabelFormat={(v) => `${formatNumber(v, lang, 1)}${unitSuffix}`}
+        valueLabelFormat={(v) => `${formatNumber(v, lang, fractionDigits)}${unitSuffix}`}
         onChange={handleSliderChange}
         onChangeCommitted={handleSliderCommitted}
-        sx={{ maxWidth: 200 }}
+        sx={{ flex: "1 1 160px", minWidth: 120, maxWidth: 420, mx: 1 }}
       />
       <Typography variant="caption" sx={{ minWidth: 56 }} noWrap>
-        {formatNumber(displayValue, lang, 1)}
+        {formatNumber(displayValue, lang, fractionDigits)}
         {unitSuffix}
       </Typography>
+
+      {isDynamics ? (
+        <Select
+          size="small"
+          value={duration}
+          onChange={(event) => runtime.setDuration(Number(event.target.value))}
+          inputProps={{ "aria-label": t("sim.transport.duration") }}
+          sx={{ minWidth: 72, fontSize: "0.8125rem", "& .MuiSelect-select": { py: 0.5 } }}
+        >
+          {DURATION_OPTIONS.map((option) => (
+            <MenuItem key={option} value={option}>
+              {t("sim.transport.durationOption", { seconds: option })}
+            </MenuItem>
+          ))}
+        </Select>
+      ) : null}
 
       <Select
         size="small"
         value={speed}
         onChange={(event) => runtime.setSpeed(Number(event.target.value))}
         aria-label={t("sim.transport.speed")}
-        sx={{ minWidth: 72 }}
+        sx={{ minWidth: 64, fontSize: "0.8125rem", "& .MuiSelect-select": { py: 0.5 } }}
       >
         {SPEED_OPTIONS.map((option) => (
           <MenuItem key={option} value={option}>
@@ -246,8 +370,11 @@ export function Transport({
           })}
         />
       ) : null}
-      {readout?.nearSingular ? (
+      {readout?.nearSingular && !isDynamics ? (
         <Chip size="small" color="warning" label={t("sim.transport.nearSingular")} />
+      ) : null}
+      {isDynamics && dynamics?.singular ? (
+        <Chip size="small" color="warning" label={t("sim.dynamics.singular")} />
       ) : null}
 
       {status ? (
@@ -262,6 +389,9 @@ export function Transport({
         aria-pressed={plotOpen}
         disabled={mode !== "simulate"}
         onClick={() => simStore.getState().togglePlotOpen()}
+        icon={<ShowChartIcon fontSize="small" aria-hidden="true" />}
+        color={plotOpen ? "primary" : "default"}
+        variant={plotOpen ? "filled" : "outlined"}
         label={`${t("sim.transport.plots")} ▾`}
       />
     </Stack>

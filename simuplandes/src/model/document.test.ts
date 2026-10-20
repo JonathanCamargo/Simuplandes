@@ -15,7 +15,7 @@ import { fourBarFixtureParsed } from "./__fixtures__/fourBar";
 describe("createEmptyDocument", () => {
   it("deep-equals the expected default document", () => {
     expect(createEmptyDocument()).toEqual({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "Untitled mechanism",
       units: { length: "mm" },
       links: [],
@@ -23,6 +23,9 @@ describe("createEmptyDocument", () => {
       motors: [],
       markers: [],
       loads: [],
+      springs: [],
+      annotations: [],
+      dynamics: { gravity: [0, -9.81], barDensity: 0.5, plateDensity: 10 },
     });
   });
 
@@ -41,7 +44,7 @@ describe("createEmptyDocument", () => {
       name: "x",
       isGround: false,
       pose: { position: [0, 0], angle: 0 },
-      shape: { kind: "bar" },
+      shape: { kind: "bar", path: [] },
       sites: [],
     });
     expect(b.links).toHaveLength(0);
@@ -128,7 +131,7 @@ describe("jointClusterSiteIds", () => {
 
   it("P joints do not join a cluster: sites slide apart, so they stay separate", () => {
     const pJointDoc = MechanismDocumentSchema.parse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: [
         {
           id: "link-a",

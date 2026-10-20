@@ -5,7 +5,7 @@ import { groundPivotTool } from "./groundPivotTool";
 import { expectHintLocalized } from "./machines.test";
 
 function emptyDoc(): MechanismDocument {
-  return MechanismDocumentSchema.parse({ schemaVersion: 1 });
+  return MechanismDocumentSchema.parse({ schemaVersion: 2 });
 }
 
 function ctxFor(doc: MechanismDocument, radiusWorld = 8): ToolContext {
@@ -61,7 +61,7 @@ describe("groundPivotTool", () => {
 
   it("a click near a moving-link site pins that site to ground", () => {
     const doc = MechanismDocumentSchema.parse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: [
         {
           id: "moving",
@@ -86,7 +86,7 @@ describe("groundPivotTool", () => {
 
   it("prefers a non-ground, not-already-grounded site over a coincident ground site", () => {
     const doc = MechanismDocumentSchema.parse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: [
         {
           id: "ground",
@@ -119,7 +119,7 @@ describe("groundPivotTool", () => {
 
   it("prefers a not-yet-grounded non-ground site over an already-grounded one", () => {
     const doc = MechanismDocumentSchema.parse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: [
         {
           id: "ground",
@@ -159,7 +159,7 @@ describe("groundPivotTool", () => {
 
   it("a click exactly on an existing ground site does nothing, hints alreadyGround", () => {
     const doc = MechanismDocumentSchema.parse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: [
         {
           id: "ground",

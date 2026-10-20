@@ -7,7 +7,17 @@ import { localToWorld, worldToLocal, direction, sub, type Vec2 } from "../geom";
 import { cleanNumber, toTuple, type Vec2Tuple } from "./vec";
 import { CURRENT_SCHEMA_VERSION, MechanismDocumentSchema } from "./schema";
 import { DEFAULT_LENGTH_UNIT } from "./units";
-import type { MechanismDocument, Link, Site, Joint, Motor, Marker, Load, Pose } from "./schema";
+import type {
+  MechanismDocument,
+  Link,
+  Site,
+  Joint,
+  Motor,
+  Marker,
+  Load,
+  Pose,
+  Spring,
+} from "./schema";
 import type { LengthUnit } from "./units";
 import type { Id } from "./ids";
 
@@ -31,6 +41,7 @@ export interface DocumentIndex {
   motors: Map<Id, Motor>;
   markers: Map<Id, Marker>;
   loads: Map<Id, Load>;
+  springs: Map<Id, Spring>;
   jointsBySite: Map<Id, Joint[]>;
 }
 
@@ -70,10 +81,13 @@ export function indexDocument(doc: MechanismDocument): DocumentIndex {
   const loads = new Map<Id, Load>();
   for (const load of doc.loads) loads.set(load.id, load);
 
-  return { links, sites, joints, motors, markers, loads, jointsBySite };
+  const springs = new Map<Id, Spring>();
+  for (const spring of doc.springs) springs.set(spring.id, spring);
+
+  return { links, sites, joints, motors, markers, loads, springs, jointsBySite };
 }
 
-/** Collects every entity id in a document (links, sites, joints, motors, markers, loads). */
+/** Collects every entity id in a document (links, sites, joints, motors, markers, loads, springs, annotations). */
 export function collectIds(doc: MechanismDocument): Set<Id> {
   const ids = new Set<Id>();
   for (const link of doc.links) {
@@ -84,7 +98,19 @@ export function collectIds(doc: MechanismDocument): Set<Id> {
   for (const motor of doc.motors) ids.add(motor.id);
   for (const marker of doc.markers) ids.add(marker.id);
   for (const load of doc.loads) ids.add(load.id);
+  for (const spring of doc.springs) ids.add(spring.id);
+  for (const annotation of doc.annotations) ids.add(annotation.id);
   return ids;
+}
+
+/**
+ * The sites a bar's polyline runs through, in path order; empty for a
+ * plate. Sites off the path are attachment points that do not shape the bar.
+ */
+export function barPathSites(link: Pick<Link, "shape" | "sites">): Site[] {
+  if (link.shape.kind !== "bar") return [];
+  const byId = new Map(link.sites.map((site) => [site.id, site]));
+  return link.shape.path.flatMap((id) => byId.get(id) ?? []);
 }
 
 /** Converts a site's link-local coordinate to world, via its link's reference pose. */

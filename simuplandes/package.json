@@ -10,6 +10,7 @@
     "dev": "vite",
     "start": "vite",
     "build": "tsc -b && vite build",
+    "build:lib": "tsc -b && vite build --mode lib",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "test": "vitest run --coverage",

@@ -11,7 +11,20 @@
     "title": "Documento",
     "name": "Nombre",
     "units": "Unidades",
-    "counts": "{{links}} eslabones · {{joints}} articulaciones · {{motors}} motores"
+    "linkCount_one": "{{count}} eslabón",
+    "linkCount_other": "{{count}} eslabones",
+    "jointCount_one": "{{count}} articulación",
+    "jointCount_other": "{{count}} articulaciones",
+    "motorCount_one": "{{count}} motor",
+    "motorCount_other": "{{count}} motores",
+    "untitled": "Mecanismo sin título",
+    "dynamics": "Dinámica",
+    "gravityX": "Gravedad x",
+    "gravityY": "Gravedad y",
+    "barDensity": "Densidad de barra",
+    "plateDensity": "Densidad de placa",
+    "springCount_one": "{{count}} resorte",
+    "springCount_other": "{{count}} resortes"
   },
   "multi": {
     "count": "{{count}} objetos seleccionados"
@@ -22,14 +35,32 @@
     "resetColor": "Restablecer color de tipo de eslabón",
     "ground": "Tierra",
     "length": "Longitud",
-    "sites": "Puntos"
+    "sites": "Puntos",
+    "mass": "Propiedades de masa",
+    "massComputed": "Según la forma",
+    "massCustom": "Personalizadas",
+    "massValue": "Masa",
+    "comX": "Centro de masa x",
+    "comY": "Centro de masa y",
+    "inertia": "Inercia respecto al centro de masa",
+    "massHint": "Calculadas a partir de la forma con las densidades del documento",
+    "loads": "Cargas",
+    "addLoad": "Añadir carga",
+    "loadSite": "Punto",
+    "loadFx": "Fx",
+    "loadFy": "Fy",
+    "loadTorque": "Torque",
+    "removeLoad": "Quitar carga",
+    "noLoads": "Este eslabón no tiene cargas"
   },
   "joint": {
     "title": "Articulación",
     "typeR": "Rotación (R)",
     "typeP": "Prismática (P)",
     "axis": "Ángulo del eje",
-    "addMotor": "Añadir motor"
+    "addMotor": "Añadir motor",
+    "addTorsionalSpring": "Añadir resorte torsional",
+    "torsionalSprings": "Resortes torsionales"
   },
   "motor": {
     "title": "Motor",
@@ -39,7 +70,14 @@
     "speed": "Velocidad",
     "expression": "Expresión",
     "expressionPlaceholder": "p. ej. sin(t)",
-    "expressionRequired": "La expresión no puede estar vacía"
+    "expressionRequired": "La expresión no puede estar vacía",
+    "dynamics": "En dinámica",
+    "dynamicsMotion": "Sigue su movimiento",
+    "dynamicsEffortRotary": "Aplica un torque",
+    "dynamicsEffortLinear": "Aplica una fuerza",
+    "effortRotary": "Torque",
+    "effortLinear": "Fuerza",
+    "effortHelp": "Usa t (s), q (ángulo o posición de la junta) y dq (su velocidad)"
   },
   "site": {
     "title": "Punto"
@@ -47,5 +85,32 @@
   "marker": {
     "title": "Marcador",
     "link": "Eslabón"
+  },
+  "motion": {
+    "title": "Movimiento",
+    "hint": "Cómo se mueve el mecanismo en todo su recorrido.",
+    "input": "Entrada",
+    "inputFullTurn": "vuelta completa",
+    "inputBetween": "de {{min}} a {{max}}",
+    "linkN": "Eslabón {{n}}",
+    "marker": "Marcador",
+    "rotates_one": "gira completo",
+    "rotates_other": "da {{count}} vueltas",
+    "oscillates": "oscila {{span}}",
+    "oscillatesRange": "entre {{min}} y {{max}}",
+    "translates": "solo se traslada",
+    "curveSize": "curva de {{width}} × {{height}} {{unit}}",
+    "motorN": "Motor {{n}}",
+    "markerN": "Marcador {{n}}"
+  },
+  "spring": {
+    "title": "Resorte",
+    "titleTorsional": "Resorte torsional",
+    "stiffness": "Rigidez",
+    "damping": "Amortiguamiento",
+    "freeLength": "Longitud libre",
+    "freeAngle": "Ángulo libre",
+    "length": "Longitud actual: {{length}}",
+    "joint": "Articulación {{joint}}"
   }
 }

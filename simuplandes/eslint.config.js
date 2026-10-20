@@ -10,6 +10,7 @@ export default defineConfig([
   {
     ignores: [
       "dist/**",
+      "lib/dist/**",
       "coverage/**",
       "node_modules/**",
       "src/legacy/**",
@@ -48,7 +49,7 @@ export default defineConfig([
     },
   },
   {
-    files: ["src/kinematics/**/*.ts"],
+    files: ["src/kinematics/**/*.ts", "src/dynamics/**/*.ts"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -83,8 +84,13 @@ export default defineConfig([
                 "../../persistence",
                 "../../persistence/*",
                 "../../legacy/*",
+                "../sim",
+                "../sim/*",
+                "../dynamics",
+                "../dynamics/*",
               ],
-              message: "src/kinematics must stay pure: import only ../geom and ../model.",
+              message:
+                "src/kinematics and src/dynamics must stay pure: kinematics imports only ../geom and ../model; dynamics also ../kinematics.",
             },
           ],
         },
@@ -101,18 +107,26 @@ export default defineConfig([
   },
   {
     // Seam rule (decision 9, widened Phase 5): only src/sim/** may import
-    // src/kinematics. UI/canvas/tools receive poses/readouts from src/sim.
+    // src/kinematics or src/dynamics (which itself builds on kinematics).
+    // UI/canvas/tools receive poses/readouts from src/sim.
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/kinematics/**", "src/sim/**", "src/legacy/**"],
+    ignores: ["src/kinematics/**", "src/dynamics/**", "src/sim/**", "src/legacy/**"],
     rules: {
       "no-restricted-imports": [
         "error",
         {
           patterns: [
             {
-              group: ["**/kinematics", "**/kinematics/*", "**/kinematics/**"],
+              group: [
+                "**/kinematics",
+                "**/kinematics/*",
+                "**/kinematics/**",
+                "**/dynamics",
+                "**/dynamics/*",
+                "**/dynamics/**",
+              ],
               message:
-                "Only src/sim/** may import src/kinematics (Phase 5 seam). UI/canvas/tools receive poses/readouts from src/sim.",
+                "Only src/sim/** may import src/kinematics or src/dynamics (Phase 5 seam). UI/canvas/tools receive poses/readouts from src/sim.",
             },
           ],
         },
@@ -146,6 +160,8 @@ export default defineConfig([
                 "matter-js",
                 "**/kinematics",
                 "**/kinematics/*",
+                "**/dynamics",
+                "**/dynamics/*",
               ],
               message: "pure logic: no React/Konva/MUI",
             },

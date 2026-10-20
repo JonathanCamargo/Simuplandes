@@ -74,7 +74,7 @@ function buildFourBarTruss(): MechanismDocument {
   });
 
   return makeDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "four-bar-truss",
     links: [...base.links, fifthBar.link],
     joints: [
@@ -104,7 +104,7 @@ function buildIsolatedLink(): MechanismDocument {
   const ground = defineLink({ name: "ground", isGround: true, origin: [0, 0], sites: {} });
   const lonely = defineLink({ name: "lonely", origin: [0, 0], sites: {} });
   return makeDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "isolated-link",
     links: [ground.link, lonely.link],
     joints: [],
@@ -114,7 +114,7 @@ function buildIsolatedLink(): MechanismDocument {
 }
 
 describe("createSimRuntime: enter", () => {
-  it("publishes a ready session, full-rotation range, one closed trace, a 361-row sweep table, 15 quantities, reference poses and a 60deg readout", () => {
+  it("publishes a ready session, full-rotation range, one closed trace, a 361-row sweep table, 32 quantities, reference poses and a 60deg readout", () => {
     const { store, runtime } = makeHarness();
     const doc = buildFourBar();
     const before = JSON.stringify(doc);
@@ -127,7 +127,9 @@ describe("createSimRuntime: enter", () => {
     expect(state.traces).toHaveLength(1);
     expect(state.traces[0].closed).toBe(true);
     expect(state.sweepTable?.length).toBe(361);
-    expect(state.quantities).toHaveLength(15);
+    // 15 kinematic (3 links x 3, 1 marker x 6) + 17 dynamic (4 joints x 3,
+    // the motor's torque and power, 3 energies).
+    expect(state.quantities).toHaveLength(32);
     expect(state.plot.quantityIds.length).toBeGreaterThan(0);
     expect(state.readout?.display).toBeCloseTo(60, 9);
     expect(state.playing).toBe(false);

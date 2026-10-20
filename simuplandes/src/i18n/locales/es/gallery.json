@@ -34,6 +34,14 @@
     "eight-bar": {
       "title": "Ocho barras",
       "description": "Topología del atlas T15"
+    },
+    "double-pendulum": {
+      "title": "Péndulo doble",
+      "description": "Dos barras libres (Dinámica)"
+    },
+    "mass-spring": {
+      "title": "Masa-resorte",
+      "description": "Bloque amortiguado en un riel vertical (Dinámica)"
     }
   }
 }

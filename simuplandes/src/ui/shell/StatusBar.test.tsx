@@ -93,12 +93,20 @@ describe("StatusBar in simulate mode", () => {
     expect(text).toContain("3e-12");
   });
 
-  it("shows the studio hint in the hint slot while simulating", () => {
+  it("shows Simulate's hint while simulating, even after a tool publishes its own", () => {
     const { studioStore } = renderStatusBar();
     act(() => {
       studioStore.getState().setMode("simulate");
-      studioStore.getState().setHint({ key: "sim.hint.simulate" });
+      studioStore.getState().setSimHint({ key: "sim.hint.simulate" });
+      // The tool controller still reacts to keys (e.g. the Space that started Simulate).
+      studioStore.getState().setHint({ key: "tools.bar.hint.idle" });
     });
-    expect(screen.getByRole("contentinfo").textContent).toContain("Arrastra un eslabón");
+    const text = () => screen.getByRole("contentinfo").textContent ?? "";
+    expect(text()).toContain("Arrastra un eslabón");
+
+    // Back in Build, the tool's hint returns.
+    act(() => studioStore.getState().setMode("build"));
+    expect(text()).toContain("Haz clic para empezar una barra");
+    expect(text()).not.toContain("Arrastra un eslabón");
   });
 });

@@ -11,7 +11,7 @@ function chainDoc() {
   const jBC = createId("joint");
   const jCD = createId("joint");
   const doc = makeDoc({
-    schemaVersion: 1,
+    schemaVersion: 2,
     name: "chain",
     links: [B.link, C.link, D.link],
     joints: [
@@ -49,7 +49,7 @@ describe("findMultiJointGroups", () => {
     const j1 = createId("joint");
     const j2 = createId("joint");
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "crossing",
       links: [A.link, B2.link, C2.link, D2.link],
       joints: [
@@ -66,7 +66,7 @@ describe("findMultiJointGroups", () => {
     const A = buildLink({ name: "A", origin: [0, 0], sites: { p: [0, 0], q: [30, 0] } });
     const B2 = buildLink({ name: "B2", origin: [0, 0], sites: { p: [0, 0], r: [0, 20] } });
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "ordinary pin",
       links: [A.link, B2.link],
       joints: [
@@ -94,7 +94,7 @@ describe("findMultiJointGroups", () => {
     const jR = createId("joint");
     const jP = createId("joint");
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "slider-crank",
       links: [ground.link, crank.link, slider.link],
       joints: [
@@ -157,7 +157,7 @@ describe("planStarSplit", () => {
     const D = buildLink({ name: "D", origin: [0, 0], sites: { p: [10, 10], s: [-25, 10] } });
     const [jBC, jCD, jBD] = [createId("joint"), createId("joint"), createId("joint")];
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "triangle",
       links: [B.link, C.link, D.link],
       joints: [
@@ -193,7 +193,7 @@ describe("planStarSplit", () => {
     const D = buildLink({ name: "D", origin: [0, 0], sites: { p: [10, 10], s: [-25, 10] } });
     const [jGC, jGD] = [createId("joint"), createId("joint")];
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "ground hub",
       links: [ground.link, C.link, D.link],
       joints: [
@@ -230,7 +230,7 @@ describe("planStarSplit", () => {
     const E = buildLink({ name: "E", origin: [0, 0], sites: { p: [10, 10], t: [10, 40] } });
     const [jBC, jCD, jBE] = [createId("joint"), createId("joint"), createId("joint")];
     const doc = makeDoc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "synthesized",
       links: [B.link, C.link, D.link, E.link],
       joints: [

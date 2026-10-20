@@ -35,7 +35,7 @@ function pointermove(world: { x: number; y: number }): ToolEvent {
 }
 
 const GROUND_AND_CRANK: MechanismDocument = MechanismDocumentSchema.parse({
-  schemaVersion: 1,
+  schemaVersion: 2,
   links: [
     {
       id: "link-ground",
@@ -72,7 +72,7 @@ describe("motorTool", () => {
 
   it("prefers a joint touching ground when several joints are nearby", () => {
     const doc = MechanismDocumentSchema.parse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: [
         {
           id: "link-ground",
@@ -113,7 +113,7 @@ describe("motorTool", () => {
 
   it("falls back to the first joint in document order when none touches ground", () => {
     const doc = MechanismDocumentSchema.parse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: [
         {
           id: "link-a",
@@ -152,7 +152,7 @@ describe("motorTool", () => {
 
   it("a P joint gets a linear motor", () => {
     const doc = MechanismDocumentSchema.parse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       links: [
         {
           id: "link-ground",
@@ -276,6 +276,7 @@ describe("motorTool", () => {
         ground: "Bancada",
         slider: "Corredera",
         marker: "Punto",
+        spring: "Resorte",
       },
     });
 

@@ -50,6 +50,7 @@ describe("verifyImportedDocument", () => {
           jointId: prismatic.id,
           kind: "linear",
           drive: { mode: "constant", speed: 1 },
+          dynamics: { mode: "motion" },
         },
       ],
     };

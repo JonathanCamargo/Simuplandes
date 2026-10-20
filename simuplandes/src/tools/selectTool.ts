@@ -64,6 +64,8 @@ function hitEntityId(hit: HitResult): Id | undefined {
       return hit.jointId;
     case "marker":
       return hit.markerId;
+    case "spring":
+      return hit.springId;
     default:
       return undefined;
   }

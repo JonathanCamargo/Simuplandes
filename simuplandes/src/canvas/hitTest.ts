@@ -15,6 +15,9 @@
 import { distance, dot, sub, type Vec2 } from "../geom";
 import {
   indexDocument,
+  flattenBar,
+  flattenOutline,
+  flattenShape,
   siteWorldPosition,
   type Id,
   type Link,
@@ -30,6 +33,7 @@ export type HitResult =
   | { kind: "marker"; markerId: Id }
   | { kind: "joint"; jointId: Id; siteId: Id; linkId: Id }
   | { kind: "site"; siteId: Id; linkId: Id }
+  | { kind: "spring"; springId: Id }
   | { kind: "link"; linkId: Id }
   | { kind: "none" };
 
@@ -61,8 +65,8 @@ function poseOf(link: Link, options?: PoseOptions): Pose {
 function hitTestLinkBody(link: Link, p: Vec2, radiusWorld: number, options?: PoseOptions): boolean {
   const pose = poseOf(link, options);
   if (link.shape.kind === "bar") {
-    if (link.sites.length < 2) return false;
-    const points = link.sites.map((s) => siteWorldPosition({ pose }, s.local));
+    const points = flattenBar(link).map((v) => siteWorldPosition({ pose }, v));
+    if (points.length < 2) return false;
     for (let i = 0; i < points.length - 1; i++) {
       if (distanceToSegment(p, points[i], points[i + 1]) <= radiusWorld) return true;
     }
@@ -70,7 +74,9 @@ function hitTestLinkBody(link: Link, p: Vec2, radiusWorld: number, options?: Pos
   }
 
   // plate
-  const polygon = link.shape.outline.map((v) => siteWorldPosition({ pose }, v));
+  const polygon = flattenOutline(link.shape.outline, link.shape.edges).map((v) =>
+    siteWorldPosition({ pose }, v),
+  );
   if (pointInPolygon(p, polygon)) return true;
   for (let i = 0; i < polygon.length; i++) {
     const a = polygon[i];
@@ -82,7 +88,7 @@ function hitTestLinkBody(link: Link, p: Vec2, radiusWorld: number, options?: Pos
 
 /**
  * Hit-tests `p` against `doc`, priority marker > site (or joint, if the
- * site belongs to one) > link body > none. Ground links are hittable only
+ * site belongs to one) > linear spring > link body > none. Ground links are hittable only
  * via their sites (their body is never returned as a `"link"` hit); the
  * topmost link body is the last one in document order.
  */
@@ -128,6 +134,21 @@ export function hitTest(
     }
     return { kind: "site", siteId: bestSite.siteId, linkId: bestSite.linkId };
   }
+
+  let bestSpring: { springId: Id; dist: number } | null = null;
+  for (const spring of doc.springs) {
+    if (spring.kind !== "linear") continue;
+    const entryA = index.sites.get(spring.siteA);
+    const entryB = index.sites.get(spring.siteB);
+    if (!entryA || !entryB) continue;
+    const a = siteWorldPosition({ pose: poseOf(entryA.link, options) }, entryA.site.local);
+    const b = siteWorldPosition({ pose: poseOf(entryB.link, options) }, entryB.site.local);
+    const dist = distanceToSegment(p, a, b);
+    if (dist <= radiusWorld && (bestSpring === null || dist < bestSpring.dist)) {
+      bestSpring = { springId: spring.id, dist };
+    }
+  }
+  if (bestSpring) return { kind: "spring", springId: bestSpring.springId };
 
   let hitLinkId: Id | null = null;
   for (const link of doc.links) {
@@ -189,7 +210,7 @@ function pointInBox(p: Vec2, box: Bounds): boolean {
 
 /**
  * Ids fully/partly enclosed by `box`: non-ground links whose every site
- * (and, for a plate, every outline vertex) lies inside the box, markers
+ * (and every point of its drawn shape) lies inside the box, markers
  * inside the box, and joints with at least one site inside the box.
  */
 export function entitiesInBox(doc: MechanismDocument, box: Bounds): Id[] {
@@ -199,10 +220,9 @@ export function entitiesInBox(doc: MechanismDocument, box: Bounds): Id[] {
   for (const link of doc.links) {
     if (link.isGround || link.sites.length === 0) continue;
     const sitesInside = link.sites.every((s) => pointInBox(siteWorldPosition(link, s.local), box));
-    const outlineInside =
-      link.shape.kind === "plate"
-        ? link.shape.outline.every((v) => pointInBox(siteWorldPosition(link, v), box))
-        : true;
+    const outlineInside = flattenShape(link).every((v) =>
+      pointInBox(siteWorldPosition(link, v), box),
+    );
     if (sitesInside && outlineInside) ids.push(link.id);
   }
 

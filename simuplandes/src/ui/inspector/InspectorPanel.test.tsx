@@ -60,7 +60,9 @@ describe("InspectorPanel", () => {
   it("empty selection shows document name and a units select", () => {
     const store = createMechanismStore();
     renderPanel(store);
-    expect(screen.getByLabelText<HTMLInputElement>("Nombre").value).toBe("Untitled mechanism");
+    const nameField = screen.getByLabelText<HTMLInputElement>("Nombre");
+    expect(nameField.value).toBe("");
+    expect(nameField.placeholder).toBe("Mecanismo sin título");
     expect(screen.getByRole("combobox", { name: "Unidades" })).toBeDefined();
   });
 
@@ -97,7 +99,7 @@ describe("InspectorPanel", () => {
     const store = createMechanismStore();
     buildExampleFourBar(store);
     renderPanel(store);
-    expect(screen.getByText("4 eslabones · 4 articulaciones · 1 motores")).toBeDefined();
+    expect(screen.getByText("4 eslabones · 4 articulaciones · 1 motor")).toBeDefined();
   });
 
   it("two links selected shows the multi-selection count", () => {

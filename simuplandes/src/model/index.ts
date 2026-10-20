@@ -10,3 +10,5 @@ export * from "./units";
 export * from "./schema";
 export * from "./document";
 export * from "./migrations";
+export * from "./massProperties";
+export * from "./shapeGeometry";

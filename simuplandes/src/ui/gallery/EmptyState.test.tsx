@@ -29,11 +29,11 @@ function setup() {
 }
 
 describe("EmptyState", () => {
-  it("shows for an empty document with the select tool, with five cards and the slot", () => {
+  it("shows for an empty document with the select tool, with seven cards and the slot", () => {
     setup();
     const root = screen.getByTestId("empty-state");
     expect(root.style.pointerEvents).toBe("");
-    expect(screen.getAllByTestId("example-card")).toHaveLength(5);
+    expect(screen.getAllByTestId("example-card")).toHaveLength(7);
     expect(screen.getByText("extra-slot")).toBeTruthy();
   });
 

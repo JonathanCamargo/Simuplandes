@@ -23,6 +23,7 @@ import {
   type MechanismDocument,
   type MechanismDocumentInput,
   type Site,
+  CURRENT_SCHEMA_VERSION,
 } from "../model";
 import { buildStudioDocument, type StudioBuildInput } from "./buildDocument";
 import type { GraphtheExport, GraphtheMarker } from "./graphtheSchema";
@@ -92,12 +93,14 @@ function incidentsByNode(envelope: GraphtheExport): Map<number, Incident[]> {
 }
 
 /** The plate-vs-bar shape rule: a plate when 3+ DISTINCT site positions. */
-function shapeFor(positions: readonly (readonly [number, number])[]): LinkShape {
+function shapeFor(sites: readonly Site[]): LinkShape {
   const distinct: [number, number][] = [];
-  for (const p of positions) {
+  for (const { local: p } of sites) {
     if (!distinct.some((d) => d[0] === p[0] && d[1] === p[1])) distinct.push([p[0], p[1]]);
   }
-  return distinct.length >= 3 ? { kind: "plate", outline: distinct } : { kind: "bar" };
+  return distinct.length >= 3
+    ? { kind: "plate", outline: distinct }
+    : { kind: "bar", path: sites.map((s) => s.id) };
 }
 
 /** Builds one link at the IDENTITY pose from its sites' world positions. */
@@ -120,7 +123,7 @@ function buildNodeLink(
     name,
     isGround,
     pose: { position: [0, 0], angle: 0 },
-    shape: shapeFor(positions),
+    shape: shapeFor(sites),
     sites,
   };
   const siteIds = new Map<number, Id>();
@@ -259,7 +262,7 @@ export function importGraphthe(
   );
 
   const doc: MechanismDocumentInput = {
-    schemaVersion: 1,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     name: envelope.name,
     ...(envelope.units ? { units: { length: envelope.units as "mm" | "m" } } : {}),
     links,

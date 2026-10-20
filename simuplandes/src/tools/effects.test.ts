@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createMechanismStore } from "../store";
 import { degToRad } from "../model/units";
-import { MechanismDocumentSchema } from "../model";
+import { MechanismDocumentSchema, computedMassProperties } from "../model";
 import { applyToolEffects, type DefaultNames } from "./effects";
 import type { ToolEffect } from "./types";
 
@@ -11,6 +11,7 @@ const DEFAULT_NAMES: DefaultNames = {
   ground: "Bancada",
   slider: "Corredera",
   marker: "Punto",
+  spring: "Resorte",
 };
 
 describe("applyToolEffects: commitBar", () => {
@@ -31,7 +32,7 @@ describe("applyToolEffects: commitBar", () => {
     const doc = store.getState().document;
     expect(doc.links).toHaveLength(1);
     const link = doc.links[0];
-    expect(link.shape).toEqual({ kind: "bar" });
+    expect(link.shape).toEqual({ kind: "bar", path: link.sites.map((s) => s.id) });
     expect(link.pose).toEqual({ position: [0, 0], angle: Math.PI / 3 });
     expect(link.sites.map((s) => s.local)).toEqual([
       [0, 0],
@@ -538,5 +539,83 @@ describe("applyToolEffects: multiple effects", () => {
     // two separate commits -> two undo steps
     store.getState().undo();
     expect(store.getState().document.links[0].sites).toHaveLength(1);
+  });
+});
+
+describe("applyToolEffects: commitSpring", () => {
+  it("a spring on a bar's body adds an attachment site off the bar's path", () => {
+    const store = createMechanismStore({ validate: true });
+    const { linkId, siteIds } = store.getState().addLink({
+      name: "Bar",
+      sites: [{ local: [0, 0] }, { local: [100, 0] }],
+    });
+    const massBefore = computedMassProperties(
+      store.getState().document.links[0],
+      store.getState().document,
+    );
+
+    const effect: ToolEffect = {
+      kind: "commitSpring",
+      a: { kind: "link", linkId, at: { x: 50, y: 0 } },
+      b: { kind: "ground", at: { x: 50, y: -40 } },
+      freeLength: 40,
+    };
+    applyToolEffects(store, [effect], { defaultNames: DEFAULT_NAMES });
+
+    const doc = store.getState().document;
+    const bar = doc.links.find((l) => l.id === linkId)!;
+    expect(bar.sites).toHaveLength(3);
+    expect(bar.shape).toEqual({ kind: "bar", path: siteIds });
+    expect(computedMassProperties(bar, doc)).toEqual(massBefore);
+  });
+
+  it("a spring's ground anchor stays off the ground path; ground pivots go on it", () => {
+    const store = createMechanismStore({ validate: true });
+    const { siteIds } = store.getState().addLink({ name: "Bar", sites: [{ local: [0, 0] }] });
+    applyToolEffects(store, [{ kind: "commitGroundPivot", at: { x: 0, y: 0 } }], {
+      defaultNames: DEFAULT_NAMES,
+    });
+    applyToolEffects(
+      store,
+      [
+        {
+          kind: "commitSpring",
+          a: { kind: "site", siteId: siteIds[0] },
+          b: { kind: "ground", at: { x: 0, y: -40 } },
+          freeLength: 40,
+        },
+      ],
+      { defaultNames: DEFAULT_NAMES },
+    );
+    applyToolEffects(store, [{ kind: "commitGroundPivot", at: { x: 80, y: 0 } }], {
+      defaultNames: DEFAULT_NAMES,
+    });
+
+    const ground = store.getState().document.links.find((l) => l.isGround)!;
+    expect(ground.sites).toHaveLength(3);
+    expect(ground.shape).toEqual({
+      kind: "bar",
+      path: [ground.sites[0].id, ground.sites[2].id],
+    });
+  });
+
+  it("a spring anchored to ground on an empty ground creates a ground link with an empty path", () => {
+    const store = createMechanismStore({ validate: true });
+    const { siteIds } = store.getState().addLink({ name: "Bar", sites: [{ local: [0, 0] }] });
+    applyToolEffects(
+      store,
+      [
+        {
+          kind: "commitSpring",
+          a: { kind: "site", siteId: siteIds[0] },
+          b: { kind: "ground", at: { x: 0, y: -40 } },
+          freeLength: 40,
+        },
+      ],
+      { defaultNames: DEFAULT_NAMES },
+    );
+    const ground = store.getState().document.links.find((l) => l.isGround)!;
+    expect(ground.sites).toHaveLength(1);
+    expect(ground.shape).toEqual({ kind: "bar", path: [] });
   });
 });

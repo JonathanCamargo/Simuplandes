@@ -288,3 +288,28 @@ describe("readUrlPreferences", () => {
     expect(readUrlPreferences("?lang=es")).toEqual({ language: "es" });
   });
 });
+
+describe("brush preferences", () => {
+  it("default to ink at 4 px, persist, and fall back per field when corrupt", () => {
+    const storage = createMemoryStorage();
+    const store = createPreferencesStore({ storage });
+    expect(store.getState()).toMatchObject({ brushColor: "ink", brushWidthPx: 4 });
+    store.getState().setBrushColor("orange");
+    store.getState().setBrushWidthPx(8);
+    expect(createPreferencesStore({ storage }).getState()).toMatchObject({
+      brushColor: "orange",
+      brushWidthPx: 8,
+    });
+
+    const saved = JSON.parse(storage.getItem(PREFERENCES_STORAGE_KEY)!) as Record<string, unknown>;
+    storage.setItem(
+      PREFERENCES_STORAGE_KEY,
+      JSON.stringify({ ...saved, brushColor: "purple", brushWidthPx: 5 }),
+    );
+    expect(createPreferencesStore({ storage }).getState()).toMatchObject({
+      brushColor: "ink",
+      brushWidthPx: 4,
+      gridVisible: saved.gridVisible,
+    });
+  });
+});

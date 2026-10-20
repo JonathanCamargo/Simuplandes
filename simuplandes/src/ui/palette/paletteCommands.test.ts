@@ -44,17 +44,23 @@ describe("buildPaletteCommands", () => {
     }
   });
 
-  it("has the three file commands first, each opening its dialog", () => {
+  it("has the four file commands first: three dialogs, then Export image", () => {
     const file = commands.filter((c) => c.group === "file");
-    expect(file.map((c) => c.id)).toEqual(["file:importGraph", "file:examples", "file:atlas"]);
+    expect(file.map((c) => c.id)).toEqual([
+      "file:importGraph",
+      "file:examples",
+      "file:atlas",
+      "file:exportImage",
+    ]);
     expect(file.map((c) => c.action)).toEqual([
       { type: "openDialog", dialog: "import" },
       { type: "openDialog", dialog: "examples" },
       { type: "openDialog", dialog: "atlas" },
+      { type: "showDockTab", tab: "export" },
     ]);
   });
 
-  it("has exactly the ten other non-tool commands, in order, each once", () => {
+  it("has exactly the fifteen other non-tool commands, in order, each once", () => {
     const nonToolIds = commands
       .filter((c) => c.group !== "tools" && c.group !== "file")
       .map((c) => c.id);
@@ -62,7 +68,12 @@ describe("buildPaletteCommands", () => {
       "edit:undo",
       "edit:redo",
       "edit:delete",
+      "edit:clearAnnotations",
       "view:fit",
+      "view:modeBuild",
+      "view:modeDraw",
+      "view:modeSimulate",
+      "view:showGraph",
       "view:toggleGrid",
       "view:toggleSnap",
       "pref:toggleTheme",

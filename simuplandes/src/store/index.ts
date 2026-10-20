@@ -9,3 +9,4 @@ export * from "./commands";
 export * from "./selection";
 export * from "./mechanismStore";
 export * from "./examples";
+export * from "./annotations";

@@ -124,7 +124,7 @@ describe("PlotDock: visibility", () => {
 });
 
 describe("PlotDock: open in simulate", () => {
-  it("shows the region, x-axis toggle, quantity picker (15 quantities), and the default rocker-angle selection", () => {
+  it("shows the region, x-axis toggle, quantity picker (32 quantities), and the default rocker-angle selection", () => {
     const h = makeHarness();
     renderDock(h);
 
@@ -138,7 +138,8 @@ describe("PlotDock: open in simulate", () => {
     const combobox = screen.getByRole("combobox");
     fireEvent.mouseDown(combobox);
     const listbox = screen.getByRole("listbox");
-    expect(within(listbox).getAllByRole("option")).toHaveLength(15);
+    // 15 kinematic + 17 dynamic (reactions, motor torque and power, energy).
+    expect(within(listbox).getAllByRole("option")).toHaveLength(32);
   });
 
   it("receives sweepTable.x and the selected column, plus the nominal-rate note", () => {
@@ -279,5 +280,29 @@ describe("PlotDock: CSV export", () => {
       URL.revokeObjectURL = originalRevoke;
       HTMLAnchorElement.prototype.click = originalClick;
     }
+  });
+});
+
+describe("PlotDock: dynamics analysis", () => {
+  it("plots the computed trajectory against time, with no x-axis toggle or rate note", () => {
+    const h = makeHarness("en");
+    h.simStore.getState().setDynamicsDuration(2);
+    h.runtime.setAnalysis("dynamics");
+    act(() => h.scheduler.tick(16));
+    renderDock(h);
+
+    expect(screen.queryByRole("button", { name: "Input" })).toBeNull();
+    expect(screen.queryByText(/computed with the input at/)).toBeNull();
+    const chart = uplotInstances[uplotInstances.length - 1];
+    const data = chart.data as Float64Array[];
+    // 2 s at 60 frames/s plus the start frame.
+    expect(data[0]).toHaveLength(121);
+    expect(data[0][120]).toBeCloseTo(2, 9);
+
+    // The dynamics quantities are offered with their SI units.
+    fireEvent.mouseDown(screen.getByRole("combobox"));
+    const listbox = screen.getByRole("listbox");
+    expect(within(listbox).getByText("Kinetic energy [J]")).toBeTruthy();
+    expect(within(listbox).getAllByText(/torque \[N·m\]/).length).toBeGreaterThan(0);
   });
 });

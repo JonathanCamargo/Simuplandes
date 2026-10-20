@@ -16,10 +16,18 @@ import {
   type EntityKind,
   type Id,
   type MechanismDocument,
+  type LinkShapeInput,
   type LinkShape,
+  type Edge,
+  type AnnotationColor,
+  MAX_BULGE,
+  remapEdges,
   type Pose,
   type MotorDrive,
+  type MotorDynamics,
   type LengthUnit,
+  type MassProperties,
+  type DynamicsSettings,
 } from "../model";
 
 export type Recipe = (draft: Draft<MechanismDocument>) => void;
@@ -41,8 +49,10 @@ export interface LinkInput {
   isGround?: boolean;
   color?: string;
   pose?: Pose;
-  shape?: LinkShape;
+  /** A bar without a `path` runs through every site in `sites`, in order. */
+  shape?: LinkShapeInput;
   sites: SiteInput[];
+  massProperties?: MassProperties;
 }
 
 export type JointInput =
@@ -55,6 +65,7 @@ export interface MotorInput {
   name?: string;
   kind?: "rotary" | "linear";
   drive?: MotorDrive;
+  dynamics?: MotorDynamics;
 }
 
 export interface MarkerInput {
@@ -70,6 +81,35 @@ export interface LoadInput {
   name?: string;
   force?: Vec2Tuple;
   torque?: number;
+}
+
+export type SpringInput =
+  | {
+      id: Id;
+      kind: "linear";
+      siteA: Id;
+      siteB: Id;
+      stiffness: number;
+      freeLength: number;
+      damping?: number;
+      name?: string;
+    }
+  | {
+      id: Id;
+      kind: "torsional";
+      jointId: Id;
+      stiffness: number;
+      freeAngle?: number;
+      damping?: number;
+      name?: string;
+    };
+
+/** The editable numbers of a spring. `freeLength` applies to linear springs, `freeAngle` to torsional ones. */
+export interface SpringParameters {
+  stiffness?: number;
+  damping?: number;
+  freeLength?: number;
+  freeAngle?: number;
 }
 
 type DraftDoc = Draft<MechanismDocument>;
@@ -92,7 +132,15 @@ function collectDraftIds(doc: DraftDoc): Set<Id> {
   for (const motor of doc.motors) ids.add(motor.id);
   for (const marker of doc.markers) ids.add(marker.id);
   for (const load of doc.loads) ids.add(load.id);
+  for (const spring of doc.springs) ids.add(spring.id);
+  for (const annotation of doc.annotations) ids.add(annotation.id);
   return ids;
+}
+
+function assertNonNegative(value: number, what: string): void {
+  if (!(Number.isFinite(value) && value >= 0)) {
+    throw new CommandError(`${what} must be a non-negative number`);
+  }
 }
 
 /** Finds a site and its owning link by site id, or undefined if not found. */
@@ -102,6 +150,49 @@ function findSite(doc: DraftDoc, id: Id): { site: DraftSite; link: DraftLink } |
     if (site) return { site, link };
   }
   return undefined;
+}
+
+/**
+ * Validated, cleaned edges for a shape with `count` edges: finite numbers,
+ * |bulge| within `MAX_BULGE`, and exactly `count` of them.
+ */
+function cleanEdges(edges: readonly Edge[], count: number): Edge[] {
+  if (edges.length !== count) {
+    throw new CommandError(`expected ${count} edges, got ${edges.length}`);
+  }
+  return edges.map((edge) => {
+    if (edge.kind === "line") return { kind: "line" };
+    if (edge.kind === "arc") {
+      if (!(Math.abs(edge.bulge) <= MAX_BULGE)) {
+        throw new CommandError(`arc bulge must be within +-${MAX_BULGE}`);
+      }
+      return { kind: "arc", bulge: cleanNumber(edge.bulge) };
+    }
+    const all = [...edge.out, ...edge.in];
+    if (!all.every(Number.isFinite)) throw new CommandError("curve controls must be finite");
+    return { kind: "bezier", out: cleanTuple(edge.out), in: cleanTuple(edge.in) };
+  });
+}
+
+/** A new bar's shape: its path (see `barPath`) and, if given, its edges. */
+function barShape(
+  shape: Extract<LinkShapeInput, { kind: "bar" }> | undefined,
+  sites: readonly SiteInput[],
+): Extract<LinkShape, { kind: "bar" }> {
+  const path = barPath(shape?.path, sites);
+  return shape?.edges
+    ? { kind: "bar", path, edges: cleanEdges(shape.edges, Math.max(0, path.length - 1)) }
+    : { kind: "bar", path };
+}
+
+/** A bar's path: `path` checked against `sites`, or every site in order. */
+function barPath(path: readonly Id[] | undefined, sites: readonly SiteInput[]): Id[] {
+  if (path === undefined) return sites.map((s) => s.id);
+  const own = new Set(sites.map((s) => s.id));
+  if (path.some((id) => !own.has(id)) || new Set(path).size !== path.length) {
+    throw new CommandError("bar path must list distinct sites of the link");
+  }
+  return [...path];
 }
 
 export function addLink(input: LinkInput): Recipe {
@@ -124,23 +215,49 @@ export function addLink(input: LinkInput): Recipe {
       pose: input.pose
         ? { position: cleanTuple(input.pose.position), angle: cleanNumber(input.pose.angle) }
         : { position: [0, 0], angle: 0 },
-      shape: input.shape ?? { kind: "bar" },
+      shape:
+        input.shape?.kind === "plate"
+          ? {
+              kind: "plate",
+              outline: input.shape.outline.map((v) => cleanTuple(v)),
+              ...(input.shape.edges
+                ? { edges: cleanEdges(input.shape.edges, input.shape.outline.length) }
+                : {}),
+            }
+          : barShape(input.shape, input.sites),
       sites: input.sites.map((s) => ({
         id: s.id,
         name: s.name ?? "",
         local: cleanTuple(s.local),
       })),
+      ...(input.massProperties
+        ? {
+            massProperties: {
+              mass: input.massProperties.mass,
+              com: cleanTuple(input.massProperties.com),
+              inertia: input.massProperties.inertia,
+            },
+          }
+        : {}),
     });
   };
 }
 
-export function addSite(linkId: Id, site: SiteInput): Recipe {
+/**
+ * Adds a site to a link. On a bar the site is an attachment point off the
+ * bar's path unless `onPath` is set, which appends it to the path.
+ */
+export function addSite(linkId: Id, site: SiteInput, options?: { onPath?: boolean }): Recipe {
   return (draft) => {
     const link = draft.links.find((l) => l.id === linkId);
     if (!link) throw new CommandError(`unknown link "${linkId}"`);
     const ids = collectDraftIds(draft);
     if (ids.has(site.id)) throw new CommandError(`duplicate id "${site.id}"`);
     link.sites.push({ id: site.id, name: site.name ?? "", local: cleanTuple(site.local) });
+    if (options?.onPath && link.shape.kind === "bar") {
+      if (link.shape.edges && link.shape.path.length > 0) link.shape.edges.push({ kind: "line" });
+      link.shape.path.push(site.id);
+    }
   };
 }
 
@@ -196,6 +313,7 @@ export function addMotor(input: MotorInput): Recipe {
       jointId: input.jointId,
       kind,
       drive: input.drive ?? { mode: "constant", speed: 1 },
+      dynamics: input.dynamics ?? { mode: "motion" },
     });
   };
 }
@@ -231,11 +349,238 @@ export function addLoad(input: LoadInput): Recipe {
   };
 }
 
+/**
+ * Changes a load's site, force (N, world) and/or torque (N·m). Unknown load
+ * or site ids, and non-finite numbers, throw before mutating.
+ */
+export function setLoad(
+  loadId: Id,
+  edit: { siteId?: Id; force?: Vec2Tuple; torque?: number },
+): Recipe {
+  return (draft) => {
+    const load = draft.loads.find((l) => l.id === loadId);
+    if (!load) throw new CommandError(`unknown load "${loadId}"`);
+    if (edit.siteId !== undefined && !findSite(draft, edit.siteId)) {
+      throw new CommandError(`unknown site "${edit.siteId}"`);
+    }
+    const numbers = [...(edit.force ?? []), ...(edit.torque !== undefined ? [edit.torque] : [])];
+    if (!numbers.every(Number.isFinite)) throw new CommandError("load values must be finite");
+    if (edit.siteId !== undefined) load.siteId = edit.siteId;
+    if (edit.force) load.force = cleanTuple(edit.force);
+    if (edit.torque !== undefined) load.torque = cleanNumber(edit.torque);
+  };
+}
+
+/**
+ * Adds a linear spring (between two sites on different links) or a
+ * torsional spring (on an R joint). Throws before mutating on a duplicate
+ * id, a bad reference, or a negative stiffness, damping or free length.
+ */
+export function addSpring(input: SpringInput): Recipe {
+  return (draft) => {
+    const ids = collectDraftIds(draft);
+    if (ids.has(input.id)) throw new CommandError(`duplicate id "${input.id}"`);
+    assertNonNegative(input.stiffness, "stiffness");
+    assertNonNegative(input.damping ?? 0, "damping");
+    if (input.kind === "linear") {
+      const a = findSite(draft, input.siteA);
+      const b = findSite(draft, input.siteB);
+      if (!a) throw new CommandError(`unknown site "${input.siteA}"`);
+      if (!b) throw new CommandError(`unknown site "${input.siteB}"`);
+      if (a.link.id === b.link.id) {
+        throw new CommandError("a spring must connect two different links");
+      }
+      assertNonNegative(input.freeLength, "free length");
+      draft.springs.push({
+        id: input.id,
+        name: input.name ?? "",
+        kind: "linear",
+        siteA: input.siteA,
+        siteB: input.siteB,
+        stiffness: cleanNumber(input.stiffness),
+        damping: cleanNumber(input.damping ?? 0),
+        freeLength: cleanNumber(input.freeLength),
+      });
+      return;
+    }
+    const joint = draft.joints.find((j) => j.id === input.jointId);
+    if (!joint) throw new CommandError(`unknown joint "${input.jointId}"`);
+    if (joint.type !== "R") throw new CommandError("a torsional spring needs an R joint");
+    const freeAngle = input.freeAngle ?? 0;
+    if (!Number.isFinite(freeAngle)) throw new CommandError("free angle must be finite");
+    draft.springs.push({
+      id: input.id,
+      name: input.name ?? "",
+      kind: "torsional",
+      jointId: input.jointId,
+      stiffness: cleanNumber(input.stiffness),
+      damping: cleanNumber(input.damping ?? 0),
+      freeAngle: cleanNumber(freeAngle),
+    });
+  };
+}
+
+/** Edits a spring's numbers. Throws before mutating on an unknown id, a negative value, or a parameter the spring kind lacks. */
+export function setSpringParameters(springId: Id, params: SpringParameters): Recipe {
+  return (draft) => {
+    const spring = draft.springs.find((s) => s.id === springId);
+    if (!spring) throw new CommandError(`unknown spring "${springId}"`);
+    if (params.stiffness !== undefined) assertNonNegative(params.stiffness, "stiffness");
+    if (params.damping !== undefined) assertNonNegative(params.damping, "damping");
+    if (params.freeLength !== undefined) {
+      if (spring.kind !== "linear")
+        throw new CommandError("only a linear spring has a free length");
+      assertNonNegative(params.freeLength, "free length");
+    }
+    if (params.freeAngle !== undefined) {
+      if (spring.kind !== "torsional") {
+        throw new CommandError("only a torsional spring has a free angle");
+      }
+      if (!Number.isFinite(params.freeAngle)) throw new CommandError("free angle must be finite");
+    }
+    if (params.stiffness !== undefined) spring.stiffness = cleanNumber(params.stiffness);
+    if (params.damping !== undefined) spring.damping = cleanNumber(params.damping);
+    if (params.freeLength !== undefined && spring.kind === "linear") {
+      spring.freeLength = cleanNumber(params.freeLength);
+    }
+    if (params.freeAngle !== undefined && spring.kind === "torsional") {
+      spring.freeAngle = cleanNumber(params.freeAngle);
+    }
+  };
+}
+
+/**
+ * Sets (or, with `undefined`, clears) a link's authored mass properties.
+ * Cleared, the link's mass properties are computed from its shape. Throws
+ * before mutating on an unknown link or a negative mass or inertia.
+ */
+export function setLinkMassProperties(linkId: Id, props: MassProperties | undefined): Recipe {
+  return (draft) => {
+    const link = draft.links.find((l) => l.id === linkId);
+    if (!link) throw new CommandError(`unknown link "${linkId}"`);
+    if (props === undefined) {
+      delete link.massProperties;
+      return;
+    }
+    assertNonNegative(props.mass, "mass");
+    assertNonNegative(props.inertia, "inertia");
+    if (!props.com.every(Number.isFinite)) throw new CommandError("center of mass must be finite");
+    link.massProperties = {
+      mass: cleanNumber(props.mass),
+      com: cleanTuple(props.com),
+      inertia: cleanNumber(props.inertia),
+    };
+  };
+}
+
+/** Edits the document's gravity (m/s²) and/or densities (kg/m, kg/m²). Densities must be positive. */
+export function setDynamicsSettings(edit: Partial<DynamicsSettings>): Recipe {
+  return (draft) => {
+    if (edit.gravity && !edit.gravity.every(Number.isFinite)) {
+      throw new CommandError("gravity must be finite");
+    }
+    for (const density of [edit.barDensity, edit.plateDensity]) {
+      if (density !== undefined && !(Number.isFinite(density) && density > 0)) {
+        throw new CommandError("density must be positive");
+      }
+    }
+    if (edit.gravity) draft.dynamics.gravity = cleanTuple(edit.gravity);
+    if (edit.barDensity !== undefined) draft.dynamics.barDensity = edit.barDensity;
+    if (edit.plateDensity !== undefined) draft.dynamics.plateDensity = edit.plateDensity;
+  };
+}
+
+/** Sets what a motor does in dynamics: follow its motion, or apply an effort expression. */
+export function setMotorDynamics(motorId: Id, dynamics: MotorDynamics): Recipe {
+  return (draft) => {
+    const motor = draft.motors.find((m) => m.id === motorId);
+    if (!motor) throw new CommandError(`unknown motor "${motorId}"`);
+    if (dynamics.mode === "effort" && dynamics.expression.trim().length === 0) {
+      throw new CommandError("effort expression must be non-empty");
+    }
+    motor.dynamics =
+      dynamics.mode === "motion"
+        ? { mode: "motion" }
+        : { mode: "effort", expression: dynamics.expression };
+  };
+}
+
 export function setLinkPose(linkId: Id, pose: Pose): Recipe {
   return (draft) => {
     const link = draft.links.find((l) => l.id === linkId);
     if (!link) throw new CommandError(`unknown link "${linkId}"`);
     link.pose = { position: cleanTuple(pose.position), angle: cleanNumber(pose.angle) };
+  };
+}
+
+/**
+ * Replaces a plate's outline (link-local vertices, at least 3, all finite)
+ * and its edges: one per vertex, or `undefined` for all straight.
+ */
+export function setPlateOutline(
+  linkId: Id,
+  outline: readonly Vec2Tuple[],
+  edges: readonly Edge[] | undefined,
+): Recipe {
+  return (draft) => {
+    const link = draft.links.find((l) => l.id === linkId);
+    if (!link) throw new CommandError(`unknown link "${linkId}"`);
+    if (link.shape.kind !== "plate") throw new CommandError(`link "${linkId}" is not a plate`);
+    if (outline.length < 3) throw new CommandError("a plate outline needs at least 3 vertices");
+    if (!outline.every(([x, y]) => Number.isFinite(x) && Number.isFinite(y))) {
+      throw new CommandError("plate outline vertices must be finite");
+    }
+    const cleaned = edges ? cleanEdges(edges, outline.length) : undefined;
+    link.shape.outline = outline.map((v) => cleanTuple(v));
+    if (cleaned) link.shape.edges = cleaned;
+    else delete link.shape.edges;
+  };
+}
+
+export interface AnnotationInput {
+  id: Id;
+  points: readonly Vec2Tuple[];
+  color: AnnotationColor;
+  width: number;
+}
+
+/** Adds a freehand annotation stroke (world points, at least one; width > 0). */
+export function addAnnotation(input: AnnotationInput): Recipe {
+  return (draft) => {
+    if (collectDraftIds(draft).has(input.id)) throw new CommandError(`duplicate id "${input.id}"`);
+    if (input.points.length === 0) throw new CommandError("a stroke needs at least one point");
+    if (!input.points.every(([x, y]) => Number.isFinite(x) && Number.isFinite(y))) {
+      throw new CommandError("stroke points must be finite");
+    }
+    if (!(Number.isFinite(input.width) && input.width > 0)) {
+      throw new CommandError("stroke width must be a positive number");
+    }
+    draft.annotations.push({
+      id: input.id,
+      kind: "stroke",
+      points: input.points.map((p) => cleanTuple(p)),
+      color: input.color,
+      width: cleanNumber(input.width),
+    });
+  };
+}
+
+/** Removes every annotation. */
+export function clearAnnotations(): Recipe {
+  return (draft) => {
+    draft.annotations = [];
+  };
+}
+
+/** Replaces a bar's edges: one per path segment, or `undefined` for all straight. */
+export function setBarEdges(linkId: Id, edges: readonly Edge[] | undefined): Recipe {
+  return (draft) => {
+    const link = draft.links.find((l) => l.id === linkId);
+    if (!link) throw new CommandError(`unknown link "${linkId}"`);
+    if (link.shape.kind !== "bar") throw new CommandError(`link "${linkId}" is not a bar`);
+    const cleaned = edges ? cleanEdges(edges, Math.max(0, link.shape.path.length - 1)) : undefined;
+    if (cleaned) link.shape.edges = cleaned;
+    else delete link.shape.edges;
   };
 }
 
@@ -277,6 +622,11 @@ export function rename(id: Id, name: string): Recipe {
     const load = draft.loads.find((l) => l.id === id);
     if (load) {
       load.name = name;
+      return;
+    }
+    const spring = draft.springs.find((s) => s.id === id);
+    if (spring) {
+      spring.name = name;
       return;
     }
     throw new CommandError(`unknown id "${id}"`);
@@ -418,6 +768,7 @@ export function deleteEntities(ids: ReadonlySet<Id>): Recipe {
     const motorsToDelete = new Set<Id>();
     const markersToDelete = new Set<Id>();
     const loadsToDelete = new Set<Id>();
+    const springsToDelete = new Set<Id>();
 
     for (const link of draft.links) {
       if (ids.has(link.id)) {
@@ -450,15 +801,33 @@ export function deleteEntities(ids: ReadonlySet<Id>): Recipe {
         loadsToDelete.add(load.id);
       }
     }
+    for (const spring of draft.springs) {
+      const dangling =
+        spring.kind === "linear"
+          ? sitesToDelete.has(spring.siteA) || sitesToDelete.has(spring.siteB)
+          : jointsToDelete.has(spring.jointId);
+      if (ids.has(spring.id) || dangling) springsToDelete.add(spring.id);
+    }
 
     draft.links = draft.links.filter((l) => !linksToDelete.has(l.id));
     for (const link of draft.links) {
       link.sites = link.sites.filter((s) => !sitesToDelete.has(s.id));
+      if (link.shape.kind === "bar") {
+        const oldPath = link.shape.path;
+        link.shape.path = oldPath.filter((id) => !sitesToDelete.has(id));
+        if (link.shape.edges) {
+          // Edges between sites that stay neighbors keep their curve.
+          const oldIndexOf = link.shape.path.map((id) => oldPath.indexOf(id));
+          link.shape.edges = remapEdges(link.shape.edges, oldPath.length, oldIndexOf, false);
+        }
+      }
     }
     draft.joints = draft.joints.filter((j) => !jointsToDelete.has(j.id));
     draft.motors = draft.motors.filter((m) => !motorsToDelete.has(m.id));
     draft.markers = draft.markers.filter((m) => !markersToDelete.has(m.id));
     draft.loads = draft.loads.filter((l) => !loadsToDelete.has(l.id));
+    draft.springs = draft.springs.filter((s) => !springsToDelete.has(s.id));
+    draft.annotations = draft.annotations.filter((a) => !ids.has(a.id));
   };
 }
 
@@ -483,7 +852,9 @@ export interface PlanDuplicateResult {
  *    e.g. the crank's joint to ground, is never copied, since the other
  *    end has no duplicate to attach to);
  *  - every motor on a duplicated (internal) joint;
- *  - every marker on a duplicated link.
+ *  - every marker on a duplicated link;
+ *  - every load on a duplicated site, and every spring whose ends (or
+ *    joint) are all duplicated.
  * All in ONE `store.execute()` call by the caller (`effects.ts`), so a
  * duplicate is one undo step no matter how many links/joints/motors/markers
  * it carries along.
@@ -521,8 +892,16 @@ export function planDuplicate(
           position: [link.pose.position[0] + offset.x, link.pose.position[1] + offset.y],
           angle: link.pose.angle,
         },
-        shape: link.shape,
+        shape:
+          link.shape.kind === "bar"
+            ? {
+                kind: "bar",
+                path: link.shape.path.map((id) => idMap.get(id)!),
+                ...(link.shape.edges ? { edges: link.shape.edges } : {}),
+              }
+            : link.shape,
         sites,
+        ...(link.massProperties ? { massProperties: link.massProperties } : {}),
       }),
     );
   }
@@ -558,8 +937,48 @@ export function planDuplicate(
     const newMotorId = newId("motor");
     idMap.set(motor.id, newMotorId);
     recipes.push(
-      addMotor({ id: newMotorId, jointId: newJointId, kind: motor.kind, drive: motor.drive }),
+      addMotor({
+        id: newMotorId,
+        jointId: newJointId,
+        kind: motor.kind,
+        drive: motor.drive,
+        dynamics: motor.dynamics,
+      }),
     );
+  }
+
+  for (const load of doc.loads) {
+    const newSiteId = idMap.get(load.siteId);
+    if (!newSiteId) continue;
+    const newLoadId = newId("load");
+    idMap.set(load.id, newLoadId);
+    recipes.push(
+      addLoad({
+        id: newLoadId,
+        siteId: newSiteId,
+        name: load.name,
+        force: load.force,
+        torque: load.torque,
+      }),
+    );
+  }
+
+  for (const spring of doc.springs) {
+    const { id, ...rest } = spring;
+    if (rest.kind === "linear") {
+      const siteA = idMap.get(rest.siteA);
+      const siteB = idMap.get(rest.siteB);
+      if (!siteA || !siteB) continue;
+      const newSpringId = newId("spring");
+      idMap.set(id, newSpringId);
+      recipes.push(addSpring({ ...rest, id: newSpringId, siteA, siteB }));
+    } else {
+      const jointId = idMap.get(rest.jointId);
+      if (!jointId) continue;
+      const newSpringId = newId("spring");
+      idMap.set(id, newSpringId);
+      recipes.push(addSpring({ ...rest, id: newSpringId, jointId }));
+    }
   }
 
   for (const marker of doc.markers) {
