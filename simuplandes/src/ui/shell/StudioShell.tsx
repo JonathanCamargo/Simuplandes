@@ -3,12 +3,18 @@
  * canvas/right-dock split, the transport placeholder and the status bar.
  * Grid ported literally from the approved `research/prototype.html` `.studio`
  * grid (top/rail/main/tx/sb areas).
+ *
+ * The compact layout (`useCompactLayout`: phones, narrow windows, heavy
+ * browser zoom) drops the resizable split. In portrait the tools sit in a
+ * bottom bar and the dock opens as a sheet under the canvas; in landscape
+ * the rail stays at the left and the sheet opens at the right. The
+ * transport shows only while simulating.
  */
 
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useStore, type StoreApi } from "zustand";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, useMediaQuery } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { Group, Panel, Separator, type PanelSize } from "react-resizable-panels";
 import { TopBar } from "./TopBar";
@@ -25,6 +31,7 @@ import { AtlasDialog } from "../atlas/AtlasDialog";
 import { CommandPalette } from "../palette/CommandPalette";
 import { ShortcutSheet } from "../palette/ShortcutSheet";
 import { ShareLinkLoader } from "./ShareLinkLoader";
+import { LANDSCAPE_MEDIA_QUERY, useCompactLayout } from "./useCompactLayout";
 import type { Session } from "../../persistence/session";
 import {
   MIN_DOCK_SIZE_PCT,
@@ -45,13 +52,36 @@ export interface StudioShellProps {
   height?: string;
 }
 
+/** The full visible viewport: `dvh` excludes a phone browser's collapsing URL bar; `vh` is the fallback. */
+const FULL_VIEWPORT_HEIGHT = {
+  height: "100vh",
+  "@supports (height: 100dvh)": { height: "100dvh" },
+} as const;
+
+/** Grid templates for the compact layout; the desktop one is inline below. */
+const COMPACT_PORTRAIT_GRID = {
+  gridTemplateColumns: "minmax(0,1fr)",
+  gridTemplateRows: "auto minmax(0,1fr) auto auto auto auto auto",
+  gridTemplateAreas: `"top" "main" "dock" "plots" "tx" "rail" "sb"`,
+} as const;
+
+const COMPACT_LANDSCAPE_GRID = {
+  gridTemplateColumns: "auto minmax(0,1fr) auto",
+  gridTemplateRows: "auto minmax(0,1fr) auto auto auto",
+  gridTemplateAreas: `"top top top" "rail main dock" "plots plots plots" "tx tx tx" "sb sb sb"`,
+} as const;
+
 export function StudioShell({
   session,
   preferencesStore,
   studioStore,
-  height = "100vh",
+  height,
 }: StudioShellProps): ReactNode {
   const { t } = useTranslation();
+  const compact = useCompactLayout(preferencesStore);
+  const landscape = useMediaQuery(LANDSCAPE_MEDIA_QUERY, { noSsr: true });
+  const mode = useStore(studioStore, (s) => s.mode);
+  const dockSheetOpen = useStore(studioStore, (s) => s.dockSheetOpen);
   useStudioShortcuts(studioStore, session.store);
   const { dragging } = useFileDrop((text, name) =>
     studioStore.getState().requestImport(text, name),
@@ -76,62 +106,122 @@ export function StudioShell({
     preferencesStore.getState().setDockSizePct(panelSize.asPercentage);
   }
 
+  const canvas = (
+    <CanvasArea
+      store={session.store}
+      studio={studioStore}
+      preferences={preferencesStore}
+      view={viewStore}
+      sim={{ store: simStore, runtime }}
+    />
+  );
+
+  function renderDock(onClose?: () => void): ReactNode {
+    return (
+      <RightDock
+        studioStore={studioStore}
+        mechanismStore={session.store}
+        preferencesStore={preferencesStore}
+        view={viewStore}
+        sim={{ store: simStore }}
+        onClose={onClose}
+      />
+    );
+  }
+
   return (
     <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: (theme) => `${theme.spacing(6.5)} minmax(0,1fr)`,
-        gridTemplateRows: "auto minmax(0,1fr) auto auto auto",
-        gridTemplateAreas: `"top top" "rail main" "plots plots" "tx tx" "sb sb"`,
-        height,
-        width: "100%",
-        bgcolor: "background.default",
-      }}
+      sx={[
+        {
+          display: "grid",
+          width: "100%",
+          bgcolor: "background.default",
+          // Keeps a phone's pull-to-refresh and scroll chaining out of canvas gestures.
+          overscrollBehavior: "none",
+        },
+        compact
+          ? landscape
+            ? COMPACT_LANDSCAPE_GRID
+            : COMPACT_PORTRAIT_GRID
+          : {
+              gridTemplateColumns: (theme) => `${theme.spacing(6.5)} minmax(0,1fr)`,
+              gridTemplateRows: "auto minmax(0,1fr) auto auto auto",
+              gridTemplateAreas: `"top top" "rail main" "plots plots" "tx tx" "sb sb"`,
+            },
+        height === undefined ? FULL_VIEWPORT_HEIGHT : { height },
+      ]}
     >
-      <TopBar session={session} preferencesStore={preferencesStore} studioStore={studioStore} />
-      <ToolRail studioStore={studioStore} />
+      <TopBar
+        session={session}
+        preferencesStore={preferencesStore}
+        studioStore={studioStore}
+        compact={compact}
+      />
+      <ToolRail
+        studioStore={studioStore}
+        orientation={compact && !landscape ? "horizontal" : "vertical"}
+        touch={compact}
+      />
 
-      <Box sx={{ gridArea: "main", minHeight: 0, minWidth: 0 }}>
-        {/* react-resizable-panels v4 treats a bare number Panel size prop as
+      {compact ? (
+        <>
+          <Box sx={{ gridArea: "main", minHeight: 0, minWidth: 0 }}>{canvas}</Box>
+          {dockSheetOpen ? (
+            <Box
+              sx={
+                landscape
+                  ? {
+                      gridArea: "dock",
+                      width: "min(50vw, 420px)",
+                      minHeight: 0,
+                      borderLeft: 1,
+                      borderColor: "divider",
+                    }
+                  : {
+                      gridArea: "dock",
+                      height: "min(45vh, 420px)",
+                      "@supports (height: 45dvh)": { height: "min(45dvh, 420px)" },
+                      minWidth: 0,
+                      borderTop: 1,
+                      borderColor: "divider",
+                    }
+              }
+            >
+              {renderDock(() => studioStore.getState().setDockSheetOpen(false))}
+            </Box>
+          ) : null}
+        </>
+      ) : (
+        <Box sx={{ gridArea: "main", minHeight: 0, minWidth: 0 }}>
+          {/* react-resizable-panels v4 treats a bare number Panel size prop as
             PIXELS, not percent -- always pass explicit "%"-suffixed strings. */}
-        <Group orientation="horizontal" style={{ height: "100%" }}>
-          <Panel
-            id="canvas"
-            defaultSize={`${100 - initialDockSizePct}%`}
-            minSize={`${100 - MAX_DOCK_SIZE_PCT}%`}
-          >
-            <CanvasArea
-              store={session.store}
-              studio={studioStore}
-              preferences={preferencesStore}
-              view={viewStore}
-              sim={{ store: simStore, runtime }}
+          <Group orientation="horizontal" style={{ height: "100%" }}>
+            <Panel
+              id="canvas"
+              defaultSize={`${100 - initialDockSizePct}%`}
+              minSize={`${100 - MAX_DOCK_SIZE_PCT}%`}
+            >
+              {canvas}
+            </Panel>
+            <Separator
+              style={{
+                width: 4,
+                cursor: "col-resize",
+                background: "var(--mui-palette-divider, #ccc)",
+              }}
             />
-          </Panel>
-          <Separator
-            style={{
-              width: 4,
-              cursor: "col-resize",
-              background: "var(--mui-palette-divider, #ccc)",
-            }}
-          />
-          <Panel
-            id="dock"
-            defaultSize={`${initialDockSizePct}%`}
-            minSize={`${MIN_DOCK_SIZE_PCT}%`}
-            maxSize={`${MAX_DOCK_SIZE_PCT}%`}
-            onResize={handleDockResize}
-          >
-            <RightDock
-              studioStore={studioStore}
-              mechanismStore={session.store}
-              preferencesStore={preferencesStore}
-              view={viewStore}
-              sim={{ store: simStore }}
-            />
-          </Panel>
-        </Group>
-      </Box>
+            <Panel
+              id="dock"
+              defaultSize={`${initialDockSizePct}%`}
+              minSize={`${MIN_DOCK_SIZE_PCT}%`}
+              maxSize={`${MAX_DOCK_SIZE_PCT}%`}
+              onResize={handleDockResize}
+            >
+              {renderDock()}
+            </Panel>
+          </Group>
+        </Box>
+      )}
 
       <Box sx={{ gridArea: "plots", minWidth: 0 }}>
         <PlotDock
@@ -139,21 +229,26 @@ export function StudioShell({
           simStore={simStore}
           runtime={runtime}
           mechanismStore={session.store}
+          compact={compact}
         />
       </Box>
 
-      <Transport
-        studioStore={studioStore}
-        simStore={simStore}
-        runtime={runtime}
-        preferencesStore={preferencesStore}
-        lengthUnit={lengthUnit}
-      />
+      {compact && mode !== "simulate" ? null : (
+        <Transport
+          studioStore={studioStore}
+          simStore={simStore}
+          runtime={runtime}
+          preferencesStore={preferencesStore}
+          lengthUnit={lengthUnit}
+          compact={compact}
+        />
+      )}
       <StatusBar
         studioStore={studioStore}
         preferencesStore={preferencesStore}
         mechanismStore={session.store}
         simStore={simStore}
+        compact={compact}
       />
       <CommandPalette
         studioStore={studioStore}

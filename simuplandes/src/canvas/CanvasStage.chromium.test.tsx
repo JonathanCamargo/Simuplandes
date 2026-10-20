@@ -134,6 +134,7 @@ function renderCanvasStage(
     issueLinkIds?: ReadonlySet<Id>;
     posesSource?: ReturnType<typeof createFakePosesSource>;
     onPointer?: (event: CanvasPointerEvent) => void;
+    onGestureCancel?: () => void;
   } = {},
 ) {
   const store = createMechanismStore();
@@ -158,6 +159,7 @@ function renderCanvasStage(
             issueLinkIds={extra.issueLinkIds}
             posesSource={extra.posesSource}
             onPointer={extra.onPointer}
+            onGestureCancel={extra.onGestureCancel}
           />
         </ThemeProvider>
       </I18nextProvider>
@@ -400,6 +402,104 @@ describe("CanvasStage (chromium): pointer delivery", () => {
 
     // The two leading moves coalesce, as do the two trailing ones.
     expect(types).toEqual(["pointermove", "pointerdown", "pointerup", "pointermove"]);
+  });
+});
+
+describe("CanvasStage (chromium): touch", () => {
+  function touch(
+    target: Element,
+    type: "pointerdown" | "pointermove" | "pointerup" | "pointercancel",
+    id: number,
+    screen: Vec2,
+  ): void {
+    dispatchPointer(target, type as "pointerdown", screen, { pointerId: id, pointerType: "touch" });
+  }
+
+  it("a single finger reaches the tools, tagged as touch", async () => {
+    const view = createViewStore();
+    const events: CanvasPointerEvent[] = [];
+    const { container } = renderCanvasStage(view, { onPointer: (e) => events.push(e) });
+    const stageEl = await waitForStage(container);
+
+    touch(stageEl, "pointerdown", 1, { x: 100, y: 100 });
+    touch(stageEl, "pointerup", 1, { x: 100, y: 100 });
+    await nextFrame();
+
+    expect(events.map((e) => [e.type, e.pointerType])).toEqual([
+      ["pointerdown", "touch"],
+      ["pointerup", "touch"],
+    ]);
+  });
+
+  it("a cancelled one-finger touch abandons its gesture", async () => {
+    const view = createViewStore();
+    let cancels = 0;
+    const { container } = renderCanvasStage(view, {
+      onGestureCancel: () => {
+        cancels += 1;
+      },
+    });
+    const stageEl = await waitForStage(container);
+
+    touch(stageEl, "pointerdown", 1, { x: 100, y: 100 });
+    touch(stageEl, "pointercancel", 1, { x: 100, y: 100 });
+    expect(cancels).toBe(1);
+    // An untracked cancel (a pointer that never went down here) changes nothing.
+    touch(stageEl, "pointercancel", 7, { x: 100, y: 100 });
+    expect(cancels).toBe(1);
+  });
+
+  it("two fingers pinch-zoom about their midpoint and pan, cancelling the first finger's gesture", async () => {
+    const view = createViewStore({ widthPx: 800, heightPx: 600 });
+    const types: CanvasPointerEvent["type"][] = [];
+    let cancels = 0;
+    const { container } = renderCanvasStage(view, {
+      onPointer: (e) => types.push(e.type),
+      onGestureCancel: () => {
+        cancels += 1;
+      },
+    });
+    const stageEl = await waitForStage(container);
+    const before = view.getState().viewport;
+    const midWorld = screenToWorld(before, { x: 400, y: 300 });
+
+    touch(stageEl, "pointerdown", 1, { x: 350, y: 300 });
+    touch(stageEl, "pointerdown", 2, { x: 450, y: 300 });
+    expect(cancels).toBe(1);
+
+    // Spread to twice the distance: zoom doubles, the midpoint stays put.
+    touch(stageEl, "pointermove", 1, { x: 300, y: 300 });
+    touch(stageEl, "pointermove", 2, { x: 500, y: 300 });
+    const zoomed = view.getState().viewport;
+    expect(zoomed.zoom).toBeCloseTo(before.zoom * 2, 6);
+    const stillUnder = worldToScreen(zoomed, midWorld);
+    expect(stillUnder.x).toBeCloseTo(400, 6);
+    expect(stillUnder.y).toBeCloseTo(300, 6);
+
+    // Both fingers move down 40px together: a pan, no zoom.
+    touch(stageEl, "pointermove", 1, { x: 300, y: 340 });
+    touch(stageEl, "pointermove", 2, { x: 500, y: 340 });
+    const panned = view.getState().viewport;
+    expect(panned.zoom).toBeCloseTo(zoomed.zoom, 6);
+    expect(worldToScreen(panned, midWorld).y).toBeCloseTo(340, 6);
+
+    // Lifting one finger keeps the pinch until the last one lifts; a third
+    // finger meanwhile is ignored too.
+    touch(stageEl, "pointerup", 1, { x: 300, y: 340 });
+    touch(stageEl, "pointermove", 2, { x: 520, y: 360 });
+    touch(stageEl, "pointerdown", 3, { x: 200, y: 200 });
+    touch(stageEl, "pointercancel", 3, { x: 200, y: 200 });
+    touch(stageEl, "pointerup", 2, { x: 520, y: 360 });
+    expect(view.getState().viewport).toEqual(panned);
+    await nextFrame();
+
+    // The first finger's down never reached the tools: it was dropped before its frame.
+    expect(types).toEqual([]);
+
+    // After the pinch, a new single touch is a normal tool gesture again.
+    touch(stageEl, "pointerdown", 4, { x: 100, y: 100 });
+    await nextFrame();
+    expect(types).toEqual(["pointerdown"]);
   });
 });
 

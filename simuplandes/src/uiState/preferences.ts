@@ -1,6 +1,6 @@
 /**
- * Persisted UI-preferences store: theme mode, language, grid/snap toggles
- * and the right-dock split size. Lives entirely outside `MechanismDocument`
+ * Persisted UI-preferences store: theme mode, language, grid/snap toggles,
+ * the right-dock split size and the layout mode. Lives entirely outside `MechanismDocument`
  * and outside undo history (Pattern 7) -- switching theme or language is
  * never a Ctrl+Z step, and never touches the mechanism store.
  *
@@ -18,6 +18,14 @@ import { ANNOTATION_COLORS, type AnnotationColor } from "../model";
 export const PREFERENCES_STORAGE_KEY = "simuplandes:ui-prefs";
 
 export type ThemeMode = "light" | "dark";
+
+/**
+ * The studio layout: "desktop" (rail, side dock, full bars), "compact"
+ * (phone and zoomed-in browsers: bottom tool bar, dock as a sheet, overflow
+ * menu) or "auto", which picks compact on narrow or short viewports.
+ */
+export const LAYOUT_MODES = ["auto", "desktop", "compact"] as const;
+export type LayoutMode = (typeof LAYOUT_MODES)[number];
 
 export const MIN_DOCK_SIZE_PCT = 15;
 export const MAX_DOCK_SIZE_PCT = 50;
@@ -51,6 +59,7 @@ export interface PersistedPreferences {
   /** The Brush tool's color and width (per viewer, never part of a document). */
   brushColor: AnnotationColor;
   brushWidthPx: BrushWidthPx;
+  layoutMode: LayoutMode;
 }
 
 /** The on-disk JSON shape: persisted UI state plus the storage-format marker. */
@@ -66,6 +75,7 @@ export interface PreferencesState extends PersistedPreferences {
   setDockSizePct(pct: number): void;
   setBrushColor(color: AnnotationColor): void;
   setBrushWidthPx(width: BrushWidthPx): void;
+  setLayoutMode(mode: LayoutMode): void;
 }
 
 function clampDockSizePct(pct: number): number {
@@ -118,6 +128,7 @@ export function createPreferencesStore(
       dockSizePct: DEFAULT_DOCK_SIZE_PCT,
       brushColor: DEFAULT_BRUSH_COLOR,
       brushWidthPx: DEFAULT_BRUSH_WIDTH_PX,
+      layoutMode: "auto",
     };
   }
 
@@ -133,6 +144,7 @@ export function createPreferencesStore(
       .catch(DEFAULT_DOCK_SIZE_PCT),
     brushColor: z.enum(ANNOTATION_COLORS).catch(DEFAULT_BRUSH_COLOR),
     brushWidthPx: z.union(BRUSH_WIDTHS_PX.map((w) => z.literal(w))).catch(DEFAULT_BRUSH_WIDTH_PX),
+    layoutMode: z.enum(LAYOUT_MODES).catch("auto"),
   });
 
   function loadPersisted(): PersistedPreferences {
@@ -194,6 +206,9 @@ export function createPreferencesStore(
     setBrushWidthPx(width) {
       set({ brushWidthPx: width });
     },
+    setLayoutMode(mode) {
+      set({ layoutMode: mode });
+    },
   }));
 
   if (storage) {
@@ -206,6 +221,7 @@ export function createPreferencesStore(
         dockSizePct: state.dockSizePct,
         brushColor: state.brushColor,
         brushWidthPx: state.brushWidthPx,
+        layoutMode: state.layoutMode,
         dockLayoutVersion: DOCK_LAYOUT_VERSION,
       };
       try {

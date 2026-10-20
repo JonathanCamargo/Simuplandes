@@ -43,6 +43,7 @@ import {
   type AtlasEntry,
 } from "./atlasEntries";
 import { AtlasThumbnail } from "./AtlasThumbnail";
+import { useFullScreenDialog } from "../shell/useCompactLayout";
 
 export interface AtlasDialogProps {
   studioStore: StoreApi<StudioState>;
@@ -63,6 +64,7 @@ function AtlasDialogBody({
   deps = studioImportDeps,
 }: AtlasDialogProps): ReactNode {
   const { t } = useTranslation();
+  const fullScreen = useFullScreenDialog();
   const entries = useMemo(() => atlasEntries(), []);
   const options = useMemo(() => atlasFilterOptions(entries), [entries]);
   const [size, setSize] = useState<"all" | number>("all");
@@ -150,6 +152,7 @@ function AtlasDialogBody({
         open
         maxWidth="md"
         fullWidth
+        fullScreen={fullScreen}
         onClose={handleClose}
         data-testid="atlas-dialog"
         aria-labelledby="atlas-dialog-title"

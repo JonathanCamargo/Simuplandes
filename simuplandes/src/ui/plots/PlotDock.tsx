@@ -63,10 +63,13 @@ export interface PlotDockProps {
   simStore: SimStore;
   runtime: SimRuntime;
   mechanismStore: MechanismStore;
+  /** The compact (phone) layout: a shorter dock whose header wraps. */
+  compact?: boolean;
 }
 
 const MAX_SERIES = 4;
 const CHART_HEIGHT = 140;
+const COMPACT_CHART_HEIGHT = 110;
 
 function seriesColors(mode: "light" | "dark"): readonly string[] {
   const tokens = canvasTokensFor(mode);
@@ -98,6 +101,7 @@ export function PlotDock({
   simStore,
   runtime,
   mechanismStore,
+  compact = false,
 }: PlotDockProps): ReactNode {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
@@ -211,7 +215,7 @@ export function PlotDock({
       role="region"
       aria-label={t("sim.plots.region")}
       sx={{
-        height: 220,
+        height: compact ? "auto" : 220,
         borderTop: 1,
         borderColor: "divider",
         display: "flex",
@@ -220,7 +224,14 @@ export function PlotDock({
         bgcolor: "background.paper",
       }}
     >
-      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ px: 1.5, py: 0.5 }}>
+      <Stack
+        direction="row"
+        spacing={compact ? 1 : 1.5}
+        useFlexGap
+        flexWrap={compact ? "wrap" : "nowrap"}
+        alignItems="center"
+        sx={{ px: compact ? 1 : 1.5, py: 0.5 }}
+      >
         {isDynamics ? null : (
           <ToggleButtonGroup
             exclusive
@@ -234,7 +245,10 @@ export function PlotDock({
           </ToggleButtonGroup>
         )}
 
-        <FormControl size="small" sx={{ minWidth: 260 }}>
+        <FormControl
+          size="small"
+          sx={compact ? { flex: "1 1 180px", minWidth: 0 } : { minWidth: 260 }}
+        >
           <Select
             multiple
             displayEmpty
@@ -268,7 +282,7 @@ export function PlotDock({
           </Select>
         </FormControl>
 
-        <Box sx={{ flex: 1 }} />
+        {compact ? null : <Box sx={{ flex: 1 }} />}
 
         <Button size="small" onClick={handleExport} disabled={!currentTable}>
           {t("sim.plots.exportCsv")}
@@ -305,7 +319,7 @@ export function PlotDock({
             data={chartData}
             axisStroke={tokens.ink}
             gridStroke={tokens.grid}
-            height={CHART_HEIGHT}
+            height={compact ? COMPACT_CHART_HEIGHT : CHART_HEIGHT}
           />
         )}
       </Box>

@@ -11,7 +11,9 @@
     "save": "Save",
     "saveAs": "Save as…",
     "share": "Copy share link",
-    "exportImage": "Export image…"
+    "exportImage": "Export image…",
+    "main": "Menu",
+    "otherLanguage": "Español"
   },
   "undo": "Undo {{label}}",
   "redo": "Redo {{label}}",
@@ -29,7 +31,9 @@
     "label": "Side panel",
     "inspector": "Inspector",
     "graph": "Graph",
-    "export": "Export"
+    "export": "Export",
+    "close": "Close panel",
+    "toggle": "Panel"
   },
   "inspector": {
     "nothingSelected": "Nothing selected",
@@ -68,5 +72,11 @@
     "open": "Open",
     "keep": "Keep mine"
   },
-  "exampleFourBarName": "Four-bar example"
+  "exampleFourBarName": "Four-bar example",
+  "layout": {
+    "label": "Layout",
+    "auto": "Automatic",
+    "desktop": "Desktop",
+    "compact": "Compact (phone)"
+  }
 }

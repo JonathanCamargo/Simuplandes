@@ -75,6 +75,19 @@ Interface and usability work after v0.1. `npm run check` (2,677 tests) and the E
 - The default document name and the four-bar example name are shown in the interface language.
 - Example and atlas card subtitles wrap to two lines instead of being cut off.
 
+## Unreleased (phone layout, 2026-10-20)
+
+The studio is usable on a phone and in a browser zoomed far in.
+
+- **Compact layout.** It switches on by itself below 900 px wide or 500 px tall (`ui/shell/useCompactLayout.ts`). Heavy browser zoom shrinks the CSS viewport, so it gets the compact layout too. A Layout preference (Automatic / Desktop / Compact) overrides it. On the desktop bar it is the devices button; in the compact layout it is in the menu. It is persisted as `layoutMode`.
+- **In portrait** the tools are a horizontal bar under the canvas, the dock (Inspector / Graph / Export) opens as a sheet under the canvas from the top bar's Panel button, and choosing a dock tab from anywhere (Export image, palette commands) opens the sheet. **In landscape** the rail stays at the left and the sheet opens at the right.
+- **Top bar:** the File button becomes a menu icon. The command palette, shortcuts, language, theme, grid, snap and layout move into that menu. The DOF badge shows only its colored icon; its count is in the badge's popover and accessible name. Bar buttons are finger-sized (about 43 px).
+- **Transport and status bar:** the transport shows only in Simulate. It puts the playback buttons and a full-width scrubber first, and lets the status caption wrap. The status bar keeps only the hint and the snap status. The plot dock's header wraps and its chart is shorter.
+- **Touch on the canvas:** two fingers pinch-zoom about their midpoint and pan. When a second finger lands, the first finger's tool gesture is cancelled (`onGestureCancel`), and a `pointercancel` does the same. A finger picks and snaps within 18 px instead of 8 (`canvas/pickRadius.ts`). The canvas sets `touch-action: none`, so the page never scrolls or zooms under a gesture.
+- Large dialogs (import, atlas, examples) are full-screen below 600 px. The shell uses `100dvh`, so a phone's URL bar does not hide the bottom bars. On a phone, "Load example four-bar" frames the mechanism.
+
+Gates: `npm run check` (2,957 tests) passes except four coverage thresholds that already fail on HEAD (`src/tools/*.ts` and `src/tools/react/**`, from the untested Brush/Eraser tools and toolbars). The E2E suite passes (85, including `e2e/mobile-layout.spec.ts`).
+
 ## Known limitations and loose ends
 
 ### Bugs

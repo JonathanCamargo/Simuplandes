@@ -349,3 +349,14 @@ describe("studio dialogs and import requests", () => {
     expect(store.getState().mode).toBe("simulate");
   });
 });
+
+describe("studioStore dock sheet", () => {
+  it("starts closed; choosing a dock tab opens it and setDockSheetOpen closes it", () => {
+    const store = createStudioStore();
+    expect(store.getState().dockSheetOpen).toBe(false);
+    store.getState().setRightDockTab("export");
+    expect(store.getState()).toMatchObject({ rightDockTab: "export", dockSheetOpen: true });
+    store.getState().setDockSheetOpen(false);
+    expect(store.getState()).toMatchObject({ rightDockTab: "export", dockSheetOpen: false });
+  });
+});

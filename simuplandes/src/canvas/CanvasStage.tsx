@@ -47,6 +47,7 @@ import { RulersLayer } from "./layers/RulersLayer";
 import { TracesLayer } from "./layers/TracesLayer";
 import { applyRenderModelToLayers } from "./layers/applyRenderModel";
 import { installCanvasTestHook } from "./layers/canvasTestHook";
+import { pickRadiusPx } from "./pickRadius";
 
 export interface CanvasPointerEvent {
   type: "pointerdown" | "pointermove" | "pointerup";
@@ -58,6 +59,8 @@ export interface CanvasPointerEvent {
   /** `ctrlKey || metaKey` (Cmd on macOS behaves like Ctrl elsewhere). */
   ctrlKey: boolean;
   altKey: boolean;
+  /** `PointerEvent.pointerType`; "touch" widens the pick radius (`pickRadiusPx`). */
+  pointerType?: string;
 }
 
 export interface CanvasStageProps {
@@ -81,6 +84,12 @@ export interface CanvasStageProps {
   traces?: readonly TracePrimitive[];
   /** GRF-03 seam: link ids flagged by the graph panel's Baranov check, drawn with an issue outline. */
   issueLinkIds?: ReadonlySet<Id>;
+  /**
+   * A second finger turned a one-finger gesture into a pinch: the pointer
+   * handler must drop whatever the first finger started (the canvas sends
+   * it no pointerup for that finger).
+   */
+  onGestureCancel?: () => void;
 }
 
 interface PendingPointer {
@@ -90,6 +99,7 @@ interface PendingPointer {
   shiftKey: boolean;
   ctrlKey: boolean;
   altKey: boolean;
+  pointerType: string;
 }
 
 export function CanvasStage({
@@ -101,6 +111,7 @@ export function CanvasStage({
   height,
   children,
   onPointer,
+  onGestureCancel,
   posesSource,
   traces,
   issueLinkIds,
@@ -126,6 +137,11 @@ export function CanvasStage({
   const [displaySnap, setDisplaySnap] = useState<SnapResult | null>(null);
 
   const panRef = useRef({ active: false, lastClientX: 0, lastClientY: 0 });
+  // Touch points down on the stage (client px, by pointerId) and, while two
+  // are down, the pinch they drive: their distance and midpoint last frame.
+  // A pinch lasts until every finger lifts; meanwhile no event reaches the tools.
+  const touchesRef = useRef(new Map<number, Vec2>());
+  const pinchRef = useRef<{ distance: number; mid: Vec2 } | null>(null);
   const pendingRef = useRef<PendingPointer | null>(null);
   // Tracks whether the CANVAS's own hit-test is the current source of
   // `studio.hoveredId` (set true only when `flush()`'s pointermove hit-test
@@ -160,6 +176,30 @@ export function CanvasStage({
   const linksLayerRef = useRef<Konva.Layer | null>(null);
   const jointsLayerRef = useRef<Konva.Layer | null>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
+
+  // Konva never fires `pointercancel` on the stage (only a pointerup on a
+  // shape under the pointer), so listen natively: a cancelled touch is
+  // forgotten, and a cancelled one-finger gesture is abandoned like a pinch.
+  const onGestureCancelRef = useRef(onGestureCancel);
+  useEffect(() => {
+    onGestureCancelRef.current = onGestureCancel;
+  }, [onGestureCancel]);
+  useEffect(() => {
+    const container = stageRef.current?.container();
+    if (!container) return undefined;
+    function handleCancel(evt: PointerEvent): void {
+      panRef.current.active = false;
+      if (evt.pointerType !== "touch") return;
+      const wasTracked = touchesRef.current.delete(evt.pointerId);
+      if (pinchRef.current) {
+        if (touchesRef.current.size === 0) pinchRef.current = null;
+        return;
+      }
+      if (wasTracked) onGestureCancelRef.current?.();
+    }
+    container.addEventListener("pointercancel", handleCancel);
+    return () => container.removeEventListener("pointercancel", handleCancel);
+  }, []);
 
   useEffect(() => {
     if (!posesSource) return undefined;
@@ -199,8 +239,9 @@ export function CanvasStage({
 
     const world = screenToWorld(viewport, pending.screen);
     const gridSpacing = gridSpacingFor(viewport.zoom);
+    const radiusWorld = pickRadiusPx(pending.pointerType) / viewport.zoom;
     const snap = computeSnap(world, doc, {
-      radiusWorld: 8 / viewport.zoom,
+      radiusWorld,
       gridSpacing,
       enabled: snapEnabled,
     });
@@ -211,7 +252,7 @@ export function CanvasStage({
     const site = snap.siteId ? index.sites.get(snap.siteId) : undefined;
 
     if (pending.type === "pointermove" && !panRef.current.active) {
-      const hit = hitTest(doc, world, 8 / viewport.zoom, { poses });
+      const hit = hitTest(doc, world, radiusWorld, { poses });
       const hoverId =
         hit.kind === "joint"
           ? hit.jointId
@@ -242,6 +283,7 @@ export function CanvasStage({
       shiftKey: pending.shiftKey,
       ctrlKey: pending.ctrlKey,
       altKey: pending.altKey,
+      pointerType: pending.pointerType,
     });
   }
 
@@ -268,13 +310,78 @@ export function CanvasStage({
       shiftKey: evt.evt.shiftKey,
       ctrlKey: evt.evt.ctrlKey || evt.evt.metaKey,
       altKey: evt.evt.altKey,
+      pointerType: evt.evt.pointerType,
     };
     if (rafRef.current === null) {
       rafRef.current = requestAnimationFrame(flush);
     }
   }
 
+  /** The two tracked touch points' distance and midpoint, in stage px. */
+  function pinchGeometry(stage: Konva.Stage): { distance: number; mid: Vec2 } | null {
+    const [a, b] = [...touchesRef.current.values()];
+    if (!a || !b) return null;
+    const rect = stage.container().getBoundingClientRect();
+    return {
+      distance: Math.hypot(b.x - a.x, b.y - a.y),
+      mid: { x: (a.x + b.x) / 2 - rect.left, y: (a.y + b.y) / 2 - rect.top },
+    };
+  }
+
+  /**
+   * Tracks touch points and runs pinch-zoom / two-finger pan. Returns true
+   * when the event belongs to a pinch and must not reach the tools.
+   */
+  function handleTouch(evt: Konva.KonvaEventObject<PointerEvent>): boolean {
+    const native = evt.evt;
+    if (native.pointerType !== "touch") return false;
+    const touches = touchesRef.current;
+    const stage = evt.target.getStage();
+
+    if (native.type === "pointerdown") {
+      touches.set(native.pointerId, { x: native.clientX, y: native.clientY });
+      if (pinchRef.current) return true;
+      if (touches.size === 2 && stage) {
+        // The first finger's gesture is abandoned: drop its queued event and
+        // let the active tool reset.
+        if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+        pendingRef.current = null;
+        panRef.current.active = false;
+        pinchRef.current = pinchGeometry(stage);
+        onGestureCancel?.();
+        return true;
+      }
+      return false;
+    }
+
+    if (native.type === "pointermove") {
+      if (!touches.has(native.pointerId)) return pinchRef.current !== null;
+      touches.set(native.pointerId, { x: native.clientX, y: native.clientY });
+      const previous = pinchRef.current;
+      if (!previous) return false;
+      const next = stage ? pinchGeometry(stage) : null;
+      if (next) {
+        view
+          .getState()
+          .panByScreen({ dx: next.mid.x - previous.mid.x, dy: next.mid.y - previous.mid.y });
+        if (previous.distance > 0 && next.distance > 0) {
+          view.getState().zoomAtScreen(next.mid, next.distance / previous.distance);
+        }
+        pinchRef.current = next;
+      }
+      return true;
+    }
+
+    // pointerup / pointercancel
+    touches.delete(native.pointerId);
+    if (!pinchRef.current) return false;
+    if (touches.size === 0) pinchRef.current = null;
+    return true;
+  }
+
   function handlePointerDown(evt: Konva.KonvaEventObject<PointerEvent>): void {
+    if (handleTouch(evt)) return;
     const isMiddleDrag = evt.evt.button === 1;
     const isPanToolDrag = activeTool === "pan" && evt.evt.button === 0;
     if (isMiddleDrag || isPanToolDrag) {
@@ -288,6 +395,7 @@ export function CanvasStage({
   }
 
   function handlePointerMove(evt: Konva.KonvaEventObject<PointerEvent>): void {
+    if (handleTouch(evt)) return;
     if (panRef.current.active) {
       const dx = evt.evt.clientX - panRef.current.lastClientX;
       const dy = evt.evt.clientY - panRef.current.lastClientY;
@@ -299,6 +407,7 @@ export function CanvasStage({
   }
 
   function handlePointerUp(evt: Konva.KonvaEventObject<PointerEvent>): void {
+    if (handleTouch(evt)) return;
     panRef.current.active = false;
     schedule("pointerup", evt);
   }

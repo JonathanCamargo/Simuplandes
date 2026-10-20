@@ -3,6 +3,9 @@
  * tool's hint (or a tool-state-specific hint once tools publish one), the
  * Grid/Snap toggles, and -- while `mode === "simulate"` -- a solver-status
  * segment fed by the (optional) `simStore` prop.
+ *
+ * The compact layout keeps only the hint and the snap status; its Grid/Snap
+ * toggles move to the top bar's menu.
  */
 
 import type { ReactNode } from "react";
@@ -22,6 +25,7 @@ export interface StatusBarProps {
   mechanismStore: MechanismStore;
   /** Optional so existing callers/tests (Build-mode-only) keep working unchanged. */
   simStore?: SimStore;
+  compact?: boolean;
 }
 
 /** A stable, never-mutated fallback so `useStore` is always called with a real store (no conditional hook call) when the caller omits `simStore`. */
@@ -39,6 +43,7 @@ export function StatusBar({
   preferencesStore,
   mechanismStore,
   simStore,
+  compact = false,
 }: StatusBarProps): ReactNode {
   const { t } = useTranslation();
   const mode = useStore(studioStore, (s) => s.mode);
@@ -98,7 +103,7 @@ export function StatusBar({
       >
         {t("shell.status.hintPrefix")}: {hintText}
       </Typography>
-      {solverText !== null ? (
+      {solverText !== null && !compact ? (
         <Typography
           variant="caption"
           noWrap
@@ -113,37 +118,45 @@ export function StatusBar({
           {t("shell.status.snap")}: {snapText}
         </Typography>
       ) : null}
-      <Typography
-        variant="caption"
-        noWrap
-        sx={{ flexShrink: 0, minWidth: 150, display: { xs: "none", md: "block" } }}
-      >
-        {t("shell.status.x")} {xText}&nbsp;&nbsp;{t("shell.status.y")} {yText}
-      </Typography>
-      <FormControlLabel
-        sx={{ mr: 0, flexShrink: 0 }}
-        control={
-          <Checkbox
-            size="small"
-            sx={{ p: 0.5 }}
-            checked={gridVisible}
-            onChange={(event) => preferencesStore.getState().setGridVisible(event.target.checked)}
+      {compact ? null : (
+        <>
+          <Typography
+            variant="caption"
+            noWrap
+            sx={{ flexShrink: 0, minWidth: 150, display: { xs: "none", md: "block" } }}
+          >
+            {t("shell.status.x")} {xText}&nbsp;&nbsp;{t("shell.status.y")} {yText}
+          </Typography>
+          <FormControlLabel
+            sx={{ mr: 0, flexShrink: 0 }}
+            control={
+              <Checkbox
+                size="small"
+                sx={{ p: 0.5 }}
+                checked={gridVisible}
+                onChange={(event) =>
+                  preferencesStore.getState().setGridVisible(event.target.checked)
+                }
+              />
+            }
+            label={<Typography variant="caption">{t("shell.status.grid")}</Typography>}
           />
-        }
-        label={<Typography variant="caption">{t("shell.status.grid")}</Typography>}
-      />
-      <FormControlLabel
-        sx={{ mr: 0, flexShrink: 0 }}
-        control={
-          <Checkbox
-            size="small"
-            sx={{ p: 0.5 }}
-            checked={snapEnabled}
-            onChange={(event) => preferencesStore.getState().setSnapEnabled(event.target.checked)}
+          <FormControlLabel
+            sx={{ mr: 0, flexShrink: 0 }}
+            control={
+              <Checkbox
+                size="small"
+                sx={{ p: 0.5 }}
+                checked={snapEnabled}
+                onChange={(event) =>
+                  preferencesStore.getState().setSnapEnabled(event.target.checked)
+                }
+              />
+            }
+            label={<Typography variant="caption">{t("shell.status.snapToggle")}</Typography>}
           />
-        }
-        label={<Typography variant="caption">{t("shell.status.snapToggle")}</Typography>}
-      />
+        </>
+      )}
     </Stack>
   );
 }

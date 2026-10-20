@@ -1,6 +1,6 @@
 /**
  * Ephemeral studio state: the active tool, whether it is mid-gesture, which
- * right-dock tab is open, palette/shortcut-sheet visibility, the cursor's
+ * right-dock tab is open (and whether the compact dock sheet shows), palette/shortcut-sheet visibility, the cursor's
  * world position, the current snap status and the status-bar hint. Never
  * persisted, never touches the mechanism document or its undo history.
  */
@@ -52,6 +52,11 @@ export interface StudioState {
   /** True while a tool is mid-gesture; suspends tool-letter shortcuts. */
   toolBusy: boolean;
   rightDockTab: RightDockTab;
+  /**
+   * Whether the compact layout shows the dock sheet. The desktop dock is
+   * always visible and ignores it. Choosing a tab opens it.
+   */
+  dockSheetOpen: boolean;
   paletteOpen: boolean;
   shortcutSheetOpen: boolean;
   cursorWorld: Vec2 | null;
@@ -92,7 +97,9 @@ export interface StudioState {
    * that "select"/"pan" stay usable while simulating. */
   setActiveTool(tool: ToolId): void;
   setToolBusy(busy: boolean): void;
+  /** Also opens the compact layout's dock sheet. */
   setRightDockTab(tab: RightDockTab): void;
+  setDockSheetOpen(open: boolean): void;
   openPalette(): void;
   closePalette(): void;
   openShortcutSheet(): void;
@@ -126,6 +133,7 @@ export function createStudioStore(): StoreApi<StudioState> {
     activeTool: "select",
     toolBusy: false,
     rightDockTab: "inspector",
+    dockSheetOpen: false,
     paletteOpen: false,
     shortcutSheetOpen: false,
     cursorWorld: null,
@@ -158,7 +166,10 @@ export function createStudioStore(): StoreApi<StudioState> {
       set({ toolBusy: busy });
     },
     setRightDockTab(tab) {
-      set({ rightDockTab: tab });
+      set({ rightDockTab: tab, dockSheetOpen: true });
+    },
+    setDockSheetOpen(open) {
+      set({ dockSheetOpen: open });
     },
     openPalette() {
       set({ paletteOpen: true });

@@ -23,6 +23,7 @@
 import { useRef } from "react";
 import type { StoreApi } from "zustand";
 import { hitTest, type HitResult } from "../../canvas/hitTest";
+import { pickRadiusPx } from "../../canvas/pickRadius";
 import type { CanvasPointerEvent } from "../../canvas/CanvasStage";
 import type { ViewStore } from "../../canvas/viewStore";
 import { indexDocument, type Id, type MechanismDocument } from "../../model";
@@ -41,6 +42,8 @@ export interface UseSimControllerOptions {
 
 export interface UseSimControllerResult {
   onPointer: (event: CanvasPointerEvent) => void;
+  /** Ends a drag-to-drive whose touch became a pinch. */
+  cancelGesture: () => void;
 }
 
 /**
@@ -100,7 +103,7 @@ export function useSimController(opts: UseSimControllerOptions): UseSimControlle
       const doc = mechanismStore.getState().document;
       const zoom = view.getState().viewport.zoom;
       const poses = simStore.getState().poses;
-      const hit = hitTest(doc, event.world, 8 / zoom, { poses });
+      const hit = hitTest(doc, event.world, pickRadiusPx(event.pointerType) / zoom, { poses });
       const linkId = resolveDragLinkId(doc, hit);
       if (linkId === null) return;
 
@@ -120,5 +123,12 @@ export function useSimController(opts: UseSimControllerOptions): UseSimControlle
     runtime.endDrag();
   }
 
-  return { onPointer };
+  /** A touch drag that became a pinch: release the dragged link. */
+  function cancelGesture(): void {
+    if (!dragRef.current.active) return;
+    dragRef.current.active = false;
+    runtime.endDrag();
+  }
+
+  return { onPointer, cancelGesture };
 }

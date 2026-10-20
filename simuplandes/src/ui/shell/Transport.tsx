@@ -8,6 +8,10 @@
  * else, and the caption reports computing progress or why integration
  * stopped.
  *
+ * The compact layout stacks it: the playback buttons and a full-width
+ * scrubber first, then the analysis, speed, loop and plot controls, then
+ * the status caption (wrapped, never cut off).
+ *
  * Selectors are limited to `session`, `range`, `playing`, `speed`, `loop`,
  * `readout`, `plot.open` -- NEVER `poses` (that field is per-frame and read
  * imperatively by the canvas; selecting it here would re-render this
@@ -59,6 +63,8 @@ export interface TransportProps {
   preferencesStore: StoreApi<PreferencesState>;
   /** `session.store.getState().document.units.length` -- only used for a linear input's value label. */
   lengthUnit: string;
+  /** The compact (phone) layout: see this file's TSDoc. */
+  compact?: boolean;
 }
 
 function statusKeyAndValues(
@@ -158,6 +164,7 @@ export function Transport({
   runtime,
   preferencesStore,
   lengthUnit,
+  compact = false,
 }: TransportProps): ReactNode {
   const { t } = useTranslation();
   const lang = useStore(preferencesStore, (s) => s.language);
@@ -234,31 +241,32 @@ export function Transport({
     if (value) runtime.setAnalysis(value);
   }
 
-  return (
-    <Stack
-      component="div"
-      role="region"
-      aria-label={t("sim.transport.label")}
-      direction="row"
-      spacing={1.5}
-      alignItems="center"
-      flexWrap="wrap"
-      sx={{ gridArea: "tx", px: 1.5, py: 0.5, borderTop: 1, borderColor: "divider" }}
+  // Touch targets: 40px icon buttons in the compact layout.
+  const iconSize = compact ? "medium" : "small";
+
+  const analysisToggle = (
+    <ToggleButtonGroup
+      exclusive
+      size="small"
+      value={analysis}
+      onChange={handleAnalysisChange}
+      aria-label={t("sim.transport.analysis")}
+      sx={{
+        "& .MuiToggleButton-root": compact
+          ? { py: 0.75, px: 1.25, fontSize: "0.8125rem" }
+          : { py: 0.25, px: 1, fontSize: "0.75rem" },
+      }}
     >
-      <ToggleButtonGroup
-        exclusive
-        size="small"
-        value={analysis}
-        onChange={handleAnalysisChange}
-        aria-label={t("sim.transport.analysis")}
-        sx={{ "& .MuiToggleButton-root": { py: 0.25, px: 1, fontSize: "0.75rem" } }}
-      >
-        <ToggleButton value="kinematics">{t("sim.transport.analysisKinematics")}</ToggleButton>
-        <ToggleButton value="dynamics">{t("sim.transport.analysisDynamics")}</ToggleButton>
-      </ToggleButtonGroup>
+      <ToggleButton value="kinematics">{t("sim.transport.analysisKinematics")}</ToggleButton>
+      <ToggleButton value="dynamics">{t("sim.transport.analysisDynamics")}</ToggleButton>
+    </ToggleButtonGroup>
+  );
+
+  const playbackButtons = (
+    <>
       {/* Play is the main action in Simulate: a filled primary button. */}
       <IconButton
-        size="small"
+        size={iconSize}
         onClick={handlePlayClick}
         disabled={playDisabled}
         aria-label={t(playing ? "sim.transport.pause" : "sim.transport.play")}
@@ -269,35 +277,39 @@ export function Transport({
           "&.Mui-disabled": { bgcolor: "action.disabledBackground" },
         }}
       >
-        {playing ? <PauseIcon fontSize="small" /> : <PlayArrowIcon fontSize="small" />}
+        {playing ? <PauseIcon fontSize={iconSize} /> : <PlayArrowIcon fontSize={iconSize} />}
       </IconButton>
       <IconButton
-        size="small"
+        size={iconSize}
         onClick={() => runtime.reset()}
         disabled={otherControlsDisabled}
         aria-label={t("sim.transport.reset")}
       >
-        <SkipPreviousIcon fontSize="small" />
+        <SkipPreviousIcon fontSize={iconSize} />
       </IconButton>
       <IconButton
-        size="small"
+        size={iconSize}
         onClick={() => runtime.step(-1)}
         disabled={otherControlsDisabled}
         aria-label={t("sim.transport.stepBack")}
       >
-        <NavigateBeforeIcon fontSize="small" />
+        <NavigateBeforeIcon fontSize={iconSize} />
       </IconButton>
       <IconButton
-        size="small"
+        size={iconSize}
         onClick={() => runtime.step(1)}
         disabled={otherControlsDisabled}
         aria-label={t("sim.transport.stepForward")}
       >
-        <NavigateNextIcon fontSize="small" />
+        <NavigateNextIcon fontSize={iconSize} />
       </IconButton>
+    </>
+  );
 
+  const scrubber = (
+    <>
       <Slider
-        size="small"
+        size={compact ? "medium" : "small"}
         aria-label={
           isDynamics
             ? t("sim.transport.time")
@@ -312,13 +324,25 @@ export function Transport({
         valueLabelFormat={(v) => `${formatNumber(v, lang, fractionDigits)}${unitSuffix}`}
         onChange={handleSliderChange}
         onChangeCommitted={handleSliderCommitted}
-        sx={{ flex: "1 1 160px", minWidth: 120, maxWidth: 420, mx: 1 }}
+        sx={
+          compact
+            ? { flex: 1, minWidth: 0, mx: 1.5 }
+            : { flex: "1 1 160px", minWidth: 120, maxWidth: 420, mx: 1 }
+        }
       />
-      <Typography variant="caption" sx={{ minWidth: 56 }} noWrap>
+      <Typography
+        variant="caption"
+        sx={{ minWidth: 56, textAlign: compact ? "right" : undefined }}
+        noWrap
+      >
         {formatNumber(displayValue, lang, fractionDigits)}
         {unitSuffix}
       </Typography>
+    </>
+  );
 
+  const options = (
+    <>
       {isDynamics ? (
         <Select
           size="small"
@@ -360,7 +384,11 @@ export function Transport({
         }
         label={<Typography variant="caption">{t("sim.transport.loop")}</Typography>}
       />
+    </>
+  );
 
+  const warningChips = (
+    <>
       {readout?.lockUp ? (
         <Chip
           size="small"
@@ -376,24 +404,71 @@ export function Transport({
       {isDynamics && dynamics?.singular ? (
         <Chip size="small" color="warning" label={t("sim.dynamics.singular")} />
       ) : null}
+    </>
+  );
 
-      {status ? (
-        <Typography variant="caption" color="text.secondary" noWrap>
-          {t(status.key, status.values)}
-        </Typography>
-      ) : null}
+  const statusCaption = status ? (
+    <Typography variant="caption" color="text.secondary" noWrap={!compact}>
+      {t(status.key, status.values)}
+    </Typography>
+  ) : null;
 
-      <Chip
-        size="small"
-        clickable
-        aria-pressed={plotOpen}
-        disabled={mode !== "simulate"}
-        onClick={() => simStore.getState().togglePlotOpen()}
-        icon={<ShowChartIcon fontSize="small" aria-hidden="true" />}
-        color={plotOpen ? "primary" : "default"}
-        variant={plotOpen ? "filled" : "outlined"}
-        label={`${t("sim.transport.plots")} ▾`}
-      />
+  const plotsToggle = (
+    <Chip
+      size={compact ? "medium" : "small"}
+      clickable
+      aria-pressed={plotOpen}
+      disabled={mode !== "simulate"}
+      onClick={() => simStore.getState().togglePlotOpen()}
+      icon={<ShowChartIcon fontSize="small" aria-hidden="true" />}
+      color={plotOpen ? "primary" : "default"}
+      variant={plotOpen ? "filled" : "outlined"}
+      label={`${t("sim.transport.plots")} ▾`}
+    />
+  );
+
+  if (compact) {
+    return (
+      <Stack
+        component="div"
+        role="region"
+        aria-label={t("sim.transport.label")}
+        spacing={0.5}
+        sx={{ gridArea: "tx", px: 1, py: 0.5, borderTop: 1, borderColor: "divider" }}
+      >
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          {playbackButtons}
+          {scrubber}
+        </Stack>
+        <Stack direction="row" alignItems="center" flexWrap="wrap" useFlexGap spacing={1}>
+          {analysisToggle}
+          {options}
+          {plotsToggle}
+          {warningChips}
+        </Stack>
+        {statusCaption}
+      </Stack>
+    );
+  }
+
+  return (
+    <Stack
+      component="div"
+      role="region"
+      aria-label={t("sim.transport.label")}
+      direction="row"
+      spacing={1.5}
+      alignItems="center"
+      flexWrap="wrap"
+      sx={{ gridArea: "tx", px: 1.5, py: 0.5, borderTop: 1, borderColor: "divider" }}
+    >
+      {analysisToggle}
+      {playbackButtons}
+      {scrubber}
+      {options}
+      {warningChips}
+      {statusCaption}
+      {plotsToggle}
     </Stack>
   );
 }

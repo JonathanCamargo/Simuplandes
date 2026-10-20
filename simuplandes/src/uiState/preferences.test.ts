@@ -313,3 +313,20 @@ describe("brush preferences", () => {
     });
   });
 });
+
+describe("layout preference", () => {
+  it("defaults to auto, persists, and falls back to auto when corrupt", () => {
+    const storage = createMemoryStorage();
+    const store = createPreferencesStore({ storage });
+    expect(store.getState().layoutMode).toBe("auto");
+    store.getState().setLayoutMode("compact");
+    expect(createPreferencesStore({ storage }).getState().layoutMode).toBe("compact");
+
+    const saved = JSON.parse(storage.getItem(PREFERENCES_STORAGE_KEY)!) as Record<string, unknown>;
+    storage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify({ ...saved, layoutMode: "tablet" }));
+    expect(createPreferencesStore({ storage }).getState()).toMatchObject({
+      layoutMode: "auto",
+      gridVisible: saved.gridVisible,
+    });
+  });
+});

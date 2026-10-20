@@ -21,6 +21,7 @@ import {
 import { commitImportedDocument } from "../import/commitDocument";
 import { ExampleCard } from "./ExampleCard";
 import { ReplaceConfirm } from "./ReplaceConfirm";
+import { useFullScreenDialog } from "../shell/useCompactLayout";
 
 export interface ExamplesGalleryProps {
   store: MechanismStore;
@@ -37,6 +38,7 @@ export function ExamplesGallery({
   onAnalysis,
 }: ExamplesGalleryProps): ReactNode {
   const { t } = useTranslation();
+  const fullScreen = useFullScreenDialog();
   const dialog = useStore(studio, (s) => s.dialog);
   const [pending, setPending] = useState<ExampleId | null>(null);
 
@@ -97,6 +99,7 @@ export function ExamplesGallery({
         onClose={() => studio.getState().closeDialog()}
         maxWidth="md"
         fullWidth
+        fullScreen={fullScreen}
         aria-labelledby="examples-gallery-title"
       >
         <DialogTitle

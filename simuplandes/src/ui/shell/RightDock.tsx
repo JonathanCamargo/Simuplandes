@@ -12,7 +12,9 @@
 import type { ReactNode, SyntheticEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useStore, type StoreApi } from "zustand";
-import { Box, Tab, Tabs } from "@mui/material";
+import { Box, IconButton, Tab, Tabs } from "@mui/material";
+// Imported from the `esm/` subpath: see TopBar.tsx's TSDoc.
+import CloseIcon from "@mui/icons-material/esm/Close";
 import { InspectorPanel } from "../inspector/InspectorPanel";
 import { GraphPanel } from "../graph/GraphPanel";
 import { ExportPanel } from "../export/ExportPanel";
@@ -31,6 +33,8 @@ export interface RightDockProps {
   canvasSize?: { width: number; height: number };
   /** Threaded to `ExportPanel`: the sim store (Simulate-mode poses/traces for WYSIWYG images). */
   sim?: { store: SimStore };
+  /** The compact layout's sheet: shows a close button beside the tabs. */
+  onClose?: () => void;
 }
 
 export function RightDock({
@@ -40,6 +44,7 @@ export function RightDock({
   view,
   canvasSize,
   sim,
+  onClose,
 }: RightDockProps): ReactNode {
   const { t } = useTranslation();
   const tab = useStore(studioStore, (s) => s.rightDockTab);
@@ -58,26 +63,32 @@ export function RightDock({
       {/* Roboto (robiolab theme) is wider than the old stack: tighter tab
           padding and sentence case keep "Inspector" unclipped down to the
           narrowest dock width an embedded studio gets. */}
-      <Tabs
-        value={tab}
-        onChange={handleChange}
-        variant="fullWidth"
-        sx={{
-          minHeight: 44,
-          borderBottom: 1,
-          borderColor: "divider",
-          "& .MuiTab-root": {
-            minWidth: 0,
+      <Box sx={{ display: "flex", alignItems: "center", borderBottom: 1, borderColor: "divider" }}>
+        <Tabs
+          value={tab}
+          onChange={handleChange}
+          variant="fullWidth"
+          sx={{
+            flex: 1,
             minHeight: 44,
-            px: 1,
-            fontSize: "0.9rem",
-          },
-        }}
-      >
-        <Tab value="inspector" label={t("shell.dock.inspector")} />
-        <Tab value="graph" label={t("shell.dock.graph")} />
-        <Tab value="export" label={t("shell.dock.export")} />
-      </Tabs>
+            "& .MuiTab-root": {
+              minWidth: 0,
+              minHeight: 44,
+              px: 1,
+              fontSize: "0.9rem",
+            },
+          }}
+        >
+          <Tab value="inspector" label={t("shell.dock.inspector")} />
+          <Tab value="graph" label={t("shell.dock.graph")} />
+          <Tab value="export" label={t("shell.dock.export")} />
+        </Tabs>
+        {onClose ? (
+          <IconButton onClick={onClose} aria-label={t("shell.dock.close")} sx={{ mx: 0.5 }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        ) : null}
+      </Box>
       <Box
         sx={{
           flex: 1,

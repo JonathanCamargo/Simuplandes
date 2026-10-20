@@ -328,3 +328,45 @@ describe("useToolController", () => {
     expect(movedCrank?.sites[0].local[0]).toBeGreaterThan(1);
   });
 });
+
+describe("useToolController touch", () => {
+  it("cancelGesture abandons a bar mid-draw without creating anything", () => {
+    const { store, studio, options } = makeHarness((cb) => {
+      cb();
+      return 0;
+    });
+    act(() => studio.getState().setActiveTool("bar"));
+    const { result } = renderHook(() => useToolController(options));
+
+    act(() => result.current.onPointer({ ...down({ x: 0, y: 0 }), pointerType: "touch" }));
+    expect(studio.getState().toolBusy).toBe(true);
+
+    act(() => result.current.cancelGesture());
+    expect(studio.getState().toolBusy).toBe(false);
+    expect(result.current.preview).toEqual([]);
+    expect(store.getState().document.links).toHaveLength(0);
+  });
+
+  it("a touch snaps to a site from further away than a mouse does", () => {
+    const { store, studio, view, options } = makeHarness((cb) => {
+      cb();
+      return 0;
+    });
+    act(() => studio.getState().setActiveTool("bar"));
+    const { result } = renderHook(() => useToolController(options));
+    // A first bar, so there is a site at the origin to snap to.
+    act(() => result.current.onPointer(down({ x: 0, y: 0 })));
+    for (const key of ["1", "2", "0", "Enter"]) fireEvent.keyDown(window, { key });
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(store.getState().document.links).toHaveLength(1);
+
+    // 12 screen px from the site: outside the mouse radius, inside the touch
+    // one. Probed with pointerups, which an idle Bar tool ignores and which
+    // (unlike moves) are never coalesced.
+    const offset = { x: 0, y: 12 / view.getState().viewport.zoom };
+    act(() => result.current.onPointer(up(offset)));
+    expect(studio.getState().snapStatus?.kind).not.toBe("site");
+    act(() => result.current.onPointer({ ...up(offset), pointerType: "touch" }));
+    expect(studio.getState().snapStatus?.kind).toBe("site");
+  });
+});
