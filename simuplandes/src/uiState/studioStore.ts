@@ -8,7 +8,7 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
 import { toolById, type EditMode, type ToolId } from "../tools/registry";
 import type { Vec2 } from "../geom";
-import type { Id } from "../model";
+import type { Id, Pose } from "../model";
 
 export type RightDockTab = "inspector" | "graph" | "export";
 
@@ -72,6 +72,13 @@ export interface StudioState {
   /** The last editing mode ("build" or "draw"); Space returns to it from Simulate. */
   editMode: EditMode;
   /**
+   * The simulated frame Simulate was showing when the user switched to Draw,
+   * so the Brush and Eraser work over it instead of the construction pose.
+   * `null` when Draw was not entered from Simulate; cleared by Build and by
+   * any document change (see `useSimRuntime`).
+   */
+  drawPoses: ReadonlyMap<Id, Pose> | null;
+  /**
    * Ephemeral, shared by canvas and graph panel (GRF-02): a link id or a
    * joint id, or `null` for "nothing hovered". Never persisted, never
    * undoable -- exactly like `cursorWorld`.
@@ -108,6 +115,7 @@ export interface StudioState {
    * open; switching to "build" is always allowed. Entering an editing mode
    * whose tools do not include the active tool picks that mode's default. */
   setMode(mode: StudioMode): void;
+  setDrawPoses(poses: ReadonlyMap<Id, Pose> | null): void;
   /** Flips between "simulate" and the last editing mode, subject to the same guard as `setMode`. */
   toggleMode(): void;
   /** No-op (does not `set`, so subscribers are not notified) when `id` is already the current `hoveredId`. */
@@ -135,6 +143,7 @@ export function createStudioStore(): StoreApi<StudioState> {
     fitRequest: 0,
     mode: "build",
     editMode: "build",
+    drawPoses: null,
     hoveredId: null,
     graphLayout: "spatial",
     dialog: null,
@@ -198,8 +207,12 @@ export function createStudioStore(): StoreApi<StudioState> {
       set({
         mode,
         editMode: mode,
+        ...(mode === "build" ? { drawPoses: null } : {}),
         ...(keepsTool ? {} : { activeTool: DEFAULT_TOOL[mode], toolBusy: false, hint: null }),
       });
+    },
+    setDrawPoses(poses) {
+      set({ drawPoses: poses });
     },
     toggleMode() {
       const state = get();
