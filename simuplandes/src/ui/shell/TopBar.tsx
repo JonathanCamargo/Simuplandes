@@ -9,6 +9,11 @@
  * the document name, the "Studio" suffix and the mode labels drop out at
  * narrower breakpoints, while every control keeps its accessible name.
  * Status messages show as a toast so they never push the canvas down.
+ *
+ * In the compact layout the File button becomes a menu icon whose menu also
+ * holds the palette, shortcuts, language, theme, grid/snap and layout
+ * controls, and a panel button opens the dock sheet. What stays on the bar
+ * (undo/redo, the mode switch, the DOF badge) is finger-sized.
  */
 
 import { useRef, useState, type ReactNode } from "react";
@@ -57,6 +62,13 @@ import MenuBookIcon from "@mui/icons-material/esm/MenuBook";
 import AccountTreeIcon from "@mui/icons-material/esm/AccountTree";
 import LinkIcon from "@mui/icons-material/esm/Link";
 import ImageIcon from "@mui/icons-material/esm/Image";
+import MenuIcon from "@mui/icons-material/esm/Menu";
+import ViewSidebarIcon from "@mui/icons-material/esm/ViewSidebar";
+import TranslateIcon from "@mui/icons-material/esm/Translate";
+import GridOnIcon from "@mui/icons-material/esm/GridOn";
+import AdsClickIcon from "@mui/icons-material/esm/AdsClick";
+import DevicesIcon from "@mui/icons-material/esm/Devices";
+import CheckIcon from "@mui/icons-material/esm/Check";
 import { DofBadge } from "./DofBadge";
 import { DEFAULT_DOCUMENT_NAME, DocumentLoadError, parseDocumentJson } from "../../model";
 import { buildExampleFourBar } from "../../store";
@@ -64,7 +76,12 @@ import { saveDocumentToFile, openTextFromFile, sniffDocumentText } from "../../p
 import { buildShareUrl } from "../../persistence/shareLink";
 import type { Session, SessionLoadResult } from "../../persistence/session";
 import type { StudioMode, StudioState } from "../../uiState/studioStore";
-import type { PreferencesState, ThemeMode } from "../../uiState/preferences";
+import {
+  LAYOUT_MODES,
+  type LayoutMode,
+  type PreferencesState,
+  type ThemeMode,
+} from "../../uiState/preferences";
 import type { Language } from "../../i18n/numberFormat";
 
 type Severity = "success" | "info" | "error";
@@ -72,6 +89,16 @@ type Severity = "success" | "info" | "error";
 type Status =
   | { severity: Severity; kind: "raw"; text: string }
   | { severity: Severity; kind: "i18n"; key: string; values?: Record<string, string> };
+
+/** Hidden on screen, still read by screen readers. */
+const visuallyHidden = {
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  overflow: "hidden",
+  clip: "rect(0 0 0 0)",
+  whiteSpace: "nowrap",
+} as const;
 
 /** Success/info toasts hide on their own; errors stay until dismissed. */
 const TOAST_HIDE_MS = 4000;
@@ -102,9 +129,16 @@ export interface TopBarProps {
   session: Session;
   preferencesStore: StoreApi<PreferencesState>;
   studioStore: StoreApi<StudioState>;
+  /** The compact (phone) layout: see this file's TSDoc. */
+  compact?: boolean;
 }
 
-export function TopBar({ session, preferencesStore, studioStore }: TopBarProps): ReactNode {
+export function TopBar({
+  session,
+  preferencesStore,
+  studioStore,
+  compact = false,
+}: TopBarProps): ReactNode {
   const { t } = useTranslation();
 
   const mode = useStore(studioStore, (s) => s.mode);
@@ -118,15 +152,31 @@ export function TopBar({ session, preferencesStore, studioStore }: TopBarProps):
 
   const themeMode = useStore(preferencesStore, (s) => s.themeMode);
   const language = useStore(preferencesStore, (s) => s.language);
+  const layoutMode = useStore(preferencesStore, (s) => s.layoutMode);
+  const gridVisible = useStore(preferencesStore, (s) => s.gridVisible);
+  const snapEnabled = useStore(preferencesStore, (s) => s.snapEnabled);
+  const dockSheetOpen = useStore(studioStore, (s) => s.dockSheetOpen);
 
   const [status, setStatus] = useState<Status | null>(() => initialStatus(session.restore));
   const [fileMenuAnchor, setFileMenuAnchor] = useState<HTMLElement | null>(null);
+  const [layoutMenuAnchor, setLayoutMenuAnchor] = useState<HTMLElement | null>(null);
   const handleRef = useRef<FileSystemFileHandle | null>(null);
   const mod = modKeyLabel();
 
   function closeFileMenu(): void {
     setFileMenuAnchor(null);
   }
+
+  function handleLayoutMode(next: LayoutMode): void {
+    setFileMenuAnchor(null);
+    setLayoutMenuAnchor(null);
+    preferencesStore.getState().setLayoutMode(next);
+  }
+
+  // Touch targets in the compact layout: ~43px buttons (the theme's UI_SCALE
+  // enlarges both the small icon and the padding).
+  const iconSize = compact ? "medium" : "small";
+  const compactIconSx = compact ? { p: 1 } : undefined;
 
   function handleNew(): void {
     session.store.getState().newDocument();
@@ -137,6 +187,10 @@ export function TopBar({ session, preferencesStore, studioStore }: TopBarProps):
   function handleLoadExample(): void {
     session.store.getState().newDocument({ name: t("shell.exampleFourBarName") });
     buildExampleFourBar(session.store);
+    // Built with undoable steps, so the canvas does not see a freshly opened
+    // document and keeps the default view. That view shows the example on a
+    // desktop canvas but cuts it off on a phone: frame it there.
+    if (compact) studioStore.getState().requestFit();
     handleRef.current = null;
     setStatus(null);
   }
@@ -230,9 +284,9 @@ export function TopBar({ session, preferencesStore, studioStore }: TopBarProps):
         sx={{
           display: "flex",
           alignItems: "center",
-          gap: { xs: 0.5, md: 1 },
-          px: 1.5,
-          py: 0.75,
+          gap: compact ? 0.25 : { xs: 0.5, md: 1 },
+          px: compact ? 1 : 1.5,
+          py: compact ? 0.5 : 0.75,
           minWidth: 0,
           flexWrap: "nowrap",
         }}
@@ -247,6 +301,8 @@ export function TopBar({ session, preferencesStore, studioStore }: TopBarProps):
             flexShrink: 0,
             mr: 0.5,
             fontSize: { xs: "1.05rem", md: "1.2rem" },
+            // A phone needs the room for the controls; the heading stays for screen readers.
+            ...(compact ? visuallyHidden : {}),
           }}
         >
           {t("shell.appNameShort")}
@@ -261,28 +317,48 @@ export function TopBar({ session, preferencesStore, studioStore }: TopBarProps):
           color="text.secondary"
           noWrap
           title={documentName}
-          sx={{ display: { xs: "none", md: "block" }, maxWidth: 220, minWidth: 0, flexShrink: 1 }}
+          sx={{
+            display: compact ? "none" : { xs: "none", md: "block" },
+            maxWidth: 220,
+            minWidth: 0,
+            flexShrink: 1,
+          }}
         >
           {documentName}
         </Typography>
 
-        <Button
-          id="file-menu-button"
-          size="small"
-          aria-haspopup="true"
-          aria-controls={fileMenuAnchor ? "file-menu" : undefined}
-          onClick={(event) => setFileMenuAnchor(event.currentTarget)}
-          endIcon={<KeyboardArrowDownIcon aria-hidden="true" />}
-          sx={{ flexShrink: 0 }}
-        >
-          {t("shell.menu.file")}
-        </Button>
+        {compact ? (
+          <IconButton
+            id="file-menu-button"
+            aria-haspopup="true"
+            aria-controls={fileMenuAnchor ? "file-menu" : undefined}
+            aria-label={t("shell.menu.main")}
+            onClick={(event) => setFileMenuAnchor(event.currentTarget)}
+            sx={{ flexShrink: 0, ml: -0.5, p: 1 }}
+          >
+            <MenuIcon fontSize="small" />
+          </IconButton>
+        ) : (
+          <Button
+            id="file-menu-button"
+            size="small"
+            aria-haspopup="true"
+            aria-controls={fileMenuAnchor ? "file-menu" : undefined}
+            onClick={(event) => setFileMenuAnchor(event.currentTarget)}
+            endIcon={<KeyboardArrowDownIcon aria-hidden="true" />}
+            sx={{ flexShrink: 0 }}
+          >
+            {t("shell.menu.file")}
+          </Button>
+        )}
         <Menu
           id="file-menu"
           anchorEl={fileMenuAnchor}
           open={fileMenuAnchor !== null}
           onClose={closeFileMenu}
-          slotProps={{ paper: { sx: { minWidth: 280 } } }}
+          slotProps={{
+            paper: { sx: { minWidth: compact ? 260 : 280, maxWidth: "calc(100vw - 32px)" } },
+          }}
         >
           <FileMenuItem
             icon={<NoteAddIcon fontSize="small" />}
@@ -369,22 +445,87 @@ export function TopBar({ session, preferencesStore, studioStore }: TopBarProps):
               handleExportImage();
             }}
           />
+          {compact
+            ? [
+                <Divider key="view-divider" />,
+                <FileMenuItem
+                  key="palette"
+                  icon={<SearchIcon fontSize="small" />}
+                  label={t("shell.buttons.commandPalette")}
+                  onSelect={() => {
+                    closeFileMenu();
+                    studioStore.getState().openPalette();
+                  }}
+                />,
+                <FileMenuItem
+                  key="shortcuts"
+                  icon={<KeyboardIcon fontSize="small" />}
+                  label={t("shell.buttons.shortcuts")}
+                  onSelect={() => {
+                    closeFileMenu();
+                    studioStore.getState().openShortcutSheet();
+                  }}
+                />,
+                <FileMenuItem
+                  key="language"
+                  icon={<TranslateIcon fontSize="small" />}
+                  label={t("shell.menu.otherLanguage")}
+                  onSelect={() => {
+                    closeFileMenu();
+                    preferencesStore.getState().setLanguage(language === "es" ? "en" : "es");
+                  }}
+                />,
+                <FileMenuItem
+                  key="theme"
+                  icon={
+                    themeMode === "light" ? (
+                      <DarkModeIcon fontSize="small" />
+                    ) : (
+                      <LightModeIcon fontSize="small" />
+                    )
+                  }
+                  label={t(themeModeToggleLabelKey(themeMode))}
+                  onSelect={() => {
+                    closeFileMenu();
+                    preferencesStore.getState().toggleThemeMode();
+                  }}
+                />,
+                <FileMenuItem
+                  key="grid"
+                  icon={<GridOnIcon fontSize="small" />}
+                  label={t("shell.status.grid")}
+                  checked={gridVisible}
+                  onSelect={() => preferencesStore.getState().setGridVisible(!gridVisible)}
+                />,
+                <FileMenuItem
+                  key="snap"
+                  icon={<AdsClickIcon fontSize="small" />}
+                  label={t("shell.status.snapToggle")}
+                  checked={snapEnabled}
+                  onSelect={() => preferencesStore.getState().setSnapEnabled(!snapEnabled)}
+                />,
+                <Divider key="layout-divider" />,
+                ...layoutMenuItems(layoutMode, handleLayoutMode, t),
+              ]
+            : null}
         </Menu>
 
         <IconButton
-          size="small"
+          size={iconSize}
           onClick={handleUndo}
           disabled={!canUndo}
           title={undoLabel ?? ""}
+          sx={compactIconSx}
           aria-label={t("shell.undo", { label: undoLabel ?? "" })}
         >
           <UndoIcon fontSize="small" />
         </IconButton>
         <IconButton
-          size="small"
+          size={iconSize}
           onClick={handleRedo}
           disabled={!canRedo}
           title={redoLabel ?? ""}
+          sx={compactIconSx}
           aria-label={t("shell.redo", { label: redoLabel ?? "" })}
         >
           <RedoIcon fontSize="small" />
@@ -404,7 +545,9 @@ export function TopBar({ session, preferencesStore, studioStore }: TopBarProps):
           sx={{
             flexShrink: 0,
             ml: 0.5,
-            "& .MuiToggleButton-root": { gap: 0.75, px: 1.25, py: 0.5 },
+            "& .MuiToggleButton-root": compact
+              ? { gap: 0.75, px: 1, py: 0.75 }
+              : { gap: 0.75, px: 1.25, py: 0.5 },
           }}
         >
           <ToggleButton value="build" aria-label={t("shell.mode.build")}>
@@ -427,62 +570,114 @@ export function TopBar({ session, preferencesStore, studioStore }: TopBarProps):
           </ToggleButton>
         </ToggleButtonGroup>
 
-        <Box sx={{ flexShrink: 0 }}>
+        {/* The compact bar has no room for "F = 1": the badge is its colored
+            severity icon, and the count stays in its name and its popover. */}
+        <Box
+          sx={{
+            flexShrink: 0,
+            display: "flex",
+            ...(compact
+              ? {
+                  "& .MuiChip-root .MuiChip-label": { display: "none" },
+                  // Doubled class: outranks the Chip's own (negative) icon margins.
+                  "& .MuiChip-root .MuiChip-icon.MuiChip-icon": { mx: "6px" },
+                }
+              : {}),
+          }}
+        >
           <DofBadge mechanismStore={session.store} />
         </Box>
 
-        <Box sx={{ flex: 1, minWidth: 8 }} />
+        <Box sx={{ flex: 1, minWidth: compact ? 0 : 8 }} />
 
-        <Tooltip title={`${t("shell.buttons.commandPalette")} (${mod}K)`}>
-          <IconButton
-            size="small"
-            onClick={() => studioStore.getState().openPalette()}
-            aria-label={t("shell.buttons.commandPalette")}
-          >
-            <SearchIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        {compact ? (
+          <Tooltip title={t("shell.dock.toggle")}>
+            <IconButton
+              onClick={() => studioStore.getState().setDockSheetOpen(!dockSheetOpen)}
+              aria-label={t("shell.dock.toggle")}
+              aria-pressed={dockSheetOpen}
+              color={dockSheetOpen ? "primary" : "default"}
+              sx={{ flexShrink: 0, mr: -0.5, p: 1 }}
+            >
+              <ViewSidebarIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        ) : null}
 
-        <Tooltip title={`${t("shell.buttons.shortcuts")} (?)`}>
-          <IconButton
-            size="small"
-            onClick={() => studioStore.getState().openShortcutSheet()}
-            aria-label={t("shell.buttons.shortcuts")}
-          >
-            <KeyboardIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        {compact ? null : (
+          <>
+            <Tooltip title={`${t("shell.buttons.commandPalette")} (${mod}K)`}>
+              <IconButton
+                size="small"
+                onClick={() => studioStore.getState().openPalette()}
+                aria-label={t("shell.buttons.commandPalette")}
+              >
+                <SearchIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
 
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          value={language}
-          aria-label={t("shell.language")}
-          onChange={(_event, value: Language | null) => {
-            if (value !== null) preferencesStore.getState().setLanguage(value);
-          }}
-          sx={{
-            flexShrink: 0,
-            "& .MuiToggleButton-root": { px: 1, py: 0.25, fontSize: "0.75rem" },
-          }}
-        >
-          <ToggleButton value="es">ES</ToggleButton>
-          <ToggleButton value="en">EN</ToggleButton>
-        </ToggleButtonGroup>
+            <Tooltip title={`${t("shell.buttons.shortcuts")} (?)`}>
+              <IconButton
+                size="small"
+                onClick={() => studioStore.getState().openShortcutSheet()}
+                aria-label={t("shell.buttons.shortcuts")}
+              >
+                <KeyboardIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
 
-        <Tooltip title={t(themeModeToggleLabelKey(themeMode))}>
-          <IconButton
-            size="small"
-            onClick={() => preferencesStore.getState().toggleThemeMode()}
-            aria-label={t(themeModeToggleLabelKey(themeMode))}
-          >
-            {themeMode === "light" ? (
-              <DarkModeIcon fontSize="small" />
-            ) : (
-              <LightModeIcon fontSize="small" />
-            )}
-          </IconButton>
-        </Tooltip>
+            <ToggleButtonGroup
+              exclusive
+              size="small"
+              value={language}
+              aria-label={t("shell.language")}
+              onChange={(_event, value: Language | null) => {
+                if (value !== null) preferencesStore.getState().setLanguage(value);
+              }}
+              sx={{
+                flexShrink: 0,
+                "& .MuiToggleButton-root": { px: 1, py: 0.25, fontSize: "0.75rem" },
+              }}
+            >
+              <ToggleButton value="es">ES</ToggleButton>
+              <ToggleButton value="en">EN</ToggleButton>
+            </ToggleButtonGroup>
+
+            <Tooltip title={t(themeModeToggleLabelKey(themeMode))}>
+              <IconButton
+                size="small"
+                onClick={() => preferencesStore.getState().toggleThemeMode()}
+                aria-label={t(themeModeToggleLabelKey(themeMode))}
+              >
+                {themeMode === "light" ? (
+                  <DarkModeIcon fontSize="small" />
+                ) : (
+                  <LightModeIcon fontSize="small" />
+                )}
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip title={t("shell.layout.label")}>
+              <IconButton
+                size="small"
+                aria-haspopup="true"
+                aria-controls={layoutMenuAnchor ? "layout-menu" : undefined}
+                aria-label={t("shell.layout.label")}
+                onClick={(event) => setLayoutMenuAnchor(event.currentTarget)}
+              >
+                <DevicesIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Menu
+              id="layout-menu"
+              anchorEl={layoutMenuAnchor}
+              open={layoutMenuAnchor !== null}
+              onClose={() => setLayoutMenuAnchor(null)}
+            >
+              {layoutMenuItems(layoutMode, handleLayoutMode, t)}
+            </Menu>
+          </>
+        )}
       </Box>
 
       {status !== null ? (
@@ -514,14 +709,22 @@ interface FileMenuItemProps {
   label: string;
   /** Shown at the right; `aria-hidden`, so the item's accessible name stays just `label`. */
   shortcut?: string;
+  /** Makes the item a checkbox item (a toggle that keeps the menu open). */
+  checked?: boolean;
   onSelect: () => void;
 }
 
-function FileMenuItem({ icon, label, shortcut, onSelect }: FileMenuItemProps): ReactNode {
+function FileMenuItem({ icon, label, shortcut, checked, onSelect }: FileMenuItemProps): ReactNode {
+  const isToggle = checked !== undefined;
   return (
-    <MenuItem onClick={onSelect}>
+    <MenuItem
+      onClick={onSelect}
+      role={isToggle ? "menuitemcheckbox" : undefined}
+      aria-checked={isToggle ? checked : undefined}
+    >
       <ListItemIcon>{icon}</ListItemIcon>
       <ListItemText>{label}</ListItemText>
+      {isToggle && checked ? <CheckIcon fontSize="small" color="primary" sx={{ ml: 3 }} /> : null}
       {shortcut ? (
         <Typography variant="body2" color="text.secondary" aria-hidden="true" sx={{ ml: 3 }}>
           {shortcut}
@@ -529,6 +732,38 @@ function FileMenuItem({ icon, label, shortcut, onSelect }: FileMenuItemProps): R
       ) : null}
     </MenuItem>
   );
+}
+
+/** "Automatic / Desktop / Compact" radio items, shared by the desktop layout menu and the compact main menu. */
+function layoutMenuItems(
+  current: LayoutMode,
+  onSelect: (mode: LayoutMode) => void,
+  t: (key: string) => string,
+): ReactNode[] {
+  return [
+    <Typography
+      key="layout-heading"
+      variant="overline"
+      color="text.secondary"
+      component="li"
+      role="presentation"
+      sx={{ px: 2, display: "block", lineHeight: 2.5 }}
+    >
+      {t("shell.layout.label")}
+    </Typography>,
+    ...LAYOUT_MODES.map((option) => (
+      <MenuItem
+        key={`layout-${option}`}
+        role="menuitemradio"
+        aria-checked={current === option}
+        selected={current === option}
+        onClick={() => onSelect(option)}
+      >
+        <ListItemIcon>{current === option ? <CheckIcon fontSize="small" /> : null}</ListItemIcon>
+        <ListItemText>{t(`shell.layout.${option}`)}</ListItemText>
+      </MenuItem>
+    )),
+  ];
 }
 
 function themeModeToggleLabelKey(current: ThemeMode): string {

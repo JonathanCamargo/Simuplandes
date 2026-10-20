@@ -311,6 +311,11 @@ export function CanvasArea({
           bgcolor: "background.paper",
           outline: "none",
           overflow: "hidden",
+          // The canvas handles every touch itself (tools, pinch-zoom, two-finger
+          // pan); without this the browser would scroll or zoom the page instead.
+          touchAction: "none",
+          WebkitUserSelect: "none",
+          userSelect: "none",
         }}
       >
         {size.width > 0 && size.height > 0 && (
@@ -322,7 +327,12 @@ export function CanvasArea({
             width={size.width}
             height={size.height}
             onPointer={isSimulate ? simController.onPointer : controller.onPointer}
+<<<<<<< HEAD
             posesSource={isSimulate ? posesSource : drawPosesSource}
+=======
+            onGestureCancel={isSimulate ? simController.cancelGesture : controller.cancelGesture}
+            posesSource={isSimulate ? posesSource : undefined}
+>>>>>>> 483023d30dae248633d3bec42bafb0935ddcb7cd
             traces={traces}
             issueLinkIds={issueLinkIds}
           >
@@ -351,7 +361,14 @@ export function CanvasArea({
             aria-label={t("canvas.fit")}
             size="small"
             onClick={() => fitToCanvasContent(view, store, studio, simStore)}
-            sx={{ position: "absolute", top: 8, right: 8, bgcolor: "background.paper" }}
+            sx={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              bgcolor: "background.paper",
+              // A finger-sized target on touch screens.
+              "@media (pointer: coarse)": { p: 1.25 },
+            }}
           >
             <ZoomOutMapIcon fontSize="small" />
           </IconButton>

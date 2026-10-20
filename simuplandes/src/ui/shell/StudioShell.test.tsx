@@ -287,3 +287,63 @@ describe("StudioShell drop overlay", () => {
     expect(studioStore.getState().dialog).toBe("import");
   });
 });
+
+describe("StudioShell compact layout", () => {
+  function renderCompact() {
+    const utils = renderShell("en");
+    act(() => {
+      utils.preferencesStore.getState().setLayoutMode("compact");
+    });
+    return utils;
+  }
+
+  it("puts the tools in a horizontal bar and hides the dock until the panel button opens it", () => {
+    const { studioStore } = renderCompact();
+
+    const rail = screen.getByRole("navigation", { name: "Tools" });
+    expect(rail.querySelector(".MuiToggleButtonGroup-vertical")).toBeNull();
+    expect(rail.querySelectorAll("[data-tool-id]").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(screen.queryByRole("button", { name: "File" })).toBeNull();
+
+    const panel = screen.getByRole("button", { name: "Panel" });
+    expect(panel.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(panel);
+    expect(studioStore.getState().dockSheetOpen).toBe(true);
+    const dock = screen.getByRole("complementary");
+    expect(within(dock).getByRole("tab", { name: "Inspector" })).toBeTruthy();
+
+    fireEvent.click(within(dock).getByRole("button", { name: "Close panel" }));
+    expect(screen.queryByRole("complementary")).toBeNull();
+  });
+
+  it("shows the transport only while simulating", () => {
+    const { studioStore } = renderCompact();
+    expect(screen.queryByRole("region", { name: "Transport" })).toBeNull();
+    act(() => {
+      studioStore.getState().setMode("simulate");
+    });
+    expect(screen.getByRole("region", { name: "Transport" })).toBeTruthy();
+  });
+
+  it("moves the view settings into the main menu", () => {
+    const { preferencesStore } = renderCompact();
+    expect(screen.queryByRole("checkbox", { name: "Grid" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    const menu = screen.getByRole("menu");
+    expect(within(menu).getByRole("menuitem", { name: "Open" })).toBeTruthy();
+
+    fireEvent.click(within(menu).getByRole("menuitemcheckbox", { name: "Grid" }));
+    expect(preferencesStore.getState().gridVisible).toBe(false);
+
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Español" }));
+    expect(preferencesStore.getState().language).toBe("es");
+
+    // A bare shell does not re-translate (App owns that), so the labels stay English.
+    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Desktop" }));
+    expect(preferencesStore.getState().layoutMode).toBe("desktop");
+    expect(screen.getByRole("complementary")).toBeTruthy();
+  });
+});

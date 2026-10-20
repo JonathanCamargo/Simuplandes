@@ -40,6 +40,7 @@ import { openTextFromFile } from "../../persistence/fileIO";
 import { commitImportedDocument } from "./commitDocument";
 import { ImportReportList } from "./ImportReportList";
 import { ImportPreview } from "./ImportPreview";
+import { useFullScreenDialog } from "../shell/useCompactLayout";
 
 export interface ImportDialogProps {
   studioStore: StoreApi<StudioState>;
@@ -73,6 +74,7 @@ function ImportDialogBody({
   deps = studioImportDeps,
 }: ImportDialogProps): ReactNode {
   const { t } = useTranslation();
+  const fullScreen = useFullScreenDialog();
   const theme = useTheme();
   const request = studioStore.getState().importRequest;
   const [showPaste] = useState(request === null);
@@ -146,7 +148,14 @@ function ImportDialogBody({
   const canCommit = !running && plan !== null && !plan.fatal && plan.doc !== null;
 
   return (
-    <Dialog open maxWidth="lg" fullWidth onClose={handleCancel} data-testid="import-dialog">
+    <Dialog
+      open
+      maxWidth="lg"
+      fullWidth
+      fullScreen={fullScreen}
+      onClose={handleCancel}
+      data-testid="import-dialog"
+    >
       <DialogTitle>{t("import.title")}</DialogTitle>
       <DialogContent dividers>
         {showPaste ? (

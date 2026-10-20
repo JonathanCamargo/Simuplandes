@@ -24,6 +24,7 @@ import type { ViewStore } from "../../canvas/viewStore";
 import type { CanvasPointerEvent } from "../../canvas/CanvasStage";
 import { computeSnap } from "../../canvas/snapping";
 import { gridSpacingFor } from "../../canvas/grid";
+import { pickRadiusPx } from "../../canvas/pickRadius";
 import { formatNumber, type Language } from "../../i18n/numberFormat";
 import { TOOL_MACHINES, type AnyToolMachine } from "../machines";
 import { applyToolEffects } from "../effects";
@@ -64,6 +65,8 @@ export interface UseToolControllerResult {
   edgeMenu?: EdgeMenu;
   /** Sends a toolbar button press to the active tool (see `ToolEvent`'s `command`). */
   sendCommand: (command: string) => void;
+  /** Abandons the active tool's gesture (a touch that became a pinch): the tool restarts. */
+  cancelGesture: () => void;
   dynamicInput?: DynamicInputOverlay;
   cursorWorld: Vec2 | null;
 }
@@ -114,6 +117,8 @@ export function useToolController(options: UseToolControllerOptions): UseToolCon
 
   const entryRef = useRef<MachineEntry | null>(null);
   const lastScreenRef = useRef<Vec2>({ x: 0, y: 0 });
+  // The last pointer's type: a finger picks and snaps from further away.
+  const pointerTypeRef = useRef<string | undefined>(undefined);
   const pendingMoveRef = useRef<CanvasPointerEvent | null>(null);
   const rafRef = useRef<number | null>(null);
 
@@ -135,7 +140,7 @@ export function useToolController(options: UseToolControllerOptions): UseToolCon
     return {
       doc: store.getState().document,
       selection: store.getState().selection,
-      radiusWorld: 8 / view.getState().viewport.zoom,
+      radiusWorld: pickRadiusPx(pointerTypeRef.current) / view.getState().viewport.zoom,
       gestureSeed: `${gestureMountPrefix}-${gestureCounterRef.current}`,
       brush: {
         color: preferences.getState().brushColor,
@@ -189,6 +194,7 @@ export function useToolController(options: UseToolControllerOptions): UseToolCon
     const entry = entryRef.current;
     if (!entry) return;
     lastScreenRef.current = event.screen;
+    pointerTypeRef.current = event.pointerType;
 
     if (event.type === "pointerdown") {
       gestureCounterRef.current += 1;
@@ -198,7 +204,7 @@ export function useToolController(options: UseToolControllerOptions): UseToolCon
     const excludeSiteIds = entry.machine.snapExclude?.(entry.state);
     const zoom = view.getState().viewport.zoom;
     const snap = computeSnap(event.world, store.getState().document, {
-      radiusWorld: 8 / zoom,
+      radiusWorld: pickRadiusPx(event.pointerType) / zoom,
       gridSpacing: gridSpacingFor(zoom),
       anchor,
       enabled: preferences.getState().snapEnabled,
@@ -316,6 +322,15 @@ export function useToolController(options: UseToolControllerOptions): UseToolCon
       if (!entry) return;
       dispatch(entry, { type: "command", command });
       publish(entry, lastScreenRef.current, renderStateRef.current.cursorWorld);
+    },
+    cancelGesture() {
+      const entry = entryRef.current;
+      if (!entry) return;
+      // A queued move belongs to the abandoned gesture.
+      pendingMoveRef.current = null;
+      entry.machine.reduce(entry.state, { type: "cancel" }, buildCtx());
+      entry.state = entry.machine.initial();
+      publish(entry, lastScreenRef.current, null);
     },
     dynamicInput: renderState.dynamicInput,
     cursorWorld: renderState.cursorWorld,
