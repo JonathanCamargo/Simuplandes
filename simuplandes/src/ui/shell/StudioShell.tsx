@@ -165,27 +165,38 @@ export function StudioShell({
 
       {compact ? (
         <>
-          <Box sx={{ gridArea: "main", minHeight: 0, minWidth: 0 }}>{canvas}</Box>
-          {dockSheetOpen ? (
+          <Box sx={{ gridArea: "main", minHeight: 0, minWidth: 0, position: "relative" }}>
+            {canvas}
+            {/* Landscape has no room for a column beside the canvas: the sheet overlays its right edge. */}
+            {dockSheetOpen && landscape ? (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: 0,
+                  right: 0,
+                  bottom: 0,
+                  width: "min(60vw, 420px)",
+                  zIndex: 2,
+                  bgcolor: "background.paper",
+                  borderLeft: 1,
+                  borderColor: "divider",
+                  boxShadow: 6,
+                }}
+              >
+                {renderDock(() => studioStore.getState().setDockSheetOpen(false))}
+              </Box>
+            ) : null}
+          </Box>
+          {dockSheetOpen && !landscape ? (
             <Box
-              sx={
-                landscape
-                  ? {
-                      gridArea: "dock",
-                      width: "min(50vw, 420px)",
-                      minHeight: 0,
-                      borderLeft: 1,
-                      borderColor: "divider",
-                    }
-                  : {
-                      gridArea: "dock",
-                      height: "min(45vh, 420px)",
-                      "@supports (height: 45dvh)": { height: "min(45dvh, 420px)" },
-                      minWidth: 0,
-                      borderTop: 1,
-                      borderColor: "divider",
-                    }
-              }
+              sx={{
+                gridArea: "dock",
+                height: "min(45vh, 420px)",
+                "@supports (height: 45dvh)": { height: "min(45dvh, 420px)" },
+                minWidth: 0,
+                borderTop: 1,
+                borderColor: "divider",
+              }}
             >
               {renderDock(() => studioStore.getState().setDockSheetOpen(false))}
             </Box>

@@ -327,12 +327,8 @@ export function CanvasArea({
             width={size.width}
             height={size.height}
             onPointer={isSimulate ? simController.onPointer : controller.onPointer}
-<<<<<<< HEAD
-            posesSource={isSimulate ? posesSource : drawPosesSource}
-=======
             onGestureCancel={isSimulate ? simController.cancelGesture : controller.cancelGesture}
-            posesSource={isSimulate ? posesSource : undefined}
->>>>>>> 483023d30dae248633d3bec42bafb0935ddcb7cd
+            posesSource={isSimulate ? posesSource : drawPosesSource}
             traces={traces}
             issueLinkIds={issueLinkIds}
           >
