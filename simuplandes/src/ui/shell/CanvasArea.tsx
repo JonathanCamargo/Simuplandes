@@ -192,6 +192,17 @@ export function CanvasArea({
   const issueLinkIds = useMemo(() => getGraphAnalysis(doc).issueLinkIds, [doc]);
 
   const posesSource = useMemo(() => (sim ? createPosesSource(sim.store) : undefined), [sim]);
+  // Draw mode entered from Simulate: the Brush and Eraser work over that frame;
+  // Edit shape needs the construction pose its handles are defined on.
+  const drawPoses = useStore(studio, (s) => s.drawPoses);
+  const activeTool = useStore(studio, (s) => s.activeTool);
+  const drawPosesSource = useMemo<PosesSource | undefined>(
+    () =>
+      drawPoses && mode === "draw" && activeTool !== "vertex"
+        ? { get: () => drawPoses, subscribe: () => () => undefined }
+        : undefined,
+    [drawPoses, mode, activeTool],
+  );
   const simTraces = useStore(sim?.store ?? EMPTY_SIM_STORE_FOR_TRACES, (s) => s.traces);
   // Called unconditionally (rules of hooks): falls back to an inert store/runtime pair when
   // `sim` is undefined (Build-only callers/tests), and its `onPointer` is only ever routed to
@@ -330,7 +341,7 @@ export function CanvasArea({
             onPointer={isSimulate ? simController.onPointer : controller.onPointer}
             snapKinds={isSimulate ? undefined : controller.snapKinds}
             onGestureCancel={isSimulate ? simController.cancelGesture : controller.cancelGesture}
-            posesSource={isSimulate ? posesSource : undefined}
+            posesSource={isSimulate ? posesSource : drawPosesSource}
             traces={traces}
             issueLinkIds={issueLinkIds}
           >

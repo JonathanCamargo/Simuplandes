@@ -75,13 +75,22 @@ export function useSimRuntime(opts: UseSimRuntimeOptions): void {
       if (state.mode === "simulate") {
         enterSimulate();
       } else {
+        // Simulate -> Draw keeps the frame on screen for the Brush and Eraser; `exit()` clears it.
+        const frame =
+          prevState.mode === "simulate" && state.mode === "draw" ? simStore.getState().poses : null;
         runtime.exit();
         studioStore.getState().setSimHint(null);
+        if (frame) {
+          studioStore.getState().setDrawPoses(frame);
+          studioStore.getState().setActiveTool("brush");
+        }
       }
     });
 
     const unsubscribeDocument = mechanismStore.subscribe((state, prevState) => {
       if (state.document === prevState.document) return;
+      // The held frame no longer matches the geometry once the document changes.
+      if (studioStore.getState().drawPoses) studioStore.getState().setDrawPoses(null);
       if (studioStore.getState().mode !== "simulate") return;
       runtime.documentChanged(state.document);
       publishModeHint();
