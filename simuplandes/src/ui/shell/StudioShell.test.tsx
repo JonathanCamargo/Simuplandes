@@ -22,7 +22,9 @@ import type { StudioState } from "../../uiState/studioStore";
 // Konva canvas out here. See `CanvasStage.chromium.test.tsx` for
 // real-pointer/Konva coverage in a browser project.
 vi.mock("./CanvasArea", () => ({
-  CanvasArea: () => <main data-testid="canvas-area" tabIndex={0} />,
+  CanvasArea: ({ compact }: { compact?: boolean }) => (
+    <main data-testid="canvas-area" data-compact={String(compact === true)} tabIndex={0} />
+  ),
 }));
 
 // uPlot touches `matchMedia`/canvas at module-evaluation time (`setPxRatio`),
@@ -315,6 +317,11 @@ describe("StudioShell compact layout", () => {
 
     fireEvent.click(within(dock).getByRole("button", { name: "Close panel" }));
     expect(screen.queryByRole("complementary")).toBeNull();
+  });
+
+  it("tells the canvas it is compact, so a selection gets the canvas's Delete button", () => {
+    renderCompact();
+    expect(screen.getByTestId("canvas-area").getAttribute("data-compact")).toBe("true");
   });
 
   it("shows the transport only while simulating", () => {

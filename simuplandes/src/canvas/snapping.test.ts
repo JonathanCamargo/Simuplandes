@@ -385,3 +385,41 @@ describe("computeSnap: radius is in world units, scaled by 1/zoom", () => {
     expect(highZoom.kind).toBe("none");
   });
 });
+
+describe("computeSnap: link (opt-in)", () => {
+  const d = doc({
+    links: [
+      {
+        id: "l1",
+        name: "Bar",
+        isGround: false,
+        pose: { position: [0, 0], angle: 0 },
+        shape: { kind: "bar" },
+        sites: [
+          { id: "s1", local: [0, 0] },
+          { id: "s2", local: [100, 0] },
+        ],
+      },
+    ],
+  });
+
+  it("is off unless a tool asks for it", () => {
+    const result = computeSnap({ x: 30, y: 3 }, d, { radiusWorld: 8, ...NO_GRID });
+    expect(result.kind).toBe("none");
+  });
+
+  it("snaps onto the bar's path when asked for", () => {
+    const result = computeSnap({ x: 30, y: 3 }, d, {
+      radiusWorld: 8,
+      gridSpacing: 1e9,
+      kinds: { grid: false, link: true },
+    });
+    expect(result).toEqual({ kind: "link", point: { x: 30, y: 0 }, linkId: "l1" });
+  });
+
+  it("a site and a midpoint still win over a point on the link", () => {
+    const opts = { radiusWorld: 8, gridSpacing: 1e9, kinds: { grid: false, link: true } };
+    expect(computeSnap({ x: 2, y: 2 }, d, opts).kind).toBe("site");
+    expect(computeSnap({ x: 50, y: 2 }, d, opts).kind).toBe("midpoint");
+  });
+});

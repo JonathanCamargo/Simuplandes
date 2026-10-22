@@ -17,6 +17,7 @@
   },
   "undo": "Deshacer {{label}}",
   "redo": "Rehacer {{label}}",
+  "deleteSelection": "Eliminar la selección (Supr)",
   "mode": {
     "build": "Construir",
     "draw": "Dibujar",

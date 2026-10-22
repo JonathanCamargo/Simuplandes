@@ -20,7 +20,7 @@
     "label": "Bar",
     "description": "Draw a rigid bar between two points",
     "hint": {
-      "idle": "Click to start a bar; ends on a joint site are pinned automatically",
+      "idle": "Click to start a bar; an end on a joint or on another link is pinned there automatically",
       "drawing": "Length {{length}} · angle {{angle}}° — click or type a value and ⏎",
       "drawingPin": "Click to pin to {{target}}",
       "zeroLength": "Move the cursor before clicking: a bar can't have zero length"
@@ -38,21 +38,27 @@
   },
   "groundPivot": {
     "label": "Ground pivot",
-    "description": "Pin a link site to ground",
+    "description": "Pin a point of a link to ground",
     "hint": {
-      "idle": "Click a site to pin it to ground",
+      "idle": "Click a link to pin it to ground there, or empty space to place a ground pivot",
+      "onLink": "Click to pin {{link}} to ground here",
+      "empty": "Click to place a ground pivot here; start a bar on it to use it",
       "alreadyGround": "That point is already pinned to ground"
     }
   },
   "pin": {
     "label": "Pin",
-    "description": "Join two coincident sites with a revolute joint",
+    "description": "Join two links with a revolute joint, anywhere on them",
     "hint": {
-      "idle": "Click two coincident sites on different links",
-      "needSite": "Click on an existing joint site",
-      "pickSecond": "Click a site on another link",
-      "differentLink": "Pick a site on a different link",
-      "alreadyPinned": "Those two sites are already pinned together"
+      "idle": "Click where two links meet to pin them, or click one link and then the other",
+      "noTarget": "Nothing to pin here: move over a link or a joint",
+      "oneLink": "Click to start a pin on {{link}}, then click the other link",
+      "pinHere": "Click to pin {{a}} to {{b}} here",
+      "pickSecond": "Click a point on another link to pin it to {{link}}; Esc cancels",
+      "pinTo": "Click to pin {{link}} to {{target}}; they are pulled together when you simulate",
+      "needLink": "Click on a link or a joint",
+      "differentLink": "Pick a point on a different link",
+      "alreadyPinned": "Those two links are already pinned together here"
     }
   },
   "slider": {

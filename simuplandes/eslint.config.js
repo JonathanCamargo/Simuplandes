@@ -12,6 +12,8 @@ export default defineConfig([
       "dist/**",
       "lib/dist/**",
       "coverage/**",
+      // Files waiting for manual deletion.
+      "to_delete/**",
       "node_modules/**",
       "src/legacy/**",
       "test-results/**",

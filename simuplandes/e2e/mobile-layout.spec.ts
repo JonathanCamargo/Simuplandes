@@ -5,7 +5,7 @@
  * landscape keeps the side rail. Screenshots land in `test-results/mobile/`.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { readSessionDocument } from "./helpers";
+import { canvasPoint, readSessionDocument, siteWorld } from "./helpers";
 
 const SHOTS = "test-results/mobile";
 
@@ -110,4 +110,31 @@ test("the layout preference overrides the viewport", async ({ page }) => {
   await page.getByRole("menuitemradio", { name: "Desktop" }).tap();
   await expect(page.getByRole("button", { name: "File" })).toBeVisible();
   await expect(page.getByRole("complementary")).toBeVisible();
+});
+
+test("tap a link to select it, then the trash button deletes it", async ({ page }) => {
+  await page.getByRole("button", { name: "Menu" }).tap();
+  await page.getByRole("menuitem", { name: "Load example four-bar" }).tap();
+  await page.locator(".MuiMenu-root").waitFor({ state: "detached" });
+  await expect(page.getByRole("button", { name: "Delete selection (Del)" })).toHaveCount(0);
+
+  const before = await readSessionDocument(page);
+  const target = before.links.find((l) => !l.isGround && l.shape.kind === "bar")!;
+  const a = siteWorld(before, target.sites[0].id);
+  const b = siteWorld(before, target.sites[1].id);
+  await page.locator('[data-tool-id="select"]').tap();
+  const at = await canvasPoint(page, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+  await page.touchscreen.tap(at.x, at.y);
+
+  const trash = page.getByRole("button", { name: "Delete selection (Del)" });
+  await expect(trash).toBeVisible();
+  // The extra button still fits the phone's width.
+  const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(scrollWidth).toBeLessThanOrEqual(390);
+  await page.screenshot({ path: `${SHOTS}/portrait-selected.png` });
+
+  await trash.tap();
+  await expect(trash).toHaveCount(0);
+  const after = await readSessionDocument(page);
+  expect(after.links.some((l) => l.id === target.id)).toBe(false);
 });

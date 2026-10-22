@@ -299,3 +299,53 @@ describe("buildRenderModel: springs and loads", () => {
     expect(model.loads[2].torqueSign).toBe(1);
   });
 });
+
+describe("buildRenderModel: unattached ground pivots", () => {
+  it("marks a ground site nothing uses as not attached", () => {
+    const doc = MechanismDocumentSchema.parse({
+      schemaVersion: 2,
+      links: [
+        {
+          id: "g",
+          name: "Ground",
+          isGround: true,
+          pose: { position: [0, 0], angle: 0 },
+          shape: { kind: "bar" },
+          sites: [
+            { id: "g1", local: [0, 0] },
+            { id: "g2", local: [50, 0] },
+            { id: "g3", local: [90, 0] },
+          ],
+        },
+        {
+          id: "b",
+          name: "Bar",
+          isGround: false,
+          pose: { position: [0, 0], angle: 0 },
+          shape: { kind: "bar" },
+          sites: [
+            { id: "b1", local: [0, 0] },
+            { id: "b2", local: [90, 40] },
+          ],
+        },
+      ],
+      joints: [{ id: "j1", name: "", type: "R", siteA: "g1", siteB: "b1" }],
+      springs: [
+        {
+          id: "k1",
+          name: "",
+          kind: "linear",
+          siteA: "g3",
+          siteB: "b2",
+          stiffness: 100,
+          damping: 0,
+          freeLength: 40,
+        },
+      ],
+    });
+    const attached = Object.fromEntries(
+      buildRenderModel(doc, new Set()).groundPivots.map((p) => [p.siteId, p.attached]),
+    );
+    expect(attached).toEqual({ g1: true, g2: false, g3: true });
+  });
+});

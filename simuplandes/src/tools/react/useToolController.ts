@@ -22,7 +22,7 @@ import { selectModalOpen, type StatusHint, type StudioState } from "../../uiStat
 import type { PreferencesState } from "../../uiState/preferences";
 import type { ViewStore } from "../../canvas/viewStore";
 import type { CanvasPointerEvent } from "../../canvas/CanvasStage";
-import { computeSnap } from "../../canvas/snapping";
+import { computeSnap, type SnapKinds } from "../../canvas/snapping";
 import { gridSpacingFor } from "../../canvas/grid";
 import { pickRadiusPx } from "../../canvas/pickRadius";
 import { formatNumber, type Language } from "../../i18n/numberFormat";
@@ -69,6 +69,8 @@ export interface UseToolControllerResult {
   cancelGesture: () => void;
   dynamicInput?: DynamicInputOverlay;
   cursorWorld: Vec2 | null;
+  /** The active tool's snap candidates, for the canvas's snap ring (see `ToolMachine.snapKinds`). */
+  snapKinds?: SnapKinds;
 }
 
 interface MachineEntry {
@@ -208,6 +210,7 @@ export function useToolController(options: UseToolControllerOptions): UseToolCon
       gridSpacing: gridSpacingFor(zoom),
       anchor,
       enabled: preferences.getState().snapEnabled,
+      ...(entry.machine.snapKinds ? { kinds: entry.machine.snapKinds } : {}),
       ...(excludeSiteIds ? { excludeSiteIds } : {}),
     });
 
@@ -304,8 +307,20 @@ export function useToolController(options: UseToolControllerOptions): UseToolCon
         mod: evt.ctrlKey || evt.metaKey,
         alt: evt.altKey,
       });
+      // Delete works whatever tool is active: one the tool did not use itself
+      // (Select's own delete, Plate's Backspace) deletes the selection.
+      const deleted =
+        !handled &&
+        !entry.machine.isBusy(entry.state) &&
+        (evt.key === "Delete" || evt.key === "Backspace") &&
+        !evt.ctrlKey &&
+        !evt.metaKey &&
+        !evt.altKey &&
+        studio.getState().mode !== "simulate" &&
+        store.getState().selection.size > 0 &&
+        store.getState().deleteSelection();
       publish(entry, lastScreenRef.current, renderStateRef.current.cursorWorld);
-      if (handled) evt.preventDefault();
+      if (handled || deleted) evt.preventDefault();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -314,6 +329,7 @@ export function useToolController(options: UseToolControllerOptions): UseToolCon
 
   return {
     onPointer,
+    snapKinds: TOOL_MACHINES[activeTool]?.snapKinds,
     preview: renderState.preview,
     handles: renderState.handles,
     edgeMenu: renderState.edgeMenu,

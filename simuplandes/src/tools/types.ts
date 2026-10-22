@@ -9,7 +9,7 @@
 
 import type { Vec2 } from "../geom";
 import type { AnnotationColor, Edge, Id, MechanismDocument, Vec2Tuple } from "../model";
-import type { SnapResult } from "../canvas/snapping";
+import type { SnapKinds, SnapResult } from "../canvas/snapping";
 import type { SelectionMode } from "../store/selection";
 import type { ToolId } from "./registry";
 import type { DynamicInputState } from "./dynamicInput";
@@ -63,6 +63,9 @@ export type SpringEnd =
   | { kind: "link"; linkId: Id; at: Vec2 }
   | { kind: "ground"; at: Vec2 };
 
+/** One end of a joint: an existing site, or a point on a link's body (a new site is added there). */
+export type LinkEnd = Exclude<SpringEnd, { kind: "ground" }>;
+
 export type ToolEffect =
   | {
       kind: "commitBar";
@@ -71,10 +74,14 @@ export type ToolEffect =
       length: number;
       startSiteId?: Id;
       endSiteId?: Id;
+      /** An end on a link's body (no site there yet): a site is added at the end and pinned. */
+      startLinkId?: Id;
+      endLinkId?: Id;
     }
   | { kind: "commitPlate"; vertices: Vec2[]; vertexSiteIds: (Id | undefined)[] }
-  | { kind: "commitGroundPivot"; at: Vec2; siteId?: Id }
-  | { kind: "commitPin"; siteA: Id; siteB: Id }
+  /** `siteId` pins that site; `linkId` adds a site on that link at `at` and pins it; neither: a lone pivot. */
+  | { kind: "commitGroundPivot"; at: Vec2; siteId?: Id; linkId?: Id }
+  | { kind: "commitPin"; a: LinkEnd; b: LinkEnd }
   | {
       kind: "commitSlider";
       at: Vec2;
@@ -130,6 +137,8 @@ export type PreviewShape =
   | { kind: "rect"; min: Vec2; max: Vec2 }
   | { kind: "ray"; from: Vec2; angle: number }
   | { kind: "point"; at: Vec2 }
+  /** A cross at the cursor: the active tool can't act here (e.g. Pin over empty space). */
+  | { kind: "blocked"; at: Vec2 }
   /** A stroke being painted: drawn like a saved annotation (width in model units). */
   | { kind: "stroke"; points: Vec2[]; color: AnnotationColor; width: number };
 
@@ -177,6 +186,12 @@ export interface ToolMachine<S> {
    * (`undefined`, no exclusion).
    */
   snapExclude?(state: S): ReadonlySet<Id> | undefined;
+  /**
+   * The snap candidates this tool uses (see `SnapOptions.kinds`), so the
+   * ring under the cursor only ever offers a point the tool accepts.
+   * Optional: the default is every kind but `"link"`.
+   */
+  snapKinds?: SnapKinds;
   dynamicInput(state: S): DynamicInputState | undefined;
   /**
    * Grab handles drawn from the CURRENT document (unlike `preview`, which

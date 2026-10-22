@@ -34,7 +34,7 @@ import type { PreferencesState } from "../uiState/preferences";
 import { canvasTokensFor } from "../ui/theme/studioTheme";
 import type { ViewStore } from "./viewStore";
 import { screenToWorld, type Viewport } from "./viewport";
-import { computeSnap, type SnapResult } from "./snapping";
+import { computeSnap, type SnapKinds, type SnapResult } from "./snapping";
 import { gridSpacingFor } from "./grid";
 import { buildRenderModel } from "./renderModel";
 import { hitTest } from "./hitTest";
@@ -64,6 +64,8 @@ export interface CanvasPointerEvent {
 }
 
 export interface CanvasStageProps {
+  /** The snap candidates the active tool uses, so the snap ring only offers points it accepts. */
+  snapKinds?: SnapKinds;
   store: MechanismStore;
   studio: StoreApi<StudioState>;
   preferences: StoreApi<PreferencesState>;
@@ -113,6 +115,7 @@ export function CanvasStage({
   onPointer,
   onGestureCancel,
   posesSource,
+  snapKinds,
   traces,
   issueLinkIds,
 }: CanvasStageProps): ReactNode {
@@ -244,6 +247,7 @@ export function CanvasStage({
       radiusWorld,
       gridSpacing,
       enabled: snapEnabled,
+      ...(snapKinds ? { kinds: snapKinds } : {}),
     });
     setDisplaySnap(snap);
 

@@ -2,6 +2,7 @@
   "snap": {
     "site": "articulación {{link}}·{{site}}",
     "midpoint": "punto medio de {{link}}",
+    "link": "sobre {{link}}",
     "grid": "cuadrícula",
     "angle": "ángulo {{deg}}°",
     "none": "libre"

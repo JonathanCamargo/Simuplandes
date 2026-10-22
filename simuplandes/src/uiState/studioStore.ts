@@ -34,7 +34,7 @@ export interface ImportRequest {
   nonce: number;
 }
 
-export type SnapKind = "site" | "midpoint" | "grid" | "angle" | "none";
+export type SnapKind = "site" | "midpoint" | "link" | "grid" | "angle" | "none";
 
 export interface SnapStatus {
   kind: SnapKind;

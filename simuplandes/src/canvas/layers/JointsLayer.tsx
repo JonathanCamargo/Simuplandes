@@ -34,6 +34,8 @@ export interface JointsLayerProps {
 }
 
 const HATCH_TICKS = [-6, -2, 2, 6];
+/** How strongly a ground pivot nothing is pinned to yet is drawn. */
+const UNATTACHED_OPACITY = 0.55;
 
 function haloNames(flags: { selected?: boolean; hovered: boolean; issue?: boolean }): string {
   const names: string[] = [];
@@ -53,6 +55,7 @@ export const JointsLayer = forwardRef<Konva.Layer, JointsLayerProps>(function Jo
         const s = worldToScreen(viewport, pivot.point);
         const stroke = pivot.issue ? tokens.issue : pivot.hovered ? tokens.hover : tokens.ink;
         const strokeWidth = 1.5 + (pivot.hovered ? 2 : 0);
+        // Nothing uses it yet: a faded, dashed placeholder until a link is pinned to it.
         return (
           <Group
             key={`ground-${pivot.siteId}`}
@@ -60,6 +63,7 @@ export const JointsLayer = forwardRef<Konva.Layer, JointsLayerProps>(function Jo
             name={haloNames(pivot)}
             x={s.x}
             y={s.y}
+            opacity={pivot.attached ? 1 : UNATTACHED_OPACITY}
             listening={false}
           >
             <Line
@@ -67,6 +71,7 @@ export const JointsLayer = forwardRef<Konva.Layer, JointsLayerProps>(function Jo
               closed
               stroke={stroke}
               strokeWidth={strokeWidth}
+              dash={pivot.attached ? undefined : [3, 2]}
               listening={false}
             />
             {HATCH_TICKS.map((dx) => (

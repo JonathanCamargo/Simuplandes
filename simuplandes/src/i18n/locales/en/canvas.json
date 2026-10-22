@@ -2,6 +2,7 @@
   "snap": {
     "site": "joint {{link}}·{{site}}",
     "midpoint": "midpoint of {{link}}",
+    "link": "on {{link}}",
     "grid": "grid",
     "angle": "angle {{deg}}°",
     "none": "free"

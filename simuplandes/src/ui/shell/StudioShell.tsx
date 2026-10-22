@@ -113,6 +113,7 @@ export function StudioShell({
       preferences={preferencesStore}
       view={viewStore}
       sim={{ store: simStore, runtime }}
+      compact={compact}
     />
   );
 

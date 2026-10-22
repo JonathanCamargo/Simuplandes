@@ -82,7 +82,9 @@ function blocksSpecifier(groups: string[][], specifier: string): boolean {
   return groups.some((group) => group.includes(specifier));
 }
 
-describe("kinematics import seam (ESLint config)", () => {
+// Resolving the ESLint config loads the whole lint setup; the first, cold
+// load can take over the default 5 s when the full suite runs in parallel.
+describe("kinematics import seam (ESLint config)", { timeout: 30_000 }, () => {
   it.each(NON_SIM_PATHS)("blocks **/kinematics for %s", async (path) => {
     const eslint = new ESLint({ cwd: PROJECT_ROOT });
     const config = await resolveConfig(eslint, path);

@@ -5,8 +5,11 @@
  * publish. No React/Konva (purity rule); one `indexDocument` pass per call
  * is fine for the documents this app targets (<= ~200 sites).
  *
- * Priority: site > midpoint > grid (within radius) > angle ray (within
- * radius, only with an anchor) > none.
+ * Priority: site > midpoint > link (opt-in) > grid (within radius) > angle
+ * ray (within radius, only with an anchor) > none. The `"link"` candidate
+ * (the nearest point on a moving link's body, see `attach.ts`) is only on
+ * for tools that ask for it: the joint tools, which can attach anywhere on
+ * a link.
  *
  * Decision (deviates from the research sketch of object > angle > grid):
  * grid beats angle here, not the other way around. The research assumed an
@@ -33,8 +36,9 @@ import {
   type Vec2Tuple,
 } from "../model";
 import { radToDeg, degToRad } from "../model/units";
+import { attachmentsAt } from "./attach";
 
-export type SnapKind = "site" | "midpoint" | "grid" | "angle" | "none";
+export type SnapKind = "site" | "midpoint" | "link" | "grid" | "angle" | "none";
 
 export interface SnapResult {
   kind: SnapKind;
@@ -43,6 +47,9 @@ export interface SnapResult {
   linkId?: Id;
   angleDeg?: number;
 }
+
+/** Which snap candidates a tool wants (see `SnapOptions.kinds`). */
+export type SnapKinds = Partial<Record<Exclude<SnapKind, "none">, boolean>>;
 
 export interface SnapOptions {
   /** Snap radius, in WORLD units (convert screen px via `screenLengthToWorld`/`8 / zoom`). */
@@ -56,7 +63,8 @@ export interface SnapOptions {
   enabled?: boolean;
   /** Sites to skip when scanning for a site candidate (e.g. sites mid-drag). */
   excludeSiteIds?: ReadonlySet<Id>;
-  kinds?: Partial<Record<Exclude<SnapKind, "none">, boolean>>;
+  /** Turns candidates on or off; every kind but `"link"` is on unless set to `false`. */
+  kinds?: SnapKinds;
 }
 
 function normalizeAngleDeg(deg: number): number {
@@ -146,6 +154,15 @@ function findAngleSnap(
     : null;
 }
 
+function findNearestLinkPoint(
+  cursor: Vec2,
+  doc: MechanismDocument,
+  radiusWorld: number,
+): { linkId: Id; point: Vec2 } | null {
+  const body = attachmentsAt(doc, cursor, radiusWorld).find((a) => a.kind === "link");
+  return body ? { linkId: body.linkId, point: body.point } : null;
+}
+
 /** The single best snap candidate under `cursor`, per this module's priority order. */
 export function computeSnap(cursor: Vec2, doc: MechanismDocument, opts: SnapOptions): SnapResult {
   if (opts.enabled === false) {
@@ -163,6 +180,13 @@ export function computeSnap(cursor: Vec2, doc: MechanismDocument, opts: SnapOpti
     const midpoint = findNearestMidpoint(cursor, doc, opts.radiusWorld);
     if (midpoint) {
       return { kind: "midpoint", point: midpoint.point, linkId: midpoint.linkId };
+    }
+  }
+
+  if (opts.kinds?.link === true) {
+    const onLink = findNearestLinkPoint(cursor, doc, opts.radiusWorld);
+    if (onLink) {
+      return { kind: "link", point: onLink.point, linkId: onLink.linkId };
     }
   }
 

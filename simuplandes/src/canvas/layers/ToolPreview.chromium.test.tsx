@@ -9,6 +9,7 @@
  */
 
 import { describe, it, expect, afterEach } from "vitest";
+import Konva from "konva";
 import { render, cleanup, waitFor } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
 import { ThemeProvider, CssBaseline } from "@mui/material";
@@ -170,5 +171,39 @@ describe("ToolPreview (chromium, real Konva)", () => {
     await nextFrame();
 
     await waitFor(() => expect(studio.getState().toolBusy).toBe(true));
+  });
+
+  it("Pin: empty space shows a blocked sign; one click on a crossing pins both bars there", async () => {
+    const view = createViewStore();
+    const { container, store, studio } = renderCanvasArea(view);
+    const stageEl = await waitForStage(container);
+
+    const h = store
+      .getState()
+      .addLink({ name: "H", sites: [{ local: [0, 0] }, { local: [100, 0] }] });
+    const v = store.getState().addLink({
+      name: "V",
+      pose: { position: [50, -50], angle: Math.PI / 2 },
+      sites: [{ local: [0, 0] }, { local: [100, 0] }],
+    });
+    setActiveTool(studio, "pin");
+    const blocked = () =>
+      Konva.stages[Konva.stages.length - 1].find(
+        (n: Konva.Node) => n.name() === "tool-preview-blocked",
+      );
+
+    const viewport = () => view.getState().viewport;
+    dispatchPointer(stageEl, "pointermove", worldToScreen(viewport(), { x: 300, y: 300 }));
+    await waitFor(() => expect(blocked()).toHaveLength(1));
+
+    dispatchPointer(stageEl, "pointermove", worldToScreen(viewport(), { x: 50, y: 0 }));
+    await waitFor(() => expect(blocked()).toHaveLength(0));
+    dispatchPointer(stageEl, "pointerdown", worldToScreen(viewport(), { x: 50, y: 0 }));
+    await waitFor(() => expect(store.getState().document.joints).toHaveLength(1));
+
+    const doc = store.getState().document;
+    expect(doc.links.find((l) => l.id === h.linkId)!.sites).toHaveLength(3);
+    expect(doc.links.find((l) => l.id === v.linkId)!.sites).toHaveLength(3);
+    expect(studio.getState().toolBusy).toBe(false);
   });
 });

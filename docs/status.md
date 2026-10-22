@@ -88,6 +88,25 @@ The studio is usable on a phone and in a browser zoomed far in.
 
 Gates: `npm run check` (2,957 tests) passes except four coverage thresholds that already fail on HEAD (`src/tools/*.ts` and `src/tools/react/**`, from the untested Brush/Eraser tools and toolbars). The E2E suite passes (85, including `e2e/mobile-layout.spec.ts`).
 
+## Unreleased (joints anywhere on a link, 2026-10-20)
+
+A revolute joint can go anywhere on a link, not only on a bar's ends or a plate's corners, and the canvas shows where a joint tool can act before the click.
+
+- **Attach anywhere.** Pin, Ground pivot and Bar ends accept an existing site or any point on a moving link's body: along a bar's drawn path, inside a plate, or on its outline (`canvas/attach.ts`). The joint gets a new site on that link. On a bar the site stays off the drawn path, so the bar's shape and mass do not change; in the graph the link simply gains a joint (a binary bar becomes ternary). Ground's body is never a target: a click in empty space still places a lone ground pivot to draw from.
+- **Pin in one click** where two links meet: two crossing bars are pinned exactly at their crossing, a bar end lying on another bar is pinned at the end, and coincident sites are joined. A click on a single link still starts the two-click form. A second click that misses every link now says so, instead of doing nothing.
+- **Tool-specific snapping.** A new opt-in `"link"` snap candidate (a diamond on the link, "on Bar 2" in the status bar) is on for the joint tools (`ToolMachine.snapKinds`). Pin no longer offers grid or angle snaps, so its ring only appears where a pin can go. Elsewhere, Pin shows a red "no" sign beside the cursor. The hints for Pin and Ground pivot follow the hover ("Click to pin Bar 1 to Bar 2 here", "Nothing to pin here", "Click to pin Bar 1 to ground here", "…place a ground pivot here").
+- **Ground pivots nothing uses** (no joint or spring) are drawn faded and dashed until a link is pinned to them.
+- A click on a site already pinned to ground (and nothing else) now reports "already pinned to ground" instead of adding a second ground joint.
+- The Plate tool's vertices still pin only to existing sites.
+
+**Deleting**
+
+- **Delete / Backspace works with any tool** (`useToolController`): if the active tool does not use the key itself and is not mid-gesture, it deletes the selection. Not in Simulate.
+- **A trash button** deletes the selection: in the desktop top bar after Undo/Redo (disabled with nothing selected, hidden in Simulate), and on a phone floating on the canvas under the Fit button while something is selected (the compact top bar has no room).
+- **No stray points after a delete** (`deleteEntities`): a site that only existed as an attachment (off a bar's path, or not on a plate's corner) goes when the last joint, spring or load using it is deleted, including through deleting the link on the other side. Ground pivots stay; they are drawn faded once unused and can be deleted on their own.
+
+Gates: `npm run check` (2,991 tests) passes except two coverage thresholds that already failed (`src/tools/*.ts` statements at 94.94% and `src/tools/react/**` functions, from the Brush/Eraser gap above). The E2E suite passes (87, including `e2e/joint-placement.spec.ts` and a phone delete test in `e2e/mobile-layout.spec.ts`). The ESLint-config seam tests got a 30 s timeout: their first, cold ESLint load took more than 5 s in a full parallel run.
+
 ## Known limitations and loose ends
 
 ### Bugs

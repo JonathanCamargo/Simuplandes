@@ -16,6 +16,8 @@ import {
   type EntityKind,
   type Id,
   type MechanismDocument,
+  type Link,
+  type Site,
   type LinkShapeInput,
   type LinkShape,
   type Edge,
@@ -759,7 +761,26 @@ export function moveEntities(ids: ReadonlySet<Id>, delta: Vec2): Recipe {
   };
 }
 
-/** Deletes every entity in `ids`, cascading to whatever would otherwise dangle. */
+/**
+ * Whether `site` is only an attachment point on its moving link -- added
+ * for a joint or spring placed on the link's body -- rather than part of
+ * the link's own geometry (a bar's path, a plate's corners).
+ */
+function isAttachmentSite(link: Draft<Link>, site: Draft<Site>): boolean {
+  if (link.isGround) return false;
+  if (link.shape.kind === "bar") return !link.shape.path.includes(site.id);
+  return !link.shape.outline.some(
+    ([x, y]) => Math.hypot(x - site.local[0], y - site.local[1]) <= 1e-9,
+  );
+}
+
+/**
+ * Deletes every entity in `ids`, cascading to whatever would otherwise
+ * dangle. An attachment site (see `isAttachmentSite`) that a deleted joint
+ * or spring leaves unused goes too, so deleting a pin placed on a bar's
+ * middle leaves no stray point behind. Ground sites stay: a ground pivot
+ * is something the user placed and can delete on its own.
+ */
 export function deleteEntities(ids: ReadonlySet<Id>): Recipe {
   return (draft) => {
     const linksToDelete = new Set<Id>();
@@ -807,6 +828,36 @@ export function deleteEntities(ids: ReadonlySet<Id>): Recipe {
           ? sitesToDelete.has(spring.siteA) || sitesToDelete.has(spring.siteB)
           : jointsToDelete.has(spring.jointId);
       if (ids.has(spring.id) || dangling) springsToDelete.add(spring.id);
+    }
+
+    const freed = new Set<Id>();
+    for (const joint of draft.joints) {
+      if (jointsToDelete.has(joint.id)) freed.add(joint.siteA).add(joint.siteB);
+    }
+    for (const spring of draft.springs) {
+      if (springsToDelete.has(spring.id) && spring.kind === "linear") {
+        freed.add(spring.siteA).add(spring.siteB);
+      }
+    }
+    const stillUsed = new Set<Id>();
+    for (const joint of draft.joints) {
+      if (!jointsToDelete.has(joint.id)) stillUsed.add(joint.siteA).add(joint.siteB);
+    }
+    for (const spring of draft.springs) {
+      if (!springsToDelete.has(spring.id) && spring.kind === "linear") {
+        stillUsed.add(spring.siteA).add(spring.siteB);
+      }
+    }
+    for (const load of draft.loads) {
+      if (!loadsToDelete.has(load.id)) stillUsed.add(load.siteId);
+    }
+    for (const link of draft.links) {
+      if (linksToDelete.has(link.id)) continue;
+      for (const site of link.sites) {
+        if (freed.has(site.id) && !stillUsed.has(site.id) && isAttachmentSite(link, site)) {
+          sitesToDelete.add(site.id);
+        }
+      }
     }
 
     draft.links = draft.links.filter((l) => !linksToDelete.has(l.id));

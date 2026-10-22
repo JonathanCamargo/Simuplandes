@@ -1,15 +1,22 @@
 /**
- * The Pin tool: click a site, then click a site on a DIFFERENT link to
- * create a revolute (R) joint between them. Like the Ground pivot tool,
- * picking the second site uses `sitesNear` (not `computeSnap`'s single
- * candidate) so a click near several coincident sites can still find one on
- * a different link than the first pick.
+ * The Pin tool: joins two links with a revolute (R) joint. A joint can go
+ * on an existing site or anywhere on a link's body (a new site is added
+ * there, see `attach.ts`).
+ *
+ * - One click where two links meet (a crossing, a bar end lying on another
+ *   bar, two coincident sites) pins them there at once.
+ * - A click on a single link picks it; a click on another link then joins
+ *   the two points (the solver pulls them together when they are apart).
+ *
+ * Hovering keeps `hover` up to date, so the hint names what a click would
+ * do and the preview marks a point where nothing can be pinned.
  */
 
-import { sitesNear } from "../canvas/hitTest";
-import { indexDocument, type Id } from "../model";
+import { attachmentsAt, jointPoint, type Attachment } from "../canvas/attach";
+import { indexDocument, type Id, type MechanismDocument } from "../model";
 import type {
   HintMessage,
+  LinkEnd,
   PreviewShape,
   ToolContext,
   ToolEvent,
@@ -19,20 +26,97 @@ import type {
 import type { Vec2 } from "../geom";
 import type { DynamicInputState } from "./dynamicInput";
 
+/** What is under the cursor: the links a pin there could join, nearest first. */
+export interface PinHover {
+  at: Vec2;
+  linkIds: Id[];
+}
+
 export type PinToolState =
-  | { phase: "idle"; lastMessage?: "needSite" }
+  | { phase: "idle"; hover?: PinHover; lastMessage?: "needLink" | "alreadyPinned" }
   | {
       phase: "pickedA";
-      siteA: Id;
+      a: LinkEnd;
       linkA: Id;
       at: Vec2;
-      lastMessage?: "differentLink" | "alreadyPinned";
+      hover?: PinHover;
+      lastMessage?: "needLink" | "differentLink" | "alreadyPinned";
     };
 
-function alreadyJoined(doc: ToolContext["doc"], siteA: Id, siteB: Id): boolean {
-  const index = indexDocument(doc);
-  const joints = index.jointsBySite.get(siteA) ?? [];
-  return joints.some((joint) => joint.siteA === siteB || joint.siteB === siteB);
+function endFor(candidate: Attachment, at: Vec2): LinkEnd {
+  return candidate.kind === "site"
+    ? { kind: "site", siteId: candidate.siteId }
+    : { kind: "link", linkId: candidate.linkId, at };
+}
+
+function alreadyJoined(doc: MechanismDocument, a: LinkEnd, b: LinkEnd): boolean {
+  if (a.kind !== "site" || b.kind !== "site") return false;
+  const joints = indexDocument(doc).jointsBySite.get(a.siteId) ?? [];
+  return joints.some((joint) => joint.siteA === b.siteId || joint.siteB === b.siteId);
+}
+
+function hoverAt(ctx: ToolContext, world: Vec2): PinHover {
+  return {
+    at: world,
+    linkIds: attachmentsAt(ctx.doc, world, ctx.radiusWorld).map((c) => c.linkId),
+  };
+}
+
+function clickIdle(world: Vec2, ctx: ToolContext): ToolReduceResult<PinToolState> {
+  const hover = hoverAt(ctx, world);
+  const candidates = attachmentsAt(ctx.doc, world, ctx.radiusWorld);
+  if (candidates.length === 0) {
+    return { state: { phase: "idle", hover, lastMessage: "needLink" }, effects: [], handled: true };
+  }
+  if (candidates.length === 1) {
+    const only = candidates[0];
+    return {
+      state: { phase: "pickedA", a: endFor(only, only.point), linkA: only.linkId, at: only.point },
+      effects: [],
+      handled: true,
+    };
+  }
+  // Two or more links meet here: pin the nearest pair not already pinned.
+  for (let i = 0; i < candidates.length; i++) {
+    for (let j = i + 1; j < candidates.length; j++) {
+      const at = jointPoint(ctx.doc, candidates[i], candidates[j], world, ctx.radiusWorld);
+      const a = endFor(candidates[i], at);
+      const b = endFor(candidates[j], at);
+      if (alreadyJoined(ctx.doc, a, b)) continue;
+      return {
+        state: { phase: "idle", hover },
+        effects: [{ kind: "commitPin", a, b }],
+        handled: true,
+      };
+    }
+  }
+  return {
+    state: { phase: "idle", hover, lastMessage: "alreadyPinned" },
+    effects: [],
+    handled: true,
+  };
+}
+
+function clickSecond(
+  state: Extract<PinToolState, { phase: "pickedA" }>,
+  world: Vec2,
+  ctx: ToolContext,
+): ToolReduceResult<PinToolState> {
+  const candidates = attachmentsAt(ctx.doc, world, ctx.radiusWorld);
+  const other = candidates.find((c) => c.linkId !== state.linkA);
+  if (!other) {
+    const lastMessage = candidates.length === 0 ? "needLink" : "differentLink";
+    return { state: { ...state, lastMessage }, effects: [], handled: true };
+  }
+  const b = endFor(other, other.point);
+  if (alreadyJoined(ctx.doc, state.a, b)) {
+    return { state: { ...state, lastMessage: "alreadyPinned" }, effects: [], handled: true };
+  }
+  return {
+    state: { phase: "idle", hover: hoverAt(ctx, world) },
+    effects: [{ kind: "commitPin", a: state.a, b }],
+    handled: true,
+  };
 }
 
 function reduce(
@@ -45,14 +129,8 @@ function reduce(
   }
 
   if (event.type === "pointermove") {
-    if (state.phase === "idle") {
-      return state.lastMessage === undefined
-        ? { state, effects: [], handled: false }
-        : { state: { phase: "idle" }, effects: [], handled: false };
-    }
-    return state.lastMessage === undefined
-      ? { state, effects: [], handled: false }
-      : { state: { ...state, lastMessage: undefined }, effects: [], handled: false };
+    const hover = hoverAt(ctx, event.world);
+    return { state: { ...state, hover, lastMessage: undefined }, effects: [], handled: false };
   }
 
   if (event.type !== "pointerdown") {
@@ -63,65 +141,66 @@ function reduce(
     return { state: { phase: "idle" }, effects: [], handled: state.phase === "pickedA" };
   }
 
-  if (state.phase === "idle") {
-    if (event.snap.kind === "site" && event.snap.siteId && event.snap.linkId) {
-      return {
-        state: {
-          phase: "pickedA",
-          siteA: event.snap.siteId,
-          linkA: event.snap.linkId,
-          at: event.snap.point,
-        },
-        effects: [],
-        handled: true,
-      };
-    }
-    return { state: { phase: "idle", lastMessage: "needSite" }, effects: [], handled: true };
-  }
-
-  // state.phase === "pickedA"
-  const candidates = sitesNear(ctx.doc, event.world, ctx.radiusWorld).filter(
-    (c) => c.siteId !== state.siteA,
-  );
-  if (candidates.length === 0) {
-    return { state: { ...state, lastMessage: undefined }, effects: [], handled: true };
-  }
-  const differentLink = candidates.find((c) => c.linkId !== state.linkA);
-  if (!differentLink) {
-    return { state: { ...state, lastMessage: "differentLink" }, effects: [], handled: true };
-  }
-  if (alreadyJoined(ctx.doc, state.siteA, differentLink.siteId)) {
-    return { state: { ...state, lastMessage: "alreadyPinned" }, effects: [], handled: true };
-  }
-  return {
-    state: { phase: "idle" },
-    effects: [{ kind: "commitPin", siteA: state.siteA, siteB: differentLink.siteId }],
-    handled: true,
-  };
+  return state.phase === "idle"
+    ? clickIdle(event.world, ctx)
+    : clickSecond(state, event.world, ctx);
 }
 
 function isBusy(state: PinToolState): boolean {
   return state.phase === "pickedA";
 }
 
+function linkName(ctx: ToolContext, linkId: Id): string {
+  const link = indexDocument(ctx.doc).links.get(linkId);
+  return link?.name || linkId;
+}
+
 function hint(state: PinToolState, ctx: ToolContext): HintMessage {
-  void ctx; // pin's hint never needs document lookups.
   if (state.phase === "idle") {
-    return state.lastMessage === "needSite"
-      ? { key: "tools.pin.hint.needSite" }
-      : { key: "tools.pin.hint.idle" };
+    if (state.lastMessage === "needLink") return { key: "tools.pin.hint.needLink" };
+    if (state.lastMessage === "alreadyPinned") return { key: "tools.pin.hint.alreadyPinned" };
+    const links = state.hover?.linkIds;
+    if (!links) return { key: "tools.pin.hint.idle" };
+    if (links.length === 0) return { key: "tools.pin.hint.noTarget" };
+    if (links.length === 1) {
+      return { key: "tools.pin.hint.oneLink", values: { link: linkName(ctx, links[0]) } };
+    }
+    return {
+      key: "tools.pin.hint.pinHere",
+      values: { a: linkName(ctx, links[0]), b: linkName(ctx, links[1]) },
+    };
   }
+  if (state.lastMessage === "needLink") return { key: "tools.pin.hint.needLink" };
   if (state.lastMessage === "differentLink") return { key: "tools.pin.hint.differentLink" };
   if (state.lastMessage === "alreadyPinned") return { key: "tools.pin.hint.alreadyPinned" };
-  return { key: "tools.pin.hint.pickSecond" };
+  const target = state.hover?.linkIds.find((id) => id !== state.linkA);
+  if (target !== undefined) {
+    return {
+      key: "tools.pin.hint.pinTo",
+      values: { link: linkName(ctx, state.linkA), target: linkName(ctx, target) },
+    };
+  }
+  return { key: "tools.pin.hint.pickSecond", values: { link: linkName(ctx, state.linkA) } };
 }
 
 function preview(state: PinToolState): PreviewShape[] {
-  return state.phase === "pickedA" ? [{ kind: "point", at: state.at }] : [];
+  const shapes: PreviewShape[] = [];
+  const hover = state.hover;
+  if (state.phase === "pickedA") {
+    shapes.push({ kind: "point", at: state.at });
+    if (hover) shapes.push({ kind: "segment", a: state.at, b: hover.at, dashed: true });
+  }
+  const valid =
+    hover === undefined ||
+    (state.phase === "idle"
+      ? hover.linkIds.length > 0
+      : hover.linkIds.some((id) => id !== state.linkA));
+  if (hover && !valid) shapes.push({ kind: "blocked", at: hover.at });
+  return shapes;
 }
 
-function snapAnchor(state: PinToolState): Vec2 | undefined {
-  return state.phase === "pickedA" ? state.at : undefined;
+function snapAnchor(): Vec2 | undefined {
+  return undefined;
 }
 
 function dynamicInput(): DynamicInputState | undefined {
@@ -137,4 +216,6 @@ export const pinTool: ToolMachine<PinToolState> = {
   preview,
   snapAnchor,
   dynamicInput,
+  // Only points a pin can use: no grid or angle candidates.
+  snapKinds: { grid: false, angle: false, link: true },
 };

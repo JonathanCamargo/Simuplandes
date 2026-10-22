@@ -17,6 +17,7 @@
   },
   "undo": "Undo {{label}}",
   "redo": "Redo {{label}}",
+  "deleteSelection": "Delete selection (Del)",
   "mode": {
     "build": "Build",
     "draw": "Draw",

@@ -20,7 +20,7 @@
     "label": "Barra",
     "description": "Dibuja una barra rígida entre dos puntos",
     "hint": {
-      "idle": "Haz clic para empezar una barra; los extremos sobre una articulación se fijan con un pasador",
+      "idle": "Haz clic para empezar una barra; un extremo sobre una articulación u otro eslabón se fija ahí con un pasador",
       "drawing": "Longitud {{length}} · ángulo {{angle}}° — clic o escribe un valor y ⏎",
       "drawingPin": "Clic para fijar con pasador a {{target}}",
       "zeroLength": "Mueve el cursor antes de hacer clic: la barra no puede tener longitud cero"
@@ -40,19 +40,25 @@
     "label": "Pivote a tierra",
     "description": "Fija un punto de un eslabón a tierra",
     "hint": {
-      "idle": "Haz clic en un punto para fijarlo a tierra",
+      "idle": "Haz clic en un eslabón para fijarlo a tierra ahí, o en un espacio vacío para poner un pivote a tierra",
+      "onLink": "Clic para fijar {{link}} a tierra aquí",
+      "empty": "Clic para poner un pivote a tierra aquí; empieza una barra sobre él para usarlo",
       "alreadyGround": "Ese punto ya está fijado a tierra"
     }
   },
   "pin": {
     "label": "Pasador",
-    "description": "Une dos puntos coincidentes con una articulación de rotación",
+    "description": "Articulación de rotación entre dos eslabones, en cualquier punto",
     "hint": {
-      "idle": "Haz clic en dos puntos coincidentes de eslabones distintos",
-      "needSite": "Haz clic sobre una articulación existente",
-      "pickSecond": "Haz clic en una articulación de otro eslabón",
+      "idle": "Haz clic donde se cruzan dos eslabones para unirlos, o en un eslabón y luego en el otro",
+      "noTarget": "Aquí no hay nada que unir: pasa sobre un eslabón o una articulación",
+      "oneLink": "Clic para empezar un pasador en {{link}}; luego haz clic en el otro eslabón",
+      "pinHere": "Clic para unir {{a}} con {{b}} aquí",
+      "pickSecond": "Haz clic en un punto de otro eslabón para unirlo a {{link}}; Esc cancela",
+      "pinTo": "Clic para unir {{link}} con {{target}}; se juntan al simular",
+      "needLink": "Haz clic sobre un eslabón o una articulación",
       "differentLink": "Elige un punto de un eslabón distinto",
-      "alreadyPinned": "Esos dos puntos ya están unidos con un pasador"
+      "alreadyPinned": "Esos dos eslabones ya están unidos aquí"
     }
   },
   "slider": {

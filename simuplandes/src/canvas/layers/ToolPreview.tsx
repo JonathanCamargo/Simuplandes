@@ -28,6 +28,9 @@ export interface ToolPreviewProps {
 /** Half the side of a vertex handle's square, in screen px. */
 const VERTEX_HANDLE_HALF = 5;
 const MIDPOINT_HANDLE_RADIUS = 3.5;
+/** The "can't place here" sign: its radius and its offset from the cursor, screen px. */
+const BLOCKED_RADIUS = 6;
+const BLOCKED_OFFSET = 14;
 
 /** Long enough to always cross the visible viewport at any zoom this app supports. */
 const RAY_LENGTH_WORLD = 1_000_000;
@@ -237,6 +240,32 @@ export function ToolPreview({
                 fill={tokens.accent}
                 listening={false}
               />
+            );
+          }
+          case "blocked": {
+            // A "no" sign beside the cursor, not under it.
+            const screen = worldToScreen(viewport, shape.at);
+            const cx = screen.x + BLOCKED_OFFSET;
+            const cy = screen.y + BLOCKED_OFFSET;
+            const d = BLOCKED_RADIUS * Math.SQRT1_2;
+            return (
+              <Group key={i} name="tool-preview-blocked" listening={false}>
+                <Circle
+                  x={cx}
+                  y={cy}
+                  radius={BLOCKED_RADIUS}
+                  stroke={tokens.err}
+                  strokeWidth={2}
+                  fill={tokens.panel}
+                  listening={false}
+                />
+                <Line
+                  points={[cx - d, cy - d, cx + d, cy + d]}
+                  stroke={tokens.err}
+                  strokeWidth={2}
+                  listening={false}
+                />
+              </Group>
             );
           }
           default:

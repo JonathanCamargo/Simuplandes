@@ -427,3 +427,57 @@ describe("barTool", () => {
     expect(result.state).toBe(state);
   });
 });
+
+describe("barTool: ends on a link's body", () => {
+  function linkSnap(point: { x: number; y: number }, linkId: string): SnapResult {
+    return { kind: "link", point, linkId };
+  }
+  function at(type: "pointerdown" | "pointermove", snap: SnapResult): ToolEvent {
+    return {
+      type,
+      world: snap.point,
+      snap,
+      button: type === "pointerdown" ? 0 : -1,
+      shift: false,
+      mod: false,
+      alt: false,
+    };
+  }
+
+  it("carries startLinkId/endLinkId to commitBar and names the link in the hint", () => {
+    const { doc } = docWithSite();
+    const ctx = ctxFor(doc);
+    let state: BarToolState = barTool.reduce(
+      barTool.initial(),
+      at("pointerdown", linkSnap({ x: 0, y: 0 }, "link-1")),
+      ctx,
+    ).state;
+    state = barTool.reduce(
+      state,
+      at("pointermove", linkSnap({ x: 40, y: 30 }, "link-1")),
+      ctx,
+    ).state;
+    const hint = barTool.hint(state, ctx);
+    expect(hint).toEqual({ key: "tools.bar.hint.drawingPin", values: { target: "Coupler" } });
+    expectHintLocalized(hint);
+
+    const result = barTool.reduce(
+      state,
+      at("pointerdown", linkSnap({ x: 40, y: 30 }, "link-1")),
+      ctx,
+    );
+    expect(result.effects).toEqual([
+      expect.objectContaining({
+        kind: "commitBar",
+        startLinkId: "link-1",
+        endLinkId: "link-1",
+        startSiteId: undefined,
+        endSiteId: undefined,
+      }),
+    ]);
+  });
+
+  it("asks for link snaps", () => {
+    expect(barTool.snapKinds).toEqual({ link: true });
+  });
+});

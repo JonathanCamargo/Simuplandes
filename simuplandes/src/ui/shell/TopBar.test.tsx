@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, fireEvent, cleanup, waitFor, within } from "@testing-library/react";
+import { act, render, screen, fireEvent, cleanup, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeAll, describe, it, expect, vi } from "vitest";
 import { I18nextProvider } from "react-i18next";
 import { ThemeProvider, CssBaseline } from "@mui/material";
@@ -51,7 +51,7 @@ function freshSession(): Session {
   return startSession({ storage: createMemoryStorage(), target: null });
 }
 
-function renderTopBar(session: Session, lang: "es" | "en" = "es") {
+function renderTopBar(session: Session, lang: "es" | "en" = "es", compact = false) {
   const preferencesStore = createPreferencesStore({ storage: null });
   if (lang === "en") preferencesStore.getState().setLanguage("en");
   const studioStore = createStudioStore();
@@ -62,7 +62,12 @@ function renderTopBar(session: Session, lang: "es" | "en" = "es") {
     <I18nextProvider i18n={i18n}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <TopBar session={session} preferencesStore={preferencesStore} studioStore={studioStore} />
+        <TopBar
+          session={session}
+          preferencesStore={preferencesStore}
+          studioStore={studioStore}
+          compact={compact}
+        />
       </ThemeProvider>
     </I18nextProvider>,
   );
@@ -464,5 +469,45 @@ describe("TopBar sharing and file shortcuts", () => {
     await openFileMenu();
     expect(screen.getByRole("menuitem", { name: "Guardar" })).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: "Abrir" })).toBeTruthy();
+  });
+});
+
+describe("TopBar delete button", () => {
+  function sessionWithBar(): { session: Session; linkId: string } {
+    const session = freshSession();
+    const { linkId } = session.store.getState().addLink({
+      name: "A",
+      sites: [{ local: [0, 0] }, { local: [100, 0] }],
+    });
+    return { session, linkId };
+  }
+
+  it("is disabled with nothing selected, and deletes the selection when clicked", () => {
+    const { session, linkId } = sessionWithBar();
+    renderTopBar(session, "en");
+    const button = screen.getByRole<HTMLButtonElement>("button", {
+      name: "Delete selection (Del)",
+    });
+    expect(button.disabled).toBe(true);
+
+    act(() => session.store.getState().select([linkId]));
+    expect(button.disabled).toBe(false);
+    fireEvent.click(button);
+    expect(session.store.getState().document.links).toHaveLength(0);
+    expect(button.disabled).toBe(true);
+  });
+
+  it("is hidden in Simulate", () => {
+    const { session } = sessionWithBar();
+    const { studioStore } = renderTopBar(session, "en");
+    act(() => studioStore.getState().setMode("simulate"));
+    expect(screen.queryByRole("button", { name: "Delete selection (Del)" })).toBeNull();
+  });
+
+  it("is not in the compact bar (it floats on the canvas there)", () => {
+    const { session, linkId } = sessionWithBar();
+    renderTopBar(session, "en", true);
+    act(() => session.store.getState().select([linkId]));
+    expect(screen.queryByRole("button", { name: "Delete selection (Del)" })).toBeNull();
   });
 });

@@ -36,6 +36,26 @@ function pointermove(world: { x: number; y: number }): ToolEvent {
   };
 }
 
+/** One bar from (0,0) to (100,0). */
+function barDoc(): MechanismDocument {
+  return MechanismDocumentSchema.parse({
+    schemaVersion: 2,
+    links: [
+      {
+        id: "bar",
+        name: "Bar",
+        isGround: false,
+        pose: { position: [0, 0], angle: 0 },
+        shape: { kind: "bar" },
+        sites: [
+          { id: "s1", local: [0, 0] },
+          { id: "s2", local: [100, 0] },
+        ],
+      },
+    ],
+  });
+}
+
 describe("groundPivotTool", () => {
   it("a click on empty space creates a ground pivot there", () => {
     const ctx = ctxFor(emptyDoc());
@@ -45,7 +65,7 @@ describe("groundPivotTool", () => {
       ctx,
     );
     expect(result.effects).toEqual([{ kind: "commitGroundPivot", at: { x: 5, y: 5 } }]);
-    expect(result.state).toEqual({ status: "idle" });
+    expect(result.state).toEqual({ status: "idle", hoverLinkId: null });
   });
 
   it("is never busy", () => {
@@ -185,7 +205,7 @@ describe("groundPivotTool", () => {
     expectHintLocalized(hint);
   });
 
-  it("moving the pointer clears the alreadyGround hint", () => {
+  it("moving the pointer off ground clears the alreadyGround hint", () => {
     const ctx = ctxFor(emptyDoc());
     const afterClick: ReturnType<typeof groundPivotTool.reduce> = {
       state: { status: "alreadyGround" },
@@ -193,7 +213,68 @@ describe("groundPivotTool", () => {
       handled: true,
     };
     const result = groundPivotTool.reduce(afterClick.state, pointermove({ x: 1, y: 1 }), ctx);
-    expect(result.state).toEqual({ status: "idle" });
+    expect(result.state).toEqual({ status: "idle", hoverLinkId: null });
+  });
+
+  it("a click on a bar's body pins that point of the bar to ground", () => {
+    const ctx = ctxFor(barDoc());
+    const result = groundPivotTool.reduce(
+      groundPivotTool.initial(),
+      pointerdown({ x: 30, y: 4 }),
+      ctx,
+    );
+    expect(result.effects).toEqual([
+      { kind: "commitGroundPivot", at: { x: 30, y: 0 }, linkId: "bar" },
+    ]);
+  });
+
+  it("hovering says whether a click pins a link or places a lone pivot", () => {
+    const ctx = ctxFor(barDoc());
+    const onBar = groundPivotTool.reduce(
+      groundPivotTool.initial(),
+      pointermove({ x: 30, y: 2 }),
+      ctx,
+    ).state;
+    const onBarHint = groundPivotTool.hint(onBar, ctx);
+    expect(onBarHint).toEqual({ key: "tools.groundPivot.hint.onLink", values: { link: "Bar" } });
+    expectHintLocalized(onBarHint);
+
+    const empty = groundPivotTool.reduce(onBar, pointermove({ x: 30, y: 60 }), ctx).state;
+    const emptyHint = groundPivotTool.hint(empty, ctx);
+    expect(emptyHint).toEqual({ key: "tools.groundPivot.hint.empty" });
+    expectHintLocalized(emptyHint);
+  });
+
+  it("a site already pinned to ground (and nothing else) hints alreadyGround, on hover and click", () => {
+    const doc = MechanismDocumentSchema.parse({
+      ...barDoc(),
+      links: [
+        ...barDoc().links,
+        {
+          id: "ground",
+          name: "Ground",
+          isGround: true,
+          pose: { position: [0, 0], angle: 0 },
+          shape: { kind: "bar" },
+          sites: [{ id: "g1", local: [0, 0] }],
+        },
+      ],
+      joints: [{ id: "j1", name: "", type: "R", siteA: "g1", siteB: "s1" }],
+    });
+    const ctx = ctxFor(doc);
+    const hovered = groundPivotTool.reduce(
+      groundPivotTool.initial(),
+      pointermove({ x: 1, y: 0 }),
+      ctx,
+    );
+    expect(hovered.state.status).toBe("alreadyGround");
+    const clicked = groundPivotTool.reduce(hovered.state, pointerdown({ x: 1, y: 0 }), ctx);
+    expect(clicked.effects).toEqual([]);
+    expect(clicked.state.status).toBe("alreadyGround");
+  });
+
+  it("snaps to points on links as well as sites and the grid", () => {
+    expect(groundPivotTool.snapKinds).toEqual({ link: true });
   });
 
   it("right-click is a no-op", () => {

@@ -118,6 +118,39 @@ describe("useToolController", () => {
     expect(studio.getState().activeTool).toBe("bar");
   });
 
+  it("Delete deletes the selection whatever tool is active, but not mid-gesture or in Simulate", () => {
+    const { store, studio, options } = makeHarness((cb) => {
+      cb();
+      return 0;
+    });
+    const { linkId } = store.getState().addLink({
+      name: "A",
+      sites: [{ local: [0, 0] }, { local: [100, 0] }],
+    });
+    act(() => studio.getState().setActiveTool("pin"));
+    const { result } = renderHook(() => useToolController(options));
+
+    act(() => studio.getState().setMode("simulate"));
+    act(() => store.getState().select([linkId], "replace"));
+    fireEvent.keyDown(window, { key: "Delete" });
+    expect(store.getState().document.links).toHaveLength(1);
+    act(() => studio.getState().setMode("build"));
+
+    // A pin started on the bar (busy): Delete leaves the bar alone.
+    act(() => studio.getState().setActiveTool("pin"));
+    act(() => store.getState().select([linkId], "replace"));
+    act(() => result.current.onPointer(down({ x: 30, y: 0 })));
+    expect(studio.getState().toolBusy).toBe(true);
+    fireEvent.keyDown(window, { key: "Delete" });
+    expect(store.getState().document.links).toHaveLength(1);
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    act(() => result.current.cancelGesture());
+    expect(studio.getState().toolBusy).toBe(false);
+    fireEvent.keyDown(window, { key: "Backspace" });
+    expect(store.getState().document.links).toHaveLength(0);
+  });
+
   it("a keydown targeting an <input> is not forwarded to the tool machine", () => {
     const { store, studio, options } = makeHarness((cb) => {
       cb();

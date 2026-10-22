@@ -32,7 +32,7 @@ import {
   type Recipe,
 } from "../store/commands";
 import type { MechanismStore } from "../store";
-import type { ToolEffect } from "./types";
+import type { LinkEnd, ToolEffect } from "./types";
 
 export interface DefaultNames {
   bar: string;
@@ -76,6 +76,26 @@ function nextIndexedSpringName(doc: MechanismDocument, base: string): string {
 }
 
 /**
+ * The site a joint or spring end names: the existing site, or a new site
+ * added to the link at the end's world point. A site added to a bar stays
+ * off its drawn path, so the bar's shape (and mass) does not change.
+ */
+function linkEndSite(
+  doc: MechanismDocument,
+  end: LinkEnd,
+  idFactory: (kind: "site") => Id,
+  recipes: Recipe[],
+  createdIds: Id[],
+): Id {
+  if (end.kind === "site") return end.siteId;
+  const link = doc.links.find((l) => l.id === end.linkId)!;
+  const siteId = idFactory("site");
+  recipes.push(addSite(link.id, { id: siteId, local: worldToLinkLocal(link.pose, end.at) }));
+  createdIds.push(siteId);
+  return siteId;
+}
+
+/**
  * Resolves both ends of a drawn spring to sites (adding a site on a link,
  * or a ground site, where the end is not already one) and adds the spring.
  */
@@ -89,14 +109,7 @@ function buildCommitSpring(
   const createdIds: Id[] = [];
   // The tool never commits two ground ends, so at most one ground site is added.
   const resolve = (end: typeof effect.a): Id => {
-    if (end.kind === "site") return end.siteId;
-    if (end.kind === "link") {
-      const link = doc.links.find((l) => l.id === end.linkId)!;
-      const siteId = idFactory("site");
-      recipes.push(addSite(link.id, { id: siteId, local: worldToLinkLocal(link.pose, end.at) }));
-      createdIds.push(siteId);
-      return siteId;
-    }
+    if (end.kind !== "ground") return linkEndSite(doc, end, idFactory, recipes, createdIds);
     const step = groundSiteStep(doc, end.at, idFactory, defaultNames, recipes, false);
     createdIds.push(...(step.createdLink ? [step.groundLinkId] : []), step.groundSiteId);
     return step.groundSiteId;
@@ -187,14 +200,26 @@ function buildCommitBar(
     }),
   ];
   const createdIds: Id[] = [linkId, siteAId, siteBId];
-  if (effect.startSiteId) {
+  const end = fromPolar(effect.length, effect.angle);
+  const ends: [Id, Id | undefined, Id | undefined, Vec2][] = [
+    [siteAId, effect.startSiteId, effect.startLinkId, effect.start],
+    [
+      siteBId,
+      effect.endSiteId,
+      effect.endLinkId,
+      { x: effect.start.x + end.x, y: effect.start.y + end.y },
+    ],
+  ];
+  for (const [ownSiteId, siteId, onLinkId, at] of ends) {
+    const other: LinkEnd | undefined = siteId
+      ? { kind: "site", siteId }
+      : onLinkId
+        ? { kind: "link", linkId: onLinkId, at }
+        : undefined;
+    if (!other) continue;
+    const otherSiteId = linkEndSite(doc, other, idFactory, recipes, createdIds);
     const jointId = idFactory("joint");
-    recipes.push(addJoint({ id: jointId, type: "R", siteA: siteAId, siteB: effect.startSiteId }));
-    createdIds.push(jointId);
-  }
-  if (effect.endSiteId) {
-    const jointId = idFactory("joint");
-    recipes.push(addJoint({ id: jointId, type: "R", siteA: siteBId, siteB: effect.endSiteId }));
+    recipes.push(addJoint({ id: jointId, type: "R", siteA: ownSiteId, siteB: otherSiteId }));
     createdIds.push(jointId);
   }
   return {
@@ -248,9 +273,15 @@ function buildCommitGroundPivot(
     recipes,
   );
   const createdIds: Id[] = createdLink ? [groundLinkId, groundSiteId] : [groundSiteId];
-  if (effect.siteId) {
+  const other: LinkEnd | undefined = effect.siteId
+    ? { kind: "site", siteId: effect.siteId }
+    : effect.linkId
+      ? { kind: "link", linkId: effect.linkId, at: effect.at }
+      : undefined;
+  if (other) {
+    const otherSiteId = linkEndSite(doc, other, idFactory, recipes, createdIds);
     const jointId = idFactory("joint");
-    recipes.push(addJoint({ id: jointId, type: "R", siteA: groundSiteId, siteB: effect.siteId }));
+    recipes.push(addJoint({ id: jointId, type: "R", siteA: groundSiteId, siteB: otherSiteId }));
     createdIds.push(jointId);
   }
   return {
@@ -262,17 +293,17 @@ function buildCommitGroundPivot(
 
 function buildCommitPin(
   effect: Extract<ToolEffect, { kind: "commitPin" }>,
+  doc: MechanismDocument,
   idFactory: (kind: "link" | "site" | "joint") => Id,
 ): { label: string; recipes: Recipe[]; result: CommitResult } {
+  const recipes: Recipe[] = [];
+  const createdIds: Id[] = [];
+  const siteA = linkEndSite(doc, effect.a, idFactory, recipes, createdIds);
+  const siteB = linkEndSite(doc, effect.b, idFactory, recipes, createdIds);
   const jointId = idFactory("joint");
-  const recipes: Recipe[] = [
-    addJoint({ id: jointId, type: "R", siteA: effect.siteA, siteB: effect.siteB }),
-  ];
-  return {
-    label: "add-pin",
-    recipes,
-    result: { siteIds: [effect.siteA, effect.siteB], createdIds: [jointId] },
-  };
+  recipes.push(addJoint({ id: jointId, type: "R", siteA, siteB }));
+  createdIds.push(jointId);
+  return { label: "add-pin", recipes, result: { siteIds: [siteA, siteB], createdIds } };
 }
 
 function buildCommitSlider(
@@ -398,7 +429,7 @@ export function applyToolEffects(
         break;
       }
       case "commitPin": {
-        const built = buildCommitPin(effect, idFactory);
+        const built = buildCommitPin(effect, store.getState().document, idFactory);
         store.getState().execute(built.label, built.recipes);
         results.push(built.result);
         break;

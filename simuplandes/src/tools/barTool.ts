@@ -2,9 +2,11 @@
  * The Bar tool: click-click drawing with CAD polyline chaining (a click on
  * a different point continues from the last endpoint) and typed
  * length/angle commit (EDT-07). A bar end landing on an existing site is
- * carried as `startSiteId`/`endSiteId` on the `commitBar` effect --
- * `effects.ts` turns that into an auto-pin R joint in the SAME
- * `store.execute()` call as the bar itself (one undo step).
+ * carried as `startSiteId`/`endSiteId` on the `commitBar` effect, and one
+ * landing on another link's body (the `"link"` snap) as
+ * `startLinkId`/`endLinkId` -- `effects.ts` turns either into an auto-pin
+ * R joint in the SAME `store.execute()` call as the bar itself (one undo
+ * step), adding a site on the other link when it needs one.
  *
  * The chain's next start-site id is not known until `effects.ts` mints it,
  * so this machine never mints ids itself: after a commit it enters a
@@ -38,6 +40,8 @@ export type BarToolState =
       phase: "drawing";
       start: Vec2;
       startSiteId?: Id;
+      /** The start lies on this link's body (no site there yet). */
+      startLinkId?: Id;
       cursor: Vec2;
       cursorSnap: SnapResult;
       input: DynamicInputState;
@@ -51,11 +55,17 @@ export type BarToolState =
       zeroLengthAttempt: boolean;
     };
 
+/** The link whose body `snap` landed on, if it is a `"link"` snap. */
+function onLinkId(snap: SnapResult): Id | undefined {
+  return snap.kind === "link" ? snap.linkId : undefined;
+}
+
 function beginDrawing(at: Vec2, siteId: Id | undefined, snap: SnapResult): BarToolState {
   return {
     phase: "drawing",
     start: at,
     startSiteId: siteId,
+    startLinkId: onLinkId(snap),
     cursor: at,
     cursorSnap: snap,
     input: initialDynamicInput(),
@@ -117,6 +127,8 @@ function reduce(
           length: distance(state.start, end),
           startSiteId: state.startSiteId,
           endSiteId: event.snap.siteId,
+          startLinkId: state.startLinkId,
+          endLinkId: onLinkId(event.snap),
         },
       ],
       handled: true,
@@ -178,6 +190,7 @@ function reduce(
           length: resolved.length,
           startSiteId: state.startSiteId,
           endSiteId: state.cursorSnap.siteId,
+          startLinkId: state.startLinkId,
         },
       ],
       handled: true,
@@ -200,6 +213,13 @@ function hint(state: BarToolState, ctx: ToolContext): HintMessage {
     return {
       key: "tools.bar.hint.drawingPin",
       values: { target },
+    };
+  }
+  if (state.cursorSnap.kind === "link" && state.cursorSnap.linkId) {
+    const link = indexDocument(ctx.doc).links.get(state.cursorSnap.linkId);
+    return {
+      key: "tools.bar.hint.drawingPin",
+      values: { target: link?.name || state.cursorSnap.linkId },
     };
   }
   if (state.zeroLengthAttempt) {
@@ -235,4 +255,5 @@ export const barTool: ToolMachine<BarToolState> = {
   preview,
   snapAnchor,
   dynamicInput,
+  snapKinds: { link: true },
 };

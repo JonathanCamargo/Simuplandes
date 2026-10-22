@@ -58,6 +58,8 @@ export interface GroundPivotPrimitive {
   hovered: boolean;
   /** `true` when this pivot's ground link is in `options.issueLinkIds` (GRF-03). */
   issue: boolean;
+  /** `false` while nothing (no joint or spring) uses this ground site yet: it is drawn as a placeholder. */
+  attached: boolean;
 }
 
 export interface PinPrimitive {
@@ -174,6 +176,14 @@ export function buildRenderModel(
     jointCountBySite.set(joint.siteB, (jointCountBySite.get(joint.siteB) ?? 0) + 1);
   }
 
+  const springSiteIds = new Set<Id>();
+  for (const spring of doc.springs) {
+    if (spring.kind === "linear") {
+      springSiteIds.add(spring.siteA);
+      springSiteIds.add(spring.siteB);
+    }
+  }
+
   for (const link of doc.links) {
     // `types` is built by `linkTypes(doc)` over this same `doc.links`, so
     // every link id is always present -- no defensive fallback needed.
@@ -200,6 +210,7 @@ export function buildRenderModel(
           point: worldOf(link, site.local),
           hovered,
           issue,
+          attached: (jointCountBySite.get(site.id) ?? 0) > 0 || springSiteIds.has(site.id),
         });
       }
     }

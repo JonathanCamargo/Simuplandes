@@ -54,6 +54,17 @@ export function OverlaysLayer({
           listening={false}
         />
       )}
+      {screen && snap?.kind === "link" && (
+        <RegularPolygon
+          x={screen.x}
+          y={screen.y}
+          sides={4}
+          radius={8}
+          stroke={tokens.accent}
+          strokeWidth={2}
+          listening={false}
+        />
+      )}
       {screen && snap?.kind === "grid" && (
         <Line
           points={[

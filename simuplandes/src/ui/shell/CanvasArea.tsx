@@ -26,6 +26,7 @@ import { Box, IconButton, Tooltip, useTheme } from "@mui/material";
 // esm/ subpath, as in TopBar.tsx: the root CJS file breaks under Vite 8.
 // An icon rather than the "⛶" glyph, which Roboto lacks.
 import ZoomOutMapIcon from "@mui/icons-material/esm/ZoomOutMap";
+import DeleteOutlineIcon from "@mui/icons-material/esm/DeleteOutline";
 import { useTranslation } from "react-i18next";
 import type { MechanismDocument } from "../../model";
 import type { MechanismStore } from "../../store";
@@ -140,6 +141,13 @@ export function useViewStore(): ViewStore {
   return view;
 }
 
+/** The buttons in the canvas's top-right corner (Fit, and Delete on a phone). */
+const cornerButtonSx = {
+  bgcolor: "background.paper",
+  // A finger-sized target on touch screens.
+  "@media (pointer: coarse)": { p: 1.25 },
+} as const;
+
 export interface CanvasAreaProps {
   store: MechanismStore;
   studio: StoreApi<StudioState>;
@@ -148,6 +156,8 @@ export interface CanvasAreaProps {
   view?: ViewStore;
   /** Phase 5 seam: when provided, Simulate mode reads posed geometry/traces from it and blocks tool edits. Undefined callers/tests keep Phase 4 (Build-only) behavior exactly. */
   sim?: { store: SimStore; runtime: SimRuntime };
+  /** The compact (phone) layout: a selection gets a floating Delete button on the canvas. */
+  compact?: boolean;
 }
 
 export function CanvasArea({
@@ -156,6 +166,7 @@ export function CanvasArea({
   preferences,
   view: viewProp,
   sim,
+  compact = false,
 }: CanvasAreaProps): ReactNode {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -173,6 +184,7 @@ export function CanvasArea({
   const fitRequest = useStore(studio, (s) => s.fitRequest);
   const mode = useStore(studio, (s) => s.mode);
   const isSimulate = mode === "simulate" && !!sim;
+  const selectionSize = useStore(store, (s) => s.selection.size);
   // GRF-03: the canvas highlights the same Baranov-offending links the graph
   // panel does. `getGraphAnalysis` is memoized by document identity (shared
   // WeakMap with `GraphPanel`), so this is never a second real computation.
@@ -316,6 +328,7 @@ export function CanvasArea({
             width={size.width}
             height={size.height}
             onPointer={isSimulate ? simController.onPointer : controller.onPointer}
+            snapKinds={isSimulate ? undefined : controller.snapKinds}
             onGestureCancel={isSimulate ? simController.cancelGesture : controller.cancelGesture}
             posesSource={isSimulate ? posesSource : undefined}
             traces={traces}
@@ -341,23 +354,40 @@ export function CanvasArea({
             onCommand={controller.sendCommand}
           />
         )}
-        <Tooltip title={t("canvas.fit")}>
-          <IconButton
-            aria-label={t("canvas.fit")}
-            size="small"
-            onClick={() => fitToCanvasContent(view, store, studio, simStore)}
-            sx={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              bgcolor: "background.paper",
-              // A finger-sized target on touch screens.
-              "@media (pointer: coarse)": { p: 1.25 },
-            }}
-          >
-            <ZoomOutMapIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        <Box
+          sx={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            display: "flex",
+            flexDirection: "column",
+            gap: 1,
+          }}
+        >
+          <Tooltip title={t("canvas.fit")}>
+            <IconButton
+              aria-label={t("canvas.fit")}
+              size="small"
+              onClick={() => fitToCanvasContent(view, store, studio, simStore)}
+              sx={cornerButtonSx}
+            >
+              <ZoomOutMapIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          {/* The phone's way to delete: the compact top bar has no room for it. */}
+          {compact && !isSimulate && selectionSize > 0 && (
+            <Tooltip title={t("shell.deleteSelection")}>
+              <IconButton
+                aria-label={t("shell.deleteSelection")}
+                size="small"
+                onClick={() => store.getState().deleteSelection()}
+                sx={cornerButtonSx}
+              >
+                <DeleteOutlineIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
         <EmptyState store={store} studio={studio} onAnalysis={setAnalysis} />
         <ExamplesGallery store={store} studio={studio} variant="dialog" onAnalysis={setAnalysis} />
       </Box>

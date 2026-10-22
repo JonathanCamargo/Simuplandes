@@ -790,3 +790,99 @@ describe("annotations", () => {
     expect(() => run({ ...stroke, width: 0 })).toThrow(CommandError);
   });
 });
+
+describe("deleteEntities: attachment sites", () => {
+  /**
+   * Bar A (path a1-a2) with an attachment site `ax` in its middle pinned to
+   * bar B's end `b1`; plate P with a corner site `pc` and an interior site
+   * `pi` pinned to `b2`; a ground pivot `g1` pinned to `a1`.
+   */
+  function base(): MechanismDocument {
+    return applyRecipes(MechanismDocumentSchema.parse({ schemaVersion: 2 }), [
+      addLink({
+        id: "A",
+        name: "A",
+        sites: [
+          { id: "a1", local: [0, 0] },
+          { id: "a2", local: [100, 0] },
+        ],
+      }),
+      addSite("A", { id: "ax", local: [50, 0] }),
+      addLink({
+        id: "B",
+        name: "B",
+        sites: [
+          { id: "b1", local: [50, 0] },
+          { id: "b2", local: [50, 80] },
+        ],
+      }),
+      addLink({
+        id: "P",
+        name: "P",
+        shape: {
+          kind: "plate",
+          outline: [
+            [40, 70],
+            [60, 70],
+            [60, 90],
+          ],
+        },
+        sites: [
+          { id: "pc", local: [40, 70] },
+          { id: "pi", local: [55, 78] },
+        ],
+      }),
+      addLink({ id: "G", name: "Ground", isGround: true, sites: [{ id: "g1", local: [0, 0] }] }),
+      addJoint({ id: "jA", type: "R", siteA: "ax", siteB: "b1" }),
+      addJoint({ id: "jP", type: "R", siteA: "pi", siteB: "b2" }),
+      addJoint({ id: "jC", type: "R", siteA: "pc", siteB: "b2" }),
+      addJoint({ id: "jG", type: "R", siteA: "g1", siteB: "a1" }),
+    ]);
+  }
+
+  function siteIds(doc: MechanismDocument): Set<string> {
+    return new Set(doc.links.flatMap((l) => l.sites.map((s) => s.id)));
+  }
+
+  it("deleting a pin on a bar's middle removes the point it added, not the bar's ends", () => {
+    const result = produce(base(), deleteEntities(new Set(["jA"])));
+    const ids = siteIds(result);
+    expect(ids.has("ax")).toBe(false);
+    expect(ids.has("b1")).toBe(true);
+    expect(ids.has("a1")).toBe(true);
+    expect(MechanismDocumentSchema.safeParse(result).success).toBe(true);
+  });
+
+  it("deleting a pin removes a plate's interior point but keeps its corners", () => {
+    const interior = produce(base(), deleteEntities(new Set(["jP"])));
+    expect(siteIds(interior).has("pi")).toBe(false);
+    const corner = produce(base(), deleteEntities(new Set(["jC"])));
+    expect(siteIds(corner).has("pc")).toBe(true);
+  });
+
+  it("deleting a link removes the points its joints had added on other links", () => {
+    const result = produce(base(), deleteEntities(new Set(["B"])));
+    const ids = siteIds(result);
+    expect(ids.has("ax")).toBe(false);
+    expect(ids.has("pi")).toBe(false);
+    expect(ids.has("pc")).toBe(true);
+    expect(result.joints.map((j) => j.id)).toEqual(["jG"]);
+    expect(MechanismDocumentSchema.safeParse(result).success).toBe(true);
+  });
+
+  it("keeps a ground pivot, and a point something else still uses", () => {
+    const grounded = produce(base(), deleteEntities(new Set(["jG"])));
+    expect(siteIds(grounded).has("g1")).toBe(true);
+
+    const withLoad = applyRecipes(base(), [addLoad({ id: "L", siteId: "ax", force: [0, -1] })]);
+    const loaded = produce(withLoad, deleteEntities(new Set(["jA"])));
+    expect(siteIds(loaded).has("ax")).toBe(true);
+    expect(loaded.loads).toHaveLength(1);
+
+    const twice = applyRecipes(base(), [
+      addJoint({ id: "jA2", type: "R", siteA: "ax", siteB: "pc" }),
+    ]);
+    const shared = produce(twice, deleteEntities(new Set(["jA"])));
+    expect(siteIds(shared).has("ax")).toBe(true);
+  });
+});

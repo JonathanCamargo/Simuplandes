@@ -45,6 +45,7 @@ import {
 // `src/ui/shell/toolIcons.tsx` and `TransportPlaceholder.tsx` for the same fix.
 import UndoIcon from "@mui/icons-material/esm/Undo";
 import RedoIcon from "@mui/icons-material/esm/Redo";
+import DeleteOutlineIcon from "@mui/icons-material/esm/DeleteOutline";
 import LightModeIcon from "@mui/icons-material/esm/LightMode";
 import DarkModeIcon from "@mui/icons-material/esm/DarkMode";
 import SearchIcon from "@mui/icons-material/esm/Search";
@@ -149,6 +150,7 @@ export function TopBar({
   const canRedo = useStore(session.store, (s) => s.canRedo);
   const undoLabel = useStore(session.store, (s) => s.undoLabel);
   const redoLabel = useStore(session.store, (s) => s.redoLabel);
+  const selectionSize = useStore(session.store, (s) => s.selection.size);
 
   const themeMode = useStore(preferencesStore, (s) => s.themeMode);
   const language = useStore(preferencesStore, (s) => s.language);
@@ -530,6 +532,23 @@ export function TopBar({
         >
           <RedoIcon fontSize="small" />
         </IconButton>
+        {/* Hidden in Simulate, which never edits. The compact bar has no room for it: on a
+            phone it floats on the canvas instead (CanvasArea). */}
+        {mode !== "simulate" && !compact && (
+          <Tooltip title={t("shell.deleteSelection")}>
+            <span>
+              <IconButton
+                size={iconSize}
+                onClick={() => session.store.getState().deleteSelection()}
+                disabled={selectionSize === 0}
+                sx={compactIconSx}
+                aria-label={t("shell.deleteSelection")}
+              >
+                <DeleteOutlineIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+        )}
 
         <ToggleButtonGroup
           exclusive

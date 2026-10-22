@@ -99,6 +99,44 @@ describe("applyToolEffects: commitBar", () => {
     expect(store.getState().document).toEqual(before);
   });
 
+  it("ends on link bodies add a site on each link and pin the bar's ends to them", () => {
+    const store = createMechanismStore({ validate: true });
+    const left = store.getState().addLink({
+      name: "Left",
+      pose: { position: [0, -50], angle: Math.PI / 2 },
+      sites: [{ local: [0, 0] }, { local: [100, 0] }],
+    });
+    const right = store.getState().addLink({
+      name: "Right",
+      pose: { position: [80, -50], angle: Math.PI / 2 },
+      sites: [{ local: [0, 0] }, { local: [100, 0] }],
+    });
+
+    const [result] = applyToolEffects(
+      store,
+      [
+        {
+          kind: "commitBar",
+          start: { x: 0, y: 0 },
+          angle: 0,
+          length: 80,
+          startLinkId: left.linkId,
+          endLinkId: right.linkId,
+        },
+      ],
+      { defaultNames: DEFAULT_NAMES },
+    );
+
+    const doc = store.getState().document;
+    const leftLink = doc.links.find((l) => l.id === left.linkId)!;
+    const rightLink = doc.links.find((l) => l.id === right.linkId)!;
+    expect(leftLink.sites[2].local[0]).toBeCloseTo(50, 9);
+    expect(rightLink.sites[2].local[0]).toBeCloseTo(50, 9);
+    expect(doc.joints).toHaveLength(2);
+    expect(doc.joints[0]).toMatchObject({ siteA: result.siteIds[0], siteB: leftLink.sites[2].id });
+    expect(doc.joints[1]).toMatchObject({ siteA: result.siteIds[1], siteB: rightLink.sites[2].id });
+  });
+
   it("names a new bar with a running index", () => {
     const store = createMechanismStore({ validate: true });
     applyToolEffects(store, [{ kind: "commitBar", start: { x: 0, y: 0 }, angle: 0, length: 1 }], {
@@ -216,6 +254,37 @@ describe("applyToolEffects: commitGroundPivot", () => {
   });
 });
 
+describe("applyToolEffects: commitGroundPivot on a link's body", () => {
+  it("adds a site on the link at the point and pins it to a new ground site", () => {
+    const store = createMechanismStore({ validate: true });
+    const bar = store.getState().addLink({
+      name: "Bar",
+      sites: [{ local: [0, 0] }, { local: [100, 0] }],
+    });
+
+    applyToolEffects(
+      store,
+      [{ kind: "commitGroundPivot", at: { x: 30, y: 0 }, linkId: bar.linkId }],
+      { defaultNames: DEFAULT_NAMES },
+    );
+
+    const doc = store.getState().document;
+    const ground = doc.links.find((l) => l.isGround)!;
+    const link = doc.links.find((l) => l.id === bar.linkId)!;
+    expect(link.sites.map((s) => s.local)).toEqual([
+      [0, 0],
+      [100, 0],
+      [30, 0],
+    ]);
+    expect(doc.joints).toHaveLength(1);
+    expect(doc.joints[0]).toMatchObject({
+      type: "R",
+      siteA: ground.sites[0].id,
+      siteB: link.sites[2].id,
+    });
+  });
+});
+
 describe("applyToolEffects: commitPin", () => {
   it("adds one R joint between the two given sites", () => {
     const store = createMechanismStore({ validate: true });
@@ -224,7 +293,13 @@ describe("applyToolEffects: commitPin", () => {
 
     const [result] = applyToolEffects(
       store,
-      [{ kind: "commitPin", siteA: a.siteIds[0], siteB: b.siteIds[0] }],
+      [
+        {
+          kind: "commitPin",
+          a: { kind: "site", siteId: a.siteIds[0] },
+          b: { kind: "site", siteId: b.siteIds[0] },
+        },
+      ],
       { defaultNames: DEFAULT_NAMES },
     );
 
@@ -232,6 +307,46 @@ describe("applyToolEffects: commitPin", () => {
     expect(doc.joints).toHaveLength(1);
     expect(doc.joints[0]).toMatchObject({ type: "R", siteA: a.siteIds[0], siteB: b.siteIds[0] });
     expect(result.siteIds).toEqual([a.siteIds[0], b.siteIds[0]]);
+  });
+
+  it("an end on a link's body adds a site there, off the bar's path, in ONE undo step", () => {
+    const store = createMechanismStore({ validate: true });
+    const bar = store.getState().addLink({
+      name: "Bar",
+      pose: { position: [10, 0], angle: Math.PI / 2 },
+      sites: [{ local: [0, 0] }, { local: [100, 0] }],
+    });
+    const other = store.getState().addLink({ name: "Other", sites: [{ local: [0, 0] }] });
+    const massBefore = computedMassProperties(
+      store.getState().document.links[0],
+      store.getState().document,
+    );
+    const before = store.getState().document;
+
+    const [result] = applyToolEffects(
+      store,
+      [
+        {
+          kind: "commitPin",
+          a: { kind: "link", linkId: bar.linkId, at: { x: 10, y: 40 } },
+          b: { kind: "site", siteId: other.siteIds[0] },
+        },
+      ],
+      { defaultNames: DEFAULT_NAMES },
+    );
+
+    const doc = store.getState().document;
+    const link = doc.links.find((l) => l.id === bar.linkId)!;
+    expect(link.sites).toHaveLength(3);
+    expect(link.sites[2].local[0]).toBeCloseTo(40, 9);
+    expect(link.sites[2].local[1]).toBeCloseTo(0, 9);
+    expect(link.shape).toEqual({ kind: "bar", path: bar.siteIds });
+    expect(computedMassProperties(link, doc)).toEqual(massBefore);
+    expect(doc.joints).toHaveLength(1);
+    expect(doc.joints[0]).toMatchObject({ siteA: link.sites[2].id, siteB: other.siteIds[0] });
+    expect(result.siteIds).toEqual([link.sites[2].id, other.siteIds[0]]);
+    store.getState().undo();
+    expect(store.getState().document).toEqual(before);
   });
 });
 

@@ -10,3 +10,4 @@ playwright-report
 blob-report
 fixtures/*.curve.json
 fixtures/*.graphthe.json
+to_delete
