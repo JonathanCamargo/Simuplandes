@@ -17,6 +17,7 @@ import { useSimRuntime } from "../../sim/react/useSimRuntime";
 import { poseFromWorldPoints, worldToLinkLocal, type MechanismDocument } from "../../model";
 import { localToWorld } from "../../geom";
 import { installDomStubs } from "../../test/domStubs";
+import { buildFiveBarFixture } from "../../sim/__fixtures__/documents";
 
 beforeAll(() => {
   installDomStubs();
@@ -360,8 +361,22 @@ describe("Transport: ignored motors", () => {
     const { studioStore } = renderTransport(twoMotorDoc);
     enterSimulate(studioStore);
 
+    expect(screen.getByText("Hay 1 motor adicional; se ignora")).toBeTruthy();
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Reproducir" }).disabled).toBe(
+      false,
+    );
+  });
+});
+
+describe("Transport: multi-input", () => {
+  it("drives a two-motor five-bar and names the scrubbed motor", () => {
+    const { studioStore } = renderTransport(buildFiveBarFixture());
+    enterSimulate(studioStore);
+
     expect(
-      screen.getByText("Hay 1 motor adicional; el transporte solo impulsa el primero"),
+      screen.getByText(
+        "2 motores lo impulsan: Reproducir los mueve todos; el deslizador mueve left-motor",
+      ),
     ).toBeTruthy();
     expect(screen.getByRole<HTMLButtonElement>("button", { name: "Reproducir" }).disabled).toBe(
       false,

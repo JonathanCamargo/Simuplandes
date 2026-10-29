@@ -5,9 +5,10 @@
  * of `poses.ts` -- everything downstream (transport, DOF badge, hint text)
  * reads a `SimSessionSummary`, never `src/kinematics` directly.
  *
- * v1 limitation (SIM-02): the transport drives only `document.motors[0]`.
- * A document with more than one motor still classifies and simulates fine;
- * `ignoredMotorCount` tells the UI how many motors are along for the ride.
+ * A 1-DOF mechanism is driven by `document.motors[0]`; any further motors
+ * are ignored (`ignoredMotorCount`). An N-DOF mechanism (N > 1) is driven by
+ * its first N motors at once (`drivenMotorCount`), provided they fully
+ * drive it; the scrubber still moves `motors[0]` alone.
  */
 
 import {
@@ -51,6 +52,8 @@ export interface SimSessionSummary {
   readonly inputMotorId: Id | null;
   readonly inputLabel: string;
   readonly ignoredMotorCount: number;
+  /** How many motors the compiled system drives: 1 for a 1-DOF mechanism, N for an N-DOF one, 0 with no input. */
+  readonly drivenMotorCount: number;
   readonly inputDisplayOffset: number;
   readonly gruebler: number | null;
   readonly rankDof: number | null;
@@ -81,9 +84,10 @@ interface DrivenInputInfo {
   readonly inputMotorId: Id | null;
   readonly inputLabel: string;
   readonly ignoredMotorCount: number;
+  readonly drivenMotorCount: number;
 }
 
-/** `DrivenInputInfo` plus the one-motor document to compile. */
+/** `DrivenInputInfo` plus the document (restricted to the driven motors) to compile. */
 interface DrivenInputChoice extends DrivenInputInfo {
   readonly simDoc: MechanismDocument;
 }
@@ -127,6 +131,7 @@ function chooseDrivenInput(doc: MechanismDocument): DrivenInputChoice {
       inputMotorId: motor.id,
       inputLabel: motor.name || jointLabel,
       ignoredMotorCount: doc.motors.length - 1,
+      drivenMotorCount: 1,
     };
   }
 
@@ -140,6 +145,7 @@ function chooseDrivenInput(doc: MechanismDocument): DrivenInputChoice {
       inputMotorId: null,
       inputLabel: "",
       ignoredMotorCount: 0,
+      drivenMotorCount: 0,
     };
   }
 
@@ -160,6 +166,7 @@ function chooseDrivenInput(doc: MechanismDocument): DrivenInputChoice {
     inputMotorId: null,
     inputLabel: tempJoint.name || tempJoint.id,
     ignoredMotorCount: 0,
+    drivenMotorCount: 1,
   };
 }
 
@@ -175,8 +182,8 @@ function rotaryDriverOffset(system: KinematicSystem): number {
 
 /**
  * Classifies drivability (step 6): the joint-rows-only rank DOF decides
- * no-dof/multi-dof first (it's a topology fact, independent of what drives
- * it); only then does the presence/adequacy of a driven input matter. A
+ * no-dof/multi-dof first (more freedom than driven inputs; only authored
+ * motors can drive more than one DOF); only then does the presence/adequacy of a driven input matter. A
  * real authored motor must also fully drive the pose's rank DOF
  * (`mobility.drivenDof === 0`) -- a motor mounted on a redundant/ineffective
  * row does not make the mechanism ready.
@@ -195,7 +202,8 @@ export function classifyDrivability(
   mobility: MobilityReport,
 ): { status: SimSessionStatus; reason: NotDrivableReason | null } {
   if (mobility.rankDof === 0) return { status: "not-drivable", reason: "no-dof" };
-  if (mobility.rankDof > 1) return { status: "not-drivable", reason: "multi-dof" };
+  const inputCount = drivingMode === "motor" ? Math.max(mobility.motorCount, 1) : 1;
+  if (mobility.rankDof > inputCount) return { status: "not-drivable", reason: "multi-dof" };
   if (drivingMode === "none") return { status: "not-drivable", reason: "no-input" };
   if (drivingMode === "motor" && mobility.drivenDof !== 0) {
     return { status: "not-drivable", reason: "multi-dof" };
@@ -217,6 +225,7 @@ function baseSummary(
     inputMotorId: info.inputMotorId,
     inputLabel: info.inputLabel,
     ignoredMotorCount: info.ignoredMotorCount,
+    drivenMotorCount: info.drivenMotorCount,
     inputDisplayOffset,
   };
 }
@@ -228,6 +237,7 @@ const EMPTY_INPUT_INFO: DrivenInputInfo = {
   inputMotorId: null,
   inputLabel: "",
   ignoredMotorCount: 0,
+  drivenMotorCount: 0,
 };
 
 function emptySession(doc: MechanismDocument): SimSession {
@@ -296,12 +306,37 @@ function invalidSession(
  * 6. Drivability is classified from rank DOF and the driven input (see
  *    `classifyDrivability`).
  * 7. `inputDisplayOffset` is read off the compiled rotary driver row, if any.
+ * 8. A one-motor result that is not drivable because the mechanism has
+ *    N > 1 DOF is classified again (steps 3-7) with the first N authored
+ *    motors (fewer if there are fewer), and that result is returned.
  */
 export function createSimSession(doc: MechanismDocument): SimSession {
   const hasMovingLink = doc.links.some((link) => !link.isGround);
   if (!hasMovingLink) return emptySession(doc);
 
   const choice = chooseDrivenInput(doc);
+  const single = classifyChoice(doc, choice);
+  const rankDof = single.summary.rankDof ?? 0;
+  if (
+    single.summary.reason !== "multi-dof" ||
+    choice.drivingMode !== "motor" ||
+    doc.motors.length < 2 ||
+    rankDof < 2
+  ) {
+    return single;
+  }
+
+  const drivenMotorCount = Math.min(doc.motors.length, rankDof);
+  return classifyChoice(doc, {
+    ...choice,
+    simDoc: { ...doc, motors: doc.motors.slice(0, drivenMotorCount) },
+    ignoredMotorCount: doc.motors.length - drivenMotorCount,
+    drivenMotorCount,
+  });
+}
+
+/** Steps 3-7 of `createSimSession` for one driven-input choice. */
+function classifyChoice(doc: MechanismDocument, choice: DrivenInputChoice): SimSession {
   const motorIndex = choice.drivingMode === "none" ? -1 : 0;
 
   let system: KinematicSystem;

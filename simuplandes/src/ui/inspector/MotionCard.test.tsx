@@ -19,6 +19,7 @@ const SUMMARY: SimSessionSummary = {
   inputMotorId: "m1",
   inputLabel: "motor-0",
   ignoredMotorCount: 0,
+  drivenMotorCount: 1,
   inputDisplayOffset: 0,
   gruebler: 1,
   rankDof: 1,

@@ -57,7 +57,8 @@ Accuracy target: a loop-closure residual below 1e-9 (in model units) on every co
 
 These live in `src/sim/`:
 
-- **Session** (`session.ts`): the primary motor is `motors[0]`. A document with no motor gets a temporary driver on the first ground–moving revolute joint. The session also runs the assembly and drivability checks.
+- **Session** (`session.ts`): the primary motor is `motors[0]`. An N-DOF mechanism (N > 1) is driven by its first N motors together, as long as they fully drive it; any further motors are ignored. A document with no motor gets a temporary driver on the first ground–moving revolute joint. The session also runs the assembly and drivability checks.
+- **Multi-input playback** (`runtime.ts`): with several driven motors, Play moves each one along its own drive in time, starting from the current pose. At a lock-up it reverses when loop is on and pauses otherwise. The scrubber and step move `motors[0]` alone. Drag moves the grabbed point using every driven motor.
 - **Runtime** (`runtime.ts`): play, pause, step, reset, speed, loop and scrub, with rocking reversal and a time history. It runs outside React.
 - **Drag-to-drive** (`kinematics/dragDrive.ts`, `sim/drag.ts`): this is inverse kinematics on the motor input. It estimates the input change from a tangent least-squares fit toward the pointer, then re-solves exactly with `advanceDrive`. Joints therefore never break (they hold to within 1e-6) during a drag.
 - **Sweeps and traces:** forward and backward marches give the full reachable range and closed coupler curves.

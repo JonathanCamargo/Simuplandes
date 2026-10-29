@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { build as buildFourBar, dims as fourBarDims } from "../kinematics/__fixtures__/fourBar";
 import { build as buildDoubleParallelogram } from "../kinematics/__fixtures__/doubleParallelogram";
+import { build as buildFiveBar } from "../kinematics/__fixtures__/fiveBar";
 import { openFourBar, impossibleFourBar } from "../kinematics/__fixtures__/misassembled";
 import { defineLink, makeDocument } from "../kinematics/__fixtures__/build";
 import { createEmptyDocument, createId, type MechanismDocument } from "../model";
@@ -102,6 +103,62 @@ describe("createSimSession: fourBar with a second (ignored) motor", () => {
       dynamics: { mode: "motion" as const },
     };
     expectNoMutation({ ...base, motors: [base.motors[0], secondMotor] });
+  });
+});
+
+describe("createSimSession: fiveBar (2 DOF)", () => {
+  it("is ready and drives both motors when there are two", () => {
+    const doc = buildFiveBar();
+    const session = createSimSession(doc);
+
+    expect(session.summary.status).toBe("ready");
+    expect(session.summary.rankDof).toBe(2);
+    expect(session.summary.drivenMotorCount).toBe(2);
+    expect(session.summary.ignoredMotorCount).toBe(0);
+    expect(session.summary.inputMotorId).toBe(doc.motors[0].id);
+    expect(session.system!.motors.map((m) => m.id)).toEqual(doc.motors.map((m) => m.id));
+    expect(session.motorIndex).toBe(0);
+  });
+
+  it("is not drivable (multi-dof) with a single motor", () => {
+    const base = buildFiveBar();
+    const session = createSimSession({ ...base, motors: [base.motors[0]] });
+
+    expect(session.summary.status).toBe("not-drivable");
+    expect(session.summary.reason).toBe("multi-dof");
+    expect(session.summary.drivenMotorCount).toBe(1);
+  });
+
+  it("drives the first two of three motors and reports the third as ignored", () => {
+    const base = buildFiveBar();
+    const jointA = base.joints.find((j) => j.name === "A")!;
+    const thirdMotor = {
+      id: createId("motor"),
+      name: "extra-motor",
+      jointId: jointA.id,
+      kind: "rotary" as const,
+      drive: { mode: "constant" as const, speed: 1 },
+      dynamics: { mode: "motion" as const },
+    };
+    const session = createSimSession({ ...base, motors: [...base.motors, thirdMotor] });
+
+    expect(session.summary.status).toBe("ready");
+    expect(session.summary.drivenMotorCount).toBe(2);
+    expect(session.summary.ignoredMotorCount).toBe(1);
+    expect(session.system!.motors).toHaveLength(2);
+  });
+
+  it("is not drivable when both motors sit on the same joint", () => {
+    const base = buildFiveBar();
+    const sameJoint = { ...base.motors[1], jointId: base.motors[0].jointId };
+    const session = createSimSession({ ...base, motors: [base.motors[0], sameJoint] });
+
+    expect(session.summary.status).toBe("not-drivable");
+    expect(session.summary.reason).toBe("multi-dof");
+  });
+
+  it("never mutates the document", () => {
+    expectNoMutation(buildFiveBar());
   });
 });
 
@@ -573,6 +630,7 @@ describe("inputDisplayValue / inputFromDisplay (rotary, fullRotation)", () => {
       inputMotorId: "motor-x",
       inputLabel: "x",
       ignoredMotorCount: 0,
+      drivenMotorCount: 1,
       inputDisplayOffset: (offsetDeg * Math.PI) / 180,
       gruebler: 1,
       rankDof: 1,
@@ -630,6 +688,7 @@ describe("inputDisplayValue / inputFromDisplay (bounded rotary)", () => {
     inputMotorId: "motor-x",
     inputLabel: "x",
     ignoredMotorCount: 0,
+    drivenMotorCount: 1,
     inputDisplayOffset: Math.PI / 3, // 60deg
     gruebler: 1,
     rankDof: 1,
@@ -671,6 +730,7 @@ describe("inputDisplayValue / inputFromDisplay (linear)", () => {
     inputMotorId: "motor-x",
     inputLabel: "x",
     ignoredMotorCount: 0,
+    drivenMotorCount: 1,
     inputDisplayOffset: 0,
     gruebler: 1,
     rankDof: 1,

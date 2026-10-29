@@ -3,7 +3,8 @@
  * always headlines Gruebler's `F` (a pure topology count, `research
  * Pitfall 2` -- never derive the headline from rank instead), and derives
  * the badge's color/explanation/motor note from comparing `F` to the
- * Jacobian's numerical rank at the document's reference pose (D5's
+ * Jacobian's numerical rank (and, for a multi-DOF mechanism, to the motor
+ * count: N motors on an N-DOF mechanism is "ok") at the document's reference pose (D5's
  * Gruebler-vs-rank split, `src/kinematics/mobility.ts`).
  *
  * `classifyDof`'s six-case ladder (documented on the function itself) is
@@ -65,8 +66,16 @@ export function classifyDof(
   return "singular";
 }
 
-function severityFor(kind: Exclude<DofKind, "empty" | "invalid">): DofSeverity {
-  if (kind === "ok") return "ok";
+/** True when the motors fully cover a multi-DOF mechanism (the transport then drives them all). */
+function isMotorDriven(kind: DofKind, motorCount: number, rankDof: number): boolean {
+  return kind === "multi-dof" && motorCount >= rankDof;
+}
+
+function severityFor(
+  kind: Exclude<DofKind, "empty" | "invalid">,
+  motorDriven: boolean,
+): DofSeverity {
+  if (kind === "ok" || motorDriven) return "ok";
   if (kind === "structure") return "error";
   return "warn"; // redundant-mobile, multi-dof, singular
 }
@@ -80,7 +89,7 @@ function computeMotorNoteKey(
   rankDof: number | null,
 ): DofReport["motorNoteKey"] {
   if (motorCount === 0 && (rankDof ?? 0) >= 1) return "sim.dof.motors.none";
-  if (motorCount > 1) return "sim.dof.motors.many";
+  if (motorCount > Math.max(rankDof ?? 0, 1)) return "sim.dof.motors.many";
   return null;
 }
 
@@ -143,7 +152,8 @@ export function computeDofReport(doc: MechanismDocument): DofReport {
 
   const mobility = analyzeMobility(system, system.q0);
   const kind = classifyDof(mobility.gruebler, mobility.rankDof);
-  const severity = severityFor(kind);
+  const motorDriven = isMotorDriven(kind, mobility.motorCount, mobility.rankDof);
+  const severity = severityFor(kind, motorDriven);
   const motorNoteKey = computeMotorNoteKey(mobility.motorCount, mobility.rankDof);
 
   return {
@@ -156,7 +166,9 @@ export function computeDofReport(doc: MechanismDocument): DofReport {
     redundantConstraints: mobility.redundantConstraints,
     motorCount: mobility.motorCount,
     headlineKey: "sim.dof.badge",
-    explanationKey: `sim.dof.explain.${toCamelCase(kind)}`,
+    explanationKey: motorDriven
+      ? "sim.dof.explain.multiDofDriven"
+      : `sim.dof.explain.${toCamelCase(kind)}`,
     motorNoteKey,
     values: {
       f: mobility.gruebler,

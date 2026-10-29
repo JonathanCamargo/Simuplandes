@@ -30,15 +30,16 @@
   "status": {
     "notDrivable": {
       "noDof": "This mechanism cannot move (0 DOF). See the F badge.",
-      "multiDof": "This mechanism has {{dof}} DOF and the transport drives a single input. See the F badge.",
+      "multiDof": "This mechanism has {{dof}} DOF: add {{dof}} motors to drive it. See the F badge.",
       "noInput": "There is no ground-connected joint to drive."
     },
     "temporaryDriver": "No motor: drag a link to move it; add a motor to use the scrubber",
     "assemblyFailed": "Could not assemble: {{joints}}",
     "invalid": "This document cannot be simulated: {{message}}",
     "empty": "Draw a mechanism to simulate it",
-    "ignoredMotors_one": "There is {{count}} extra motor; the transport drives only the first",
-    "ignoredMotors_other": "There are {{count}} extra motors; the transport drives only the first"
+    "ignoredMotors_one": "There is {{count}} extra motor; it is ignored",
+    "ignoredMotors_other": "There are {{count}} extra motors; they are ignored",
+    "multiInput": "{{count}} motors drive it: Play runs them all; the scrubber moves {{input}}"
   },
   "solver": {
     "label": "solver",
@@ -65,15 +66,16 @@
       "redundantMobile_one": "F = {{f}} by Gruebler, but this mechanism moves with {{rank}} DOF because a constraint is redundant (parallel links).",
       "redundantMobile_other": "F = {{f}} by Gruebler, but this mechanism moves with {{rank}} DOF because {{count}} constraints are redundant (parallel links).",
       "structure": "F = {{f}}: this is a structure; it cannot move.",
-      "multiDof": "F = {{f}}: it needs {{rank}} inputs; the transport drives a single motor.",
+      "multiDof": "F = {{f}}: it needs {{rank}} inputs; add {{rank}} motors to drive it.",
+      "multiDofDriven": "F = {{f}}: {{motorCount}} motors drive its {{rank}} DOF together.",
       "singular": "At the reference pose the mechanism has {{rank}} instantaneous DOF (singular position).",
       "empty": "Draw links and joints to see the mobility.",
       "invalid": "The document could not be analyzed."
     },
     "motors": {
       "none": "No motor: drag a link to move it; add a motor to use the scrubber.",
-      "many_one": "{{count}} motors: the transport drives only the first.",
-      "many_other": "{{count}} motors: the transport drives only the first."
+      "many_one": "{{count}} motors for {{rank}} DOF: the extra motors are ignored.",
+      "many_other": "{{count}} motors for {{rank}} DOF: the extra motors are ignored."
     }
   },
   "plots": {

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { computeDofReport, classifyDof } from "./dof";
 import * as fourBarFixture from "../kinematics/__fixtures__/fourBar";
 import * as doubleParallelogramFixture from "../kinematics/__fixtures__/doubleParallelogram";
+import * as fiveBarFixture from "../kinematics/__fixtures__/fiveBar";
 import { defineLink, makeDocument } from "../kinematics/__fixtures__/build";
 import { poseFromWorldPoints, createId, type MechanismDocument } from "../model";
 
@@ -77,6 +78,22 @@ describe("computeDofReport: fourBar", () => {
     const report = computeDofReport(twoMotorDoc);
     expect(report.motorNoteKey).toBe("sim.dof.motors.many");
     expect(report.values.motorCount).toBe(2);
+  });
+
+  it("five-bar with two motors: multi-dof, severity ok, driven explanation, no motor note", () => {
+    const report = computeDofReport(fiveBarFixture.build());
+    expect(report.kind).toBe("multi-dof");
+    expect(report.gruebler).toBe(2);
+    expect(report.severity).toBe("ok");
+    expect(report.explanationKey).toBe("sim.dof.explain.multiDofDriven");
+    expect(report.motorNoteKey).toBeNull();
+  });
+
+  it("five-bar with one motor: multi-dof, severity warn", () => {
+    const doc = fiveBarFixture.build();
+    const report = computeDofReport({ ...doc, motors: [doc.motors[0]] });
+    expect(report.severity).toBe("warn");
+    expect(report.explanationKey).toBe("sim.dof.explain.multiDof");
   });
 
   it("never mutates doc", () => {

@@ -35,6 +35,11 @@
  *   `play()` eases from the scrubbed/locked pose back toward
  *   `value(simTime)` through the ordinary `advanceDrive` predictor/corrector,
  *   never a jump.
+ * - A multi-input session (an N-DOF mechanism driven by N motors) plays
+ *   every motor along its own drive in time (`stepMultiInput`), offset so
+ *   playback continues from the current pose. A lock-up reverses time when
+ *   `loop` is on, and otherwise pauses and reverses the next `play()`. The
+ *   scrubber and step move `motors[0]` alone, holding the others.
  *
  * Drag-to-drive (SIM-03) and trace/sweep publishing (SIM-04) are thin calls
  * into `drag.ts`/`sweep.ts`/`traces.ts`/`plots.ts`; this module owns none of
@@ -219,6 +224,8 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
   let dragTarget: DragTarget | null = null;
   let driveMode: DriveMode = "constant";
   let motorSpeed = 1;
+  /** Multi-input playback: per-motor `inputs[k] - value_k(simTime)`, captured on `play()`. */
+  let driveOffsets = new Float64Array(0);
 
   let ratesBuf = new Float64Array(0);
   let accelsBuf = new Float64Array(0);
@@ -280,13 +287,19 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
     lastReadoutMs = now;
   }
 
-  /** Runs after every accepted (or rejected-but-recorded) solve: updates the reused rate/accel/measurement buffers, pushes one history row, publishes poses, and throttles both the history-version bump and the readout. */
+  /**
+   * Runs after every accepted (or rejected-but-recorded) solve: updates the
+   * reused rate/accel/measurement buffers, pushes one history row, publishes
+   * poses, and throttles both the history-version bump and the readout.
+   * `rate`/`accel` are the driven motor's (a number) or every motor's (an
+   * array indexed like `system.motors`, multi-input playback).
+   */
   function recordFrame(
     status: SolverReadoutStatus,
     residualNorm: number,
     nearSingular: boolean,
-    rate: number,
-    accel: number,
+    rate: number | Float64Array,
+    accel: number | Float64Array,
     nowMs: number,
     forceReadout: boolean,
   ): void {
@@ -304,9 +317,12 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
 
     ratesBuf.fill(0);
     accelsBuf.fill(0);
-    if (motorIndex >= 0) {
-      ratesBuf[motorIndex] = rate;
-      accelsBuf[motorIndex] = accel;
+    if (typeof rate !== "number" && typeof accel !== "number") {
+      ratesBuf.set(rate);
+      accelsBuf.set(accel);
+    } else if (motorIndex >= 0) {
+      ratesBuf[motorIndex] = rate as number;
+      accelsBuf[motorIndex] = accel as number;
     }
 
     const rateResult = solveVelocityAcceleration(system, currentState.q, ratesBuf, accelsBuf);
@@ -354,7 +370,75 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
     }
   }
 
+  /** True when the session drives more than one motor at once (an N-DOF mechanism, N > 1). */
+  function isMultiInput(): boolean {
+    return !!session?.system && session.system.motors.length > 1;
+  }
+
+  /** Captures `driveOffsets` so multi-input playback continues from the current pose. */
+  function captureDriveOffsets(): void {
+    const evalResult = evaluateDrivesAtTime(session!.system!, simTime);
+    driveOffsets = new Float64Array(state!.inputs.length);
+    if (!evalResult.ok) return;
+    for (let k = 0; k < driveOffsets.length; k++) {
+      driveOffsets[k] = state!.inputs[k] - evalResult.values[k];
+    }
+  }
+
+  /** One multi-input playback frame: every motor follows its own drive at `simTime`. */
+  function stepMultiInput(dt: number, nowMs: number): void {
+    const system = session!.system!;
+    const range = store.getState().range;
+    const loop = store.getState().loop;
+    const motorCount = system.motors.length;
+
+    simTime += direction * dt;
+    const evalResult = evaluateDrivesAtTime(system, simTime);
+    if (!evalResult.ok) {
+      store.getState().setPlaying(false);
+      recordFrame("invalid-input", 0, false, 0, 0, nowMs, true);
+      return;
+    }
+    const target = new Float64Array(motorCount);
+    const rates = new Float64Array(motorCount);
+    for (let k = 0; k < motorCount; k++) {
+      target[k] = evalResult.values[k] + driveOffsets[k];
+      rates[k] = direction * evalResult.rates[k];
+    }
+    const stepResult = advanceDrive(system, state!, target);
+    state = stepResult.state;
+    const status = stepResult.status;
+    let shouldPause = false;
+    if (status === "locked") {
+      // Back off to the bracketed pose's time so the reversal starts there.
+      simTime -= direction * dt;
+      direction = direction === 1 ? -1 : 1;
+      lockUp = { display: inputDisplayValue(session!.summary, range, state.inputs[0]) };
+      captureDriveOffsets();
+      if (!loop) shouldPause = true;
+    } else if (status !== "ok") {
+      shouldPause = true;
+    } else {
+      lockUp = null;
+    }
+
+    if (shouldPause) store.getState().setPlaying(false);
+    recordFrame(
+      status,
+      stepResult.residualNorm,
+      stepResult.singularity.nearSingular,
+      rates,
+      evalResult.accels,
+      nowMs,
+      shouldPause,
+    );
+  }
+
   function stepSimulation(dt: number, nowMs: number): void {
+    if (isMultiInput()) {
+      stepMultiInput(dt, nowMs);
+      return;
+    }
     // Only ever invoked from `frameTick` while `playing` is true, which
     // `play()` only sets after `canDrive()` passed -- so `session.system`,
     // `state` and a non-negative `motorIndex` are already guaranteed here.
@@ -782,6 +866,7 @@ export function createSimRuntime(opts: CreateSimRuntimeOptions): SimRuntime {
     if (!entered || !canDrive()) return;
     if (store.getState().playing) return;
     playStartInput = state!.inputs[session!.motorIndex];
+    if (isMultiInput()) captureDriveOffsets();
     lastFrameMs = scheduler.now();
     store.getState().setPlaying(true);
     scheduleFrame();

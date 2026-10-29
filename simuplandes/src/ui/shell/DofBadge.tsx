@@ -115,7 +115,7 @@ export function DofBadge({ mechanismStore }: DofBadgeProps): ReactNode {
           </Typography>
           {report.motorNoteKey ? (
             <Typography variant="body2" color="text.secondary">
-              {t(report.motorNoteKey, { count: report.values.motorCount })}
+              {t(report.motorNoteKey, { ...report.values, count: report.values.motorCount })}
             </Typography>
           ) : null}
         </Stack>

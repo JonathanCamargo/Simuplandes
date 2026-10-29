@@ -13,3 +13,4 @@
 
 export { build as buildDoubleParallelogram } from "../../kinematics/__fixtures__/doubleParallelogram";
 export { build as buildFourBarFixture } from "../../kinematics/__fixtures__/fourBar";
+export { build as buildFiveBarFixture } from "../../kinematics/__fixtures__/fiveBar";

@@ -100,6 +100,12 @@ function statusKeyAndValues(
       if (session.ignoredMotorCount > 0) {
         return { key: "sim.status.ignoredMotors", values: { count: session.ignoredMotorCount } };
       }
+      if (session.drivenMotorCount > 1) {
+        return {
+          key: "sim.status.multiInput",
+          values: { count: session.drivenMotorCount, input: session.inputLabel },
+        };
+      }
       return null;
     default:
       return null;

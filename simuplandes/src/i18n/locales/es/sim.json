@@ -30,15 +30,16 @@
   "status": {
     "notDrivable": {
       "noDof": "Este mecanismo no puede moverse (0 GDL). Mira el indicador F.",
-      "multiDof": "Este mecanismo tiene {{dof}} GDL y el transporte impulsa una sola entrada. Mira el indicador F.",
+      "multiDof": "Este mecanismo tiene {{dof}} GDL: agrega {{dof}} motores para impulsarlo. Mira el indicador F.",
       "noInput": "No hay una junta unida a tierra que se pueda impulsar."
     },
     "temporaryDriver": "Sin motor: arrastra un eslabón para moverlo; agrega un motor para usar el deslizador",
     "assemblyFailed": "No se pudo ensamblar: {{joints}}",
     "invalid": "No se puede simular este documento: {{message}}",
     "empty": "Dibuja un mecanismo para simularlo",
-    "ignoredMotors_one": "Hay {{count}} motor adicional; el transporte solo impulsa el primero",
-    "ignoredMotors_other": "Hay {{count}} motores adicionales; el transporte solo impulsa el primero"
+    "ignoredMotors_one": "Hay {{count}} motor adicional; se ignora",
+    "ignoredMotors_other": "Hay {{count}} motores adicionales; se ignoran",
+    "multiInput": "{{count}} motores lo impulsan: Reproducir los mueve todos; el deslizador mueve {{input}}"
   },
   "solver": {
     "label": "solver",
@@ -65,15 +66,16 @@
       "redundantMobile_one": "F = {{f}} según Gruebler, pero este mecanismo se mueve con {{rank}} GDL porque hay {{count}} restricción redundante (eslabones paralelos).",
       "redundantMobile_other": "F = {{f}} según Gruebler, pero este mecanismo se mueve con {{rank}} GDL porque hay {{count}} restricciones redundantes (eslabones paralelos).",
       "structure": "F = {{f}}: es una estructura; no puede moverse.",
-      "multiDof": "F = {{f}}: necesita {{rank}} entradas; el transporte impulsa un solo motor.",
+      "multiDof": "F = {{f}}: necesita {{rank}} entradas; agrega {{rank}} motores para impulsarlo.",
+      "multiDofDriven": "F = {{f}}: {{motorCount}} motores impulsan sus {{rank}} GDL a la vez.",
       "singular": "En la pose de referencia el mecanismo tiene {{rank}} GDL instantáneos (posición singular).",
       "empty": "Dibuja eslabones y juntas para ver la movilidad.",
       "invalid": "No se pudo analizar el documento."
     },
     "motors": {
       "none": "Sin motor: arrastra un eslabón para moverlo; agrega un motor para usar el deslizador.",
-      "many_one": "{{count}} motores: el transporte solo impulsa el primero.",
-      "many_other": "{{count}} motores: el transporte solo impulsa el primero."
+      "many_one": "{{count}} motores para {{rank}} GDL: los motores adicionales se ignoran.",
+      "many_other": "{{count}} motores para {{rank}} GDL: los motores adicionales se ignoran."
     }
   },
   "plots": {
