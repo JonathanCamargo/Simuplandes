@@ -8,7 +8,7 @@
  */
 
 import type { Vec2 } from "../geom";
-import type { AnnotationColor, Edge, Id, MechanismDocument, Vec2Tuple } from "../model";
+import type { AnnotationColor, BackgroundImage, Edge, Id, MechanismDocument, Vec2Tuple } from "../model";
 import type { SnapKinds, SnapResult } from "../canvas/snapping";
 import type { SelectionMode } from "../store/selection";
 import type { ToolId } from "./registry";
@@ -126,6 +126,8 @@ export type ToolEffect =
   | { kind: "addAnnotation"; points: Vec2Tuple[]; color: AnnotationColor; width: number }
   /** Annotations the Eraser crossed; one drag (`gestureId`) is one undo step. */
   | { kind: "deleteAnnotations"; ids: Id[]; gestureId: string }
+  /** The background image's new placement; one drag (`gestureId`) is one undo step. */
+  | { kind: "setBackground"; background: BackgroundImage; gestureId: string }
   /** A bar's new edges, coalesced by `gestureId` like `setPlateOutline`. */
   | { kind: "setBarEdges"; linkId: Id; edges: Edge[] | undefined; gestureId: string };
 

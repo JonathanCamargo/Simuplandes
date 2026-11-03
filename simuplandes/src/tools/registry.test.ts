@@ -3,7 +3,7 @@ import { TOOL_REGISTRY, EDIT_SHORTCUTS, toolById, toolsForMode, type ToolId } fr
 import { collectKeys, loadLocaleResources } from "../i18n/i18n";
 
 describe("TOOL_REGISTRY", () => {
-  it("has 10 tools in the UX.md rail order (plus the dynamics spring tool and Draw's Edit shape, Brush and Eraser)", () => {
+  it("has 10 tools in the UX.md rail order (plus the dynamics spring tool and Draw's Edit shape, Brush, Eraser and Image)", () => {
     const ids = TOOL_REGISTRY.map((t) => t.id);
     expect(ids).toEqual([
       "select",
@@ -19,13 +19,20 @@ describe("TOOL_REGISTRY", () => {
       "vertex",
       "brush",
       "eraser",
+      "image",
     ]);
   });
 
-  it("splits the rail by mode: Draw shows Pan, Edit shape, Brush and Eraser; Build everything else", () => {
-    expect(toolsForMode("draw").map((t) => t.id)).toEqual(["pan", "vertex", "brush", "eraser"]);
+  it("splits the rail by mode: Draw shows Pan, Edit shape, Brush, Eraser and Image; Build everything else", () => {
+    expect(toolsForMode("draw").map((t) => t.id)).toEqual([
+      "pan",
+      "vertex",
+      "brush",
+      "eraser",
+      "image",
+    ]);
     expect(toolsForMode("build").map((t) => t.id)).not.toContain("vertex");
-    expect(toolsForMode("build")).toHaveLength(TOOL_REGISTRY.length - 3);
+    expect(toolsForMode("build")).toHaveLength(TOOL_REGISTRY.length - 4);
   });
 
   it("has unique tool ids", () => {

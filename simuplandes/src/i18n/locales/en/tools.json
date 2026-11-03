@@ -137,6 +137,23 @@
     "clearAll": "Clear all notes",
     "toolbar": "Clear all notes"
   },
+  "image": {
+    "label": "Background image",
+    "description": "Import a picture to trace your mechanism over",
+    "hint": {
+      "idle": "Drag the image to move it · drag a corner to scale it",
+      "moving": "Release to place the image",
+      "scaling": "Release to set the size",
+      "empty": "Import an image from the toolbar to use it as a guide"
+    },
+    "toolbar": "Background image",
+    "import": "Import image…",
+    "replace": "Replace…",
+    "width": "Width",
+    "opacity": "Opacity",
+    "remove": "Remove",
+    "loadError": "That image could not be read"
+  },
   "defaultNames": {
     "bar": "Bar",
     "plate": "Plate",

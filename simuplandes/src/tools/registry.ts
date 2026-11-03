@@ -24,7 +24,8 @@ export type ToolId =
   | "marker"
   | "vertex"
   | "brush"
-  | "eraser";
+  | "eraser"
+  | "image";
 
 export type ToolGroup =
   "navigate" | "draw" | "connect" | "drive" | "measure" | "shape" | "annotate";
@@ -164,6 +165,15 @@ export const TOOL_REGISTRY: readonly ToolDescriptor[] = [
     labelKey: "tools.eraser.label",
     descKey: "tools.eraser.description",
     hintKey: "tools.eraser.hint.idle",
+    group: "annotate",
+    modes: ["draw"],
+  },
+  {
+    id: "image",
+    key: "i",
+    labelKey: "tools.image.label",
+    descKey: "tools.image.description",
+    hintKey: "tools.image.hint.idle",
     group: "annotate",
     modes: ["draw"],
   },

@@ -8,7 +8,7 @@
 
 import { useState, type ReactNode } from "react";
 import { useStore, type StoreApi } from "zustand";
-import { Box, Dialog, DialogContent, DialogTitle, IconButton } from "@mui/material";
+import { Box, Dialog, DialogContent, DialogTitle, IconButton, useMediaQuery } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import type { MechanismStore } from "../../store";
 import type { StudioState } from "../../uiState/studioStore";
@@ -21,7 +21,7 @@ import {
 import { commitImportedDocument } from "../import/commitDocument";
 import { ExampleCard } from "./ExampleCard";
 import { ReplaceConfirm } from "./ReplaceConfirm";
-import { useFullScreenDialog } from "../shell/useCompactLayout";
+import { COMPACT_MEDIA_QUERY, useFullScreenDialog } from "../shell/useCompactLayout";
 
 export interface ExamplesGalleryProps {
   store: MechanismStore;
@@ -39,6 +39,7 @@ export function ExamplesGallery({
 }: ExamplesGalleryProps): ReactNode {
   const { t } = useTranslation();
   const fullScreen = useFullScreenDialog();
+  const smallScreen = useMediaQuery(COMPACT_MEDIA_QUERY, { noSsr: true });
   const dialog = useStore(studio, (s) => s.dialog);
   const [pending, setPending] = useState<ExampleId | null>(null);
 
@@ -63,7 +64,12 @@ export function ExamplesGallery({
   const grid = (
     <Box
       data-testid="examples-gallery"
-      sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, justifyContent: "center" }}
+      sx={
+        // On a small screen the empty-state card keeps the examples on one swipeable row, leaving the canvas visible.
+        variant === "inline" && smallScreen
+          ? { display: "flex", gap: 1.5, overflowX: "auto", mx: -2, px: 2, pb: 0.5 }
+          : { display: "flex", flexWrap: "wrap", gap: 1.5, justifyContent: "center" }
+      }
     >
       {EXAMPLES.map((example) => (
         <ExampleCard key={example.id} example={example} onSelect={handleSelect} />

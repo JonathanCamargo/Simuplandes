@@ -1,6 +1,6 @@
 /**
  * The react-konva `Stage` + layer stack, pointer/wheel wiring, and the
- * status-bar cursor/snap publish. Layers (in paint order): grid, traces
+ * status-bar cursor/snap publish. Layers (in paint order): background image, grid, traces
  * (only when `traces?.length`), links, joints, overlays (+ `children`,
  * 04-04's live-draw previews), rulers.
  *
@@ -39,6 +39,7 @@ import { gridSpacingFor } from "./grid";
 import { buildRenderModel } from "./renderModel";
 import { hitTest } from "./hitTest";
 import type { PosesSource, TracePrimitive } from "./posesSource";
+import { BackgroundLayer } from "./layers/BackgroundLayer";
 import { GridLayer } from "./layers/GridLayer";
 import { LinksLayer } from "./layers/LinksLayer";
 import { JointsLayer } from "./layers/JointsLayer";
@@ -451,6 +452,7 @@ export function CanvasStage({
       onWheel={handleWheel}
       onContextMenu={(evt) => evt.evt.preventDefault()}
     >
+      <BackgroundLayer viewport={viewport} background={doc.background} />
       <GridLayer viewport={viewport} tokens={tokens} visible={gridVisible} />
       {traces && traces.length > 0 && (
         <TracesLayer viewport={viewport} tokens={tokens} traces={traces} />

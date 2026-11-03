@@ -22,6 +22,8 @@ import {
   type LinkShape,
   type Edge,
   type AnnotationColor,
+  type BackgroundImage,
+  BACKGROUND_IMAGE_DATA_URL,
   MAX_BULGE,
   remapEdges,
   type Pose,
@@ -571,6 +573,33 @@ export function addAnnotation(input: AnnotationInput): Recipe {
 export function clearAnnotations(): Recipe {
   return (draft) => {
     draft.annotations = [];
+  };
+}
+
+/** Sets (or, with `undefined`, removes) the background reference image. */
+export function setBackgroundImage(background: BackgroundImage | undefined): Recipe {
+  return (draft) => {
+    if (background === undefined) {
+      delete draft.background;
+      return;
+    }
+    const { src, center, width, height, opacity } = background;
+    if (!BACKGROUND_IMAGE_DATA_URL.test(src)) {
+      throw new CommandError("the background must be an embedded png, jpeg, webp or gif image");
+    }
+    if (!center.every(Number.isFinite))
+      throw new CommandError("the background centre must be finite");
+    if (!(Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0)) {
+      throw new CommandError("the background size must be positive");
+    }
+    if (!(opacity >= 0 && opacity <= 1)) throw new CommandError("opacity must be between 0 and 1");
+    draft.background = {
+      src,
+      center: cleanTuple(center),
+      width: cleanNumber(width),
+      height: cleanNumber(height),
+      opacity,
+    };
   };
 }
 

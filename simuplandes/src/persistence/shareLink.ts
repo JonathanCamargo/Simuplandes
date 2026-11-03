@@ -32,9 +32,15 @@ function fromBase64Url(text: string): Uint8Array<ArrayBuffer> {
   return Uint8Array.from(binary, (c) => c.charCodeAt(0));
 }
 
-/** Packs `doc` into the fragment form `#m=<data>`. */
+/**
+ * Packs `doc` into the fragment form `#m=<data>`. The background reference
+ * image is left out: an embedded picture would make the link far too long
+ * to paste anywhere (saved files keep it).
+ */
 export async function encodeShareHash(doc: MechanismDocument): Promise<string> {
-  const json = new TextEncoder().encode(JSON.stringify(doc));
+  const shared: Partial<MechanismDocument> = { ...doc };
+  delete shared.background;
+  const json = new TextEncoder().encode(JSON.stringify(shared));
   const packed = await pipe(json, new CompressionStream("deflate-raw"));
   return SHARE_HASH_PREFIX + toBase64Url(packed);
 }

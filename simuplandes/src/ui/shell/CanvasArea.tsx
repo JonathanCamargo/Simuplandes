@@ -43,6 +43,7 @@ import { useToolController } from "../../tools/react/useToolController";
 import { DynamicInputBadge } from "../../tools/react/DynamicInputBadge";
 import { EdgeToolbar } from "../../tools/react/EdgeToolbar";
 import { BrushToolbar } from "../../tools/react/BrushToolbar";
+import { BackgroundToolbar } from "../../tools/react/BackgroundToolbar";
 // `CanvasArea` (src/ui) is the seam's UI half: it may import `src/sim`
 // TYPES/stores (poses/readout), but `src/canvas` itself never imports
 // `src/sim` -- see `src/canvas/posesSource.ts`'s own TSDoc.
@@ -328,6 +329,10 @@ export function CanvasArea({
           touchAction: "none",
           WebkitUserSelect: "none",
           userSelect: "none",
+          // A host page's `main { margin }` rule (the robiolab site had
+          // `.Layout main`) must not push the canvas over the rows below it;
+          // the doubled class outranks a class + element selector.
+          "&&": { m: 0 },
         }}
       >
         {size.width > 0 && size.height > 0 && (
@@ -358,6 +363,7 @@ export function CanvasArea({
         )}
         {isSimulate ? null : <DynamicInputBadge dynamicInput={controller.dynamicInput} />}
         <BrushToolbar store={store} studio={studio} preferences={preferences} tokens={tokens} />
+        <BackgroundToolbar store={store} studio={studio} view={view} />
         {isSimulate ? null : (
           <EdgeToolbar
             menu={controller.edgeMenu}

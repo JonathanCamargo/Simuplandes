@@ -30,7 +30,7 @@ function ExampleCardImpl({ example, onSelect }: ExampleCardProps): ReactNode {
   }, [example.id]);
 
   return (
-    <Card variant="outlined" sx={{ width: THUMB_WIDTH + 2 }}>
+    <Card variant="outlined" sx={{ width: THUMB_WIDTH + 2, flexShrink: 0 }}>
       <CardActionArea
         data-testid="example-card"
         data-example-id={example.id}

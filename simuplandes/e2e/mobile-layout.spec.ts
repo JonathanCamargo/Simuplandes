@@ -40,6 +40,35 @@ async function pinch(
   await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
 }
 
+/** One finger dragged from `from` to `to` through CDP, so the browser's own touch scrolling applies. */
+async function swipe(
+  page: Page,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+): Promise<void> {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ ...from, id: 1 }],
+  });
+  const steps = 8;
+  for (let i = 1; i <= steps; i += 1) {
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [
+        {
+          x: from.x + ((to.x - from.x) * i) / steps,
+          y: from.y + ((to.y - from.y) * i) / steps,
+          id: 1,
+        },
+      ],
+    });
+  }
+  // The finger rests before lifting: a fling would swallow the next tap, as on a real phone.
+  await page.waitForTimeout(200);
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto("/?lang=en&theme=light");
   await expect(page.locator('[data-testid="canvas-area"] canvas').first()).toBeVisible();
@@ -70,6 +99,49 @@ test("a phone gets the compact shell and the dock as a sheet", async ({ page }) 
   await page.getByRole("button", { name: /Plots/ }).tap();
   await page.screenshot({ path: `${SHOTS}/portrait-simulate.png` });
 });
+
+for (const size of [
+  { name: "portrait", width: 390, height: 844 },
+  { name: "small", width: 360, height: 640 },
+  { name: "landscape", width: 844, height: 390 },
+]) {
+  test(`the empty-state card fits the canvas on a ${size.name} phone`, async ({ page }) => {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    const card = page.getByTestId("empty-state").locator(".MuiPaper-root").first();
+    await expect(card).toBeVisible();
+    await page.screenshot({ path: `${SHOTS}/empty-state-${size.name}.png` });
+
+    const canvas = (await page.getByTestId("canvas-area").boundingBox())!;
+    const box = (await card.boundingBox())!;
+    expect(box.y).toBeGreaterThanOrEqual(canvas.y);
+    expect(box.y + box.height).toBeLessThanOrEqual(canvas.y + canvas.height);
+    expect(box.x).toBeGreaterThanOrEqual(canvas.x);
+    expect(box.x + box.width).toBeLessThanOrEqual(canvas.x + canvas.width);
+
+    // A finger swipes through the examples, despite the canvas's `touch-action: none`.
+    const row = page.getByTestId("examples-gallery");
+    const rowBox = (await row.boundingBox())!;
+    const rowY = rowBox.y + rowBox.height / 2;
+    await swipe(page, { x: rowBox.x + 200, y: rowY }, { x: rowBox.x + 40, y: rowY });
+    await expect.poll(() => row.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+
+    // Every example stays reachable, and the card closes.
+    const last = page.getByTestId("example-card").last();
+    await last.scrollIntoViewIfNeeded();
+    await expect(last).toBeInViewport();
+
+    // Where the card itself has to scroll, the close button stays pinned in view.
+    if (await card.evaluate((el) => el.scrollHeight > el.clientHeight)) {
+      const x = box.x + box.width / 2;
+      await swipe(page, { x, y: box.y + 100 }, { x, y: box.y + 20 });
+      await expect.poll(() => card.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+      await expect(page.getByRole("button", { name: "Import graph…" })).toBeInViewport();
+    }
+    await expect(page.getByRole("button", { name: "Dismiss" })).toBeInViewport();
+    await page.getByRole("button", { name: "Dismiss" }).tap();
+    await expect(page.getByTestId("empty-state")).toHaveCount(0);
+  });
+}
 
 test("two fingers pinch-zoom and pan the canvas", async ({ page }) => {
   // A mechanism first: on an empty drawing the examples card covers the middle of a phone.

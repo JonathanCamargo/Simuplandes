@@ -137,6 +137,23 @@
     "clearAll": "Borrar todas las notas",
     "toolbar": "Borrar todas las notas"
   },
+  "image": {
+    "label": "Imagen de fondo",
+    "description": "Importa una imagen para calcar tu mecanismo sobre ella",
+    "hint": {
+      "idle": "Arrastra la imagen para moverla · arrastra una esquina para escalarla",
+      "moving": "Suelta para colocar la imagen",
+      "scaling": "Suelta para fijar el tamaño",
+      "empty": "Importa una imagen desde la barra para usarla como guía"
+    },
+    "toolbar": "Imagen de fondo",
+    "import": "Importar imagen…",
+    "replace": "Reemplazar…",
+    "width": "Ancho",
+    "opacity": "Opacidad",
+    "remove": "Quitar",
+    "loadError": "No se pudo leer esa imagen"
+  },
   "defaultNames": {
     "bar": "Barra",
     "plate": "Placa",

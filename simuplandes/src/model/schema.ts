@@ -243,6 +243,25 @@ export const AnnotationSchema = z.object({
   width: z.number().positive(),
 });
 
+/** The image types a background may embed (as a base64 data URL). */
+export const BACKGROUND_IMAGE_DATA_URL =
+  /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+=*$/;
+
+/**
+ * A reference picture under the drawing, to trace a mechanism over: the
+ * image embedded as a data URL, centred at `center` (WORLD coordinates,
+ * model units) and `width` x `height` model units in size. Like the
+ * annotations it is static, never moves in simulation and never affects
+ * the mechanism; drawings export without it.
+ */
+export const BackgroundImageSchema = z.object({
+  src: z.string().regex(BACKGROUND_IMAGE_DATA_URL),
+  center: Vec2TupleSchema,
+  width: z.number().positive(),
+  height: z.number().positive(),
+  opacity: z.number().min(0).max(1).default(0.5),
+});
+
 /** The default gravity, m/s² (world y-up). */
 export const DEFAULT_GRAVITY: readonly [number, number] = [0, -9.81];
 /** The default linear density of a bar, kg/m. */
@@ -279,6 +298,7 @@ const MechanismDocumentBaseSchema = z.object({
   loads: z.array(LoadSchema).default(() => []),
   springs: z.array(SpringSchema).default(() => []),
   annotations: z.array(AnnotationSchema).default(() => []),
+  background: BackgroundImageSchema.optional(),
   dynamics: DynamicsSettingsSchema.default(() => ({
     gravity: [DEFAULT_GRAVITY[0], DEFAULT_GRAVITY[1]] as [number, number],
     barDensity: DEFAULT_BAR_DENSITY,
@@ -533,6 +553,7 @@ export type MechanismDocument = z.output<typeof MechanismDocumentSchema>;
 export type MechanismDocumentInput = z.input<typeof MechanismDocumentSchema>;
 export type { Link, Joint, Motor, Marker, Load, Spring, Annotation };
 export type AnnotationColor = (typeof ANNOTATION_COLORS)[number];
+export type BackgroundImage = z.output<typeof BackgroundImageSchema>;
 export type LinkShape = Link["shape"];
 export type LinkShapeInput = z.input<typeof LinkShapeSchema>;
 export type Edge = z.output<typeof EdgeSchema>;

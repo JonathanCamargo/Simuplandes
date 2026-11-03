@@ -21,6 +21,7 @@ import AddLocationAltIcon from "@mui/icons-material/esm/AddLocationAlt";
 import ShapeLineIcon from "@mui/icons-material/esm/ShapeLine";
 import BrushIcon from "@mui/icons-material/esm/Brush";
 import AutoFixNormalIcon from "@mui/icons-material/esm/AutoFixNormal";
+import ImageIcon from "@mui/icons-material/esm/Image";
 import type { ToolId } from "../../tools/registry";
 
 /** A zigzag spring between two end dots; MUI has no spring glyph. */
@@ -50,4 +51,5 @@ export const TOOL_ICONS: Record<ToolId, ComponentType<SvgIconProps>> = {
   vertex: ShapeLineIcon,
   brush: BrushIcon,
   eraser: AutoFixNormalIcon,
+  image: ImageIcon,
 };

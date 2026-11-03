@@ -45,31 +45,49 @@ export function EmptyState({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        p: 1,
         pointerEvents: "none",
       }}
     >
+      {/* Never taller than the canvas: on a short screen the card scrolls inside itself, with the close button pinned. */}
       <Paper
         elevation={3}
-        sx={{ pointerEvents: "auto", p: 2, maxWidth: 640, position: "relative" }}
+        sx={{
+          pointerEvents: "auto",
+          p: 2,
+          maxWidth: 640,
+          maxHeight: "100%",
+          minWidth: 0,
+          overflowY: "auto",
+          // The canvas area's `touch-action: none` would otherwise block scrolling the card.
+          touchAction: "pan-x pan-y",
+        }}
       >
-        <IconButton
-          size="small"
-          aria-label={t("gallery.empty.dismiss")}
-          onClick={() => setDismissed(true)}
-          sx={{ position: "absolute", top: 4, right: 4 }}
-        >
-          <Box component="span" aria-hidden sx={{ fontSize: 14, lineHeight: 1 }}>
-            ✕
-          </Box>
-        </IconButton>
-        <Typography variant="h6" component="h2" sx={{ pr: 4 }}>
+        <Box sx={{ position: "sticky", top: 0, height: 0, zIndex: 1, textAlign: "right" }}>
+          <IconButton
+            size="small"
+            aria-label={t("gallery.empty.dismiss")}
+            onClick={() => setDismissed(true)}
+            sx={{
+              bgcolor: "background.paper",
+              "&:hover": { bgcolor: "background.paper" },
+              // A finger-sized target on touch screens.
+              "@media (pointer: coarse)": { p: 1.25 },
+            }}
+          >
+            <Box component="span" aria-hidden sx={{ fontSize: 14, lineHeight: 1 }}>
+              ✕
+            </Box>
+          </IconButton>
+        </Box>
+        <Typography variant="h6" component="h2" sx={{ pr: 5 }}>
           {t("gallery.empty.title")}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
           {t("gallery.empty.text")}
         </Typography>
         <ExamplesGallery store={store} studio={studio} variant="inline" onAnalysis={onAnalysis} />
-        <Box sx={{ display: "flex", gap: 1, mt: 1.5, justifyContent: "center" }}>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 1.5, justifyContent: "center" }}>
           <Button
             size="small"
             variant="outlined"

@@ -40,6 +40,21 @@ describe("share links", () => {
     expect(await decodeShareHash(await encodeShareHash(doc))).toEqual(doc);
   });
 
+  it("leaves out the background reference image", async () => {
+    const doc = MechanismDocumentSchema.parse({
+      ...fourBarFixture,
+      background: {
+        src: "data:image/png;base64,AAAA",
+        center: [0, 0],
+        width: 10,
+        height: 5,
+      },
+    });
+    const decoded = await decodeShareHash(await encodeShareHash(doc));
+    expect(decoded.background).toBeUndefined();
+    expect(decoded.links).toEqual(doc.links);
+  });
+
   it("uses only URL-safe characters after the prefix", async () => {
     const hash = await encodeShareHash(fourBarFixtureParsed);
     expect(hash.slice(SHARE_HASH_PREFIX.length)).toMatch(/^[A-Za-z0-9_-]+$/);

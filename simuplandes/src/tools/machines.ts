@@ -19,6 +19,7 @@ import { springTool } from "./springTool";
 import { vertexTool } from "./vertexTool";
 import { brushTool } from "./brushTool";
 import { eraserTool } from "./eraserTool";
+import { imageTool } from "./imageTool";
 import { toolById, type ToolId } from "./registry";
 import type { ToolMachine } from "./types";
 
@@ -58,4 +59,5 @@ export const TOOL_MACHINES: Readonly<Record<ToolId, AnyToolMachine>> = {
   vertex: erase(vertexTool),
   brush: erase(brushTool),
   eraser: erase(eraserTool),
+  image: erase(imageTool),
 };

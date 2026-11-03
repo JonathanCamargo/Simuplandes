@@ -21,6 +21,7 @@ import {
   setPlateOutline,
   setBarEdges,
   addAnnotation,
+  setBackgroundImage,
   deleteEntities,
   addJoint,
   addMotor,
@@ -527,6 +528,13 @@ export function applyToolEffects(
       }
       case "deleteAnnotations": {
         store.getState().execute("erase-annotations", deleteEntities(new Set(effect.ids)), {
+          coalesceKey: effect.gestureId,
+        });
+        results.push(NO_ENTITIES_RESULT);
+        break;
+      }
+      case "setBackground": {
+        store.getState().execute("edit-background", setBackgroundImage(effect.background), {
           coalesceKey: effect.gestureId,
         });
         results.push(NO_ENTITIES_RESULT);
