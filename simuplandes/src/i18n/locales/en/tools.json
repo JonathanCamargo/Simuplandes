@@ -11,7 +11,7 @@
   },
   "pan": {
     "label": "Pan",
-    "description": "Pan the view with a middle-drag or by holding H",
+    "description": "Pan the view by dragging, or with a middle-drag in any tool",
     "hint": {
       "idle": "Drag to pan the view; scroll to zoom"
     }
@@ -63,10 +63,22 @@
   },
   "slider": {
     "label": "Slider",
-    "description": "Create a prismatic joint with a sliding axis",
+    "description": "Prismatic joint between two parts, no rotation",
     "hint": {
-      "idle": "Click a site and drag the axis direction",
-      "aim": "Aim the axis (15° steps) or type the angle and ⏎ — angle {{angle}}°"
+      "idle": "Click the part that slides (a site or its body)",
+      "needLink": "Click a part: the slider joins two existing parts",
+      "aim": "Aim the axis (15° steps) or type the angle and ⏎; click a part to slide along it, or empty space for ground. Angle {{angle}}°",
+      "aimRail": "Slides along {{rail}}, angle {{angle}}°. Click to place",
+      "needRail": "Ground can't slide on ground: point at a moving part to use as the guide"
+    }
+  },
+  "sliderRevolute": {
+    "label": "Slider + revolute",
+    "description": "Slider block pinned to a part",
+    "hint": {
+      "idle": "Click a site or part to pin the block to, or empty space",
+      "aim": "Aim the axis (15° steps) or type the angle and ⏎; point at a part to slide along it. Guide: ground, angle {{angle}}°",
+      "aimRail": "Slides along {{rail}}, angle {{angle}}°. Click to place, or point at empty space to slide on ground"
     }
   },
   "motor": {

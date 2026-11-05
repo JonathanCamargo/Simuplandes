@@ -23,6 +23,7 @@ import type { Vec2 } from "../../geom";
 import type { RenderModel } from "../renderModel";
 import { angleToKonvaRotationDeg, worldToScreen, type Viewport } from "../viewport";
 import { springZigzag } from "../springGlyph";
+import { BLOCK_WIDTH, sliderGlyph } from "../sliderGlyph";
 
 export interface RenderLayers {
   links: Konva.Layer | null;
@@ -88,8 +89,17 @@ export function applyRenderModelToLayers(
   }
   for (const slider of model.sliders) {
     const node = jointNodes.get(`slider:${slider.jointId}`);
-    setPosition(node, slider.point, viewport);
-    if (node) node.rotation(angleToKonvaRotationDeg(slider.blockAngle));
+    if (!(node instanceof Konva.Group)) continue;
+    const rotation = angleToKonvaRotationDeg(slider.blockAngle);
+    const rail = worldToScreen(viewport, slider.point);
+    const glyph = sliderGlyph(rail, worldToScreen(viewport, slider.blockPoint), rotation);
+    node.x(rail.x);
+    node.y(rail.y);
+    node.rotation(rotation);
+    for (const child of node.getChildren()) {
+      if (child instanceof Konva.Line) child.points(glyph.guide);
+      else if (child instanceof Konva.Rect) child.x(glyph.blockX - BLOCK_WIDTH / 2);
+    }
   }
   for (const motor of model.motors) {
     setPosition(jointNodes.get(`motor:${motor.jointId}`), motor.point, viewport);

@@ -13,6 +13,7 @@ describe("TOOL_REGISTRY", () => {
       "groundPivot",
       "pin",
       "slider",
+      "sliderRevolute",
       "spring",
       "motor",
       "marker",
@@ -41,7 +42,7 @@ describe("TOOL_REGISTRY", () => {
   });
 
   it("has unique single lowercase-letter keys", () => {
-    const keys = TOOL_REGISTRY.map((t) => t.key);
+    const keys = TOOL_REGISTRY.flatMap((t) => (t.key ? [t.key] : []));
     expect(new Set(keys).size).toBe(keys.length);
     for (const key of keys) {
       expect(key).toMatch(/^[a-z]$/);

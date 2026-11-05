@@ -75,7 +75,10 @@ export interface PinPrimitive {
 
 export interface SliderPrimitive {
   jointId: Id;
+  /** The rail site (siteA), where the guide is drawn. */
   point: Vec2;
+  /** The sliding site (siteB), where the block is drawn. */
+  blockPoint: Vec2;
   /** Unit slide-axis direction in WORLD space. */
   axisWorld: Vec2;
   /** The rail/block's world-space orientation (radians), for `angleToKonvaRotationDeg`. */
@@ -256,6 +259,7 @@ export function buildRenderModel(
       sliders.push({
         jointId: joint.id,
         point: pointA,
+        blockPoint: pointB,
         axisWorld,
         blockAngle,
         selected: jointSelected,

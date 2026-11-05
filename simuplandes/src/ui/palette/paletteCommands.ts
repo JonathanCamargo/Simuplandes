@@ -63,7 +63,7 @@ export function buildPaletteCommands(): PaletteCommand[] {
     group: "tools",
     labelKey: tool.labelKey,
     keywordsKeys: [tool.descKey],
-    shortcut: tool.key.toUpperCase(),
+    shortcut: tool.key?.toUpperCase(),
     action: { type: "setTool", tool: tool.id },
   }));
 

@@ -31,6 +31,7 @@ import type { ReactNode } from "react";
 import { buildRenderModel } from "../../canvas/renderModel";
 import { worldToScreen, angleToKonvaRotationDeg, type Viewport } from "../../canvas/viewport";
 import { springZigzag, torsionalSpiral, LOAD_ARROW_LENGTH } from "../../canvas/springGlyph";
+import { BLOCK_HEIGHT, BLOCK_WIDTH, sliderGlyph } from "../../canvas/sliderGlyph";
 import type { TracePrimitive } from "../../canvas/posesSource";
 import type { Id, MechanismDocument, Pose } from "../../model";
 import { canvasTokensFor } from "../theme/studioTheme";
@@ -166,6 +167,39 @@ export function DrawingSvg({ doc, poses, traces, view, themeMode }: DrawingSvgPr
         );
       })}
 
+      {model.sliders.map((slider) => {
+        const s = screenXY(viewport, slider.point);
+        const rotation = angleToKonvaRotationDeg(slider.blockAngle);
+        const glyph = sliderGlyph(s, screenXY(viewport, slider.blockPoint), rotation);
+        return (
+          <g
+            key={slider.jointId}
+            data-kind="slider"
+            data-id={slider.jointId}
+            transform={`translate(${s.x},${s.y}) rotate(${rotation})`}
+          >
+            <polyline
+              points={glyph.guide.join(" ")}
+              fill="none"
+              stroke={tokens.muted}
+              strokeWidth={1.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <rect
+              x={glyph.blockX - BLOCK_WIDTH / 2}
+              y={-BLOCK_HEIGHT / 2}
+              width={BLOCK_WIDTH}
+              height={BLOCK_HEIGHT}
+              fill={tokens.panel2}
+              stroke={tokens.ink}
+              strokeWidth={1.5}
+            />
+          </g>
+        );
+      })}
+
+      {/* Pins after sliders: a slider block's revolute sits on the block and must stay visible. */}
       {model.pins.map((pin) => {
         const s = screenXY(viewport, pin.point);
         return (
@@ -180,38 +214,6 @@ export function DrawingSvg({ doc, poses, traces, view, themeMode }: DrawingSvgPr
             stroke={tokens.ink}
             strokeWidth={1.5}
           />
-        );
-      })}
-
-      {model.sliders.map((slider) => {
-        const s = screenXY(viewport, slider.point);
-        const rotation = angleToKonvaRotationDeg(slider.blockAngle);
-        return (
-          <g
-            key={slider.jointId}
-            data-kind="slider"
-            data-id={slider.jointId}
-            transform={`translate(${s.x},${s.y}) rotate(${rotation})`}
-          >
-            <line
-              x1={-24}
-              y1={0}
-              x2={24}
-              y2={0}
-              stroke={tokens.muted}
-              strokeWidth={1}
-              strokeDasharray="4 3"
-            />
-            <rect
-              x={-10}
-              y={-6}
-              width={20}
-              height={12}
-              fill={tokens.panel2}
-              stroke={tokens.ink}
-              strokeWidth={1.5}
-            />
-          </g>
         );
       })}
 

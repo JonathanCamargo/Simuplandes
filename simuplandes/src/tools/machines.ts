@@ -12,6 +12,7 @@ import { plateTool } from "./plateTool";
 import { groundPivotTool } from "./groundPivotTool";
 import { pinTool } from "./pinTool";
 import { sliderTool } from "./sliderTool";
+import { sliderRevoluteTool } from "./sliderRevoluteTool";
 import { selectTool } from "./selectTool";
 import { motorTool } from "./motorTool";
 import { markerTool } from "./markerTool";
@@ -53,6 +54,7 @@ export const TOOL_MACHINES: Readonly<Record<ToolId, AnyToolMachine>> = {
   groundPivot: erase(groundPivotTool),
   pin: erase(pinTool),
   slider: erase(sliderTool),
+  sliderRevolute: erase(sliderRevoluteTool),
   spring: erase(springTool),
   motor: erase(motorTool),
   marker: erase(markerTool),

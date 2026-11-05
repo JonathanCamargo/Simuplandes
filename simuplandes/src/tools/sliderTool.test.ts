@@ -1,36 +1,71 @@
 import { describe, expect, it } from "vitest";
 import { MechanismDocumentSchema, type MechanismDocument } from "../model";
-import { degToRad } from "../model/units";
 import type { SnapResult } from "../canvas/snapping";
-import type { ToolContext, ToolEvent } from "./types";
+import type { ToolContext, ToolEffect, ToolEvent } from "./types";
 import { sliderTool, type SliderToolState } from "./sliderTool";
 import { expectHintLocalized } from "./machines.test";
 
-function emptyDoc(): MechanismDocument {
-  return MechanismDocumentSchema.parse({ schemaVersion: 2 });
+// A rod (horizontal bar, sites at (0,0) and (100,0)) and a vertical
+// cylinder bar along x = 200, plus a ground pivot site at (-50, 0).
+function doc(): MechanismDocument {
+  return MechanismDocumentSchema.parse({
+    schemaVersion: 2,
+    links: [
+      {
+        id: "ground",
+        name: "Ground",
+        isGround: true,
+        pose: { position: [0, 0], angle: 0 },
+        shape: { kind: "bar", path: ["g0"] },
+        sites: [{ id: "g0", local: [-50, 0] }],
+      },
+      {
+        id: "rod",
+        name: "Rod",
+        isGround: false,
+        pose: { position: [0, 0], angle: 0 },
+        shape: { kind: "bar", path: ["r0", "r1"] },
+        sites: [
+          { id: "r0", local: [0, 0] },
+          { id: "r1", local: [100, 0] },
+        ],
+      },
+      {
+        id: "cyl",
+        name: "Cylinder",
+        isGround: false,
+        pose: { position: [200, -100], angle: Math.PI / 2 },
+        shape: { kind: "bar", path: ["c0", "c1"] },
+        sites: [
+          { id: "c0", local: [0, 0] },
+          { id: "c1", local: [200, 0] },
+        ],
+      },
+    ],
+  });
 }
 
-function ctxFor(doc: MechanismDocument, radiusWorld = 8): ToolContext {
-  return { doc, selection: new Set(), radiusWorld, gestureSeed: "test-gesture" };
+function ctxFor(d: MechanismDocument = doc()): ToolContext {
+  return { doc: d, selection: new Set(), radiusWorld: 4, gestureSeed: "test-gesture" };
 }
 
-function noneSnap(point: { x: number; y: number }): SnapResult {
-  return { kind: "none", point };
-}
+const none = (p: { x: number; y: number }): SnapResult => ({ kind: "none", point: p });
+const site = (p: { x: number; y: number }, siteId: string, linkId: string): SnapResult => ({
+  kind: "site",
+  point: p,
+  siteId,
+  linkId,
+});
 
-function angleSnap(point: { x: number; y: number }, angleDeg: number): SnapResult {
-  return { kind: "angle", point, angleDeg };
-}
-
-function siteSnap(point: { x: number; y: number }, siteId: string, linkId: string): SnapResult {
-  return { kind: "site", point, siteId, linkId };
-}
-
-function pointerdown(world: { x: number; y: number }, snap: SnapResult, button = 0): ToolEvent {
+function down(
+  world: { x: number; y: number },
+  snap: SnapResult = none(world),
+  button = 0,
+): ToolEvent {
   return { type: "pointerdown", world, snap, button, shift: false, mod: false, alt: false };
 }
 
-function pointermove(world: { x: number; y: number }, snap: SnapResult): ToolEvent {
+function move(world: { x: number; y: number }, snap: SnapResult = none(world)): ToolEvent {
   return { type: "pointermove", world, snap, button: -1, shift: false, mod: false, alt: false };
 }
 
@@ -38,250 +73,141 @@ function key(k: string): ToolEvent {
   return { type: "key", key: k, shift: false, mod: false, alt: false };
 }
 
-describe("sliderTool", () => {
-  it("a click starts aiming (busy)", () => {
-    const ctx = ctxFor(emptyDoc());
-    const result = sliderTool.reduce(
-      sliderTool.initial(),
-      pointerdown({ x: 5, y: 5 }, noneSnap({ x: 5, y: 5 })),
-      ctx,
-    );
-    expect(result.state).toMatchObject({ phase: "aiming", at: { x: 5, y: 5 } });
-    expect(sliderTool.isBusy(result.state)).toBe(true);
+function run(events: ToolEvent[], ctx = ctxFor()) {
+  let state: SliderToolState = sliderTool.initial();
+  let effects: ToolEffect[] = [];
+  for (const event of events) {
+    const result = sliderTool.reduce(state, event, ctx);
+    state = result.state;
+    effects = result.effects;
+  }
+  return { state, effects };
+}
+
+describe("sliderTool (pure prismatic)", () => {
+  it("a click in empty space does nothing but asks for a part", () => {
+    const { state, effects } = run([down({ x: 500, y: 500 })]);
+    expect(state).toEqual({ phase: "idle", lastMessage: "needLink" });
+    expect(effects).toEqual([]);
+    expect(sliderTool.hint(state, ctxFor()).key).toBe("tools.slider.hint.needLink");
+    expectHintLocalized(sliderTool.hint(state, ctxFor()));
   });
 
-  it("a click on a site carries siteId", () => {
-    const ctx = ctxFor(emptyDoc());
-    const result = sliderTool.reduce(
-      sliderTool.initial(),
-      pointerdown({ x: 5, y: 5 }, siteSnap({ x: 5, y: 5 }, "site-1", "link-1")),
-      ctx,
-    );
-    expect(result.state).toMatchObject({ siteId: "site-1" });
-  });
-
-  it("pointermove sets axisAngle from the cursor direction", () => {
-    const ctx = ctxFor(emptyDoc());
-    let state = sliderTool.reduce(
-      sliderTool.initial(),
-      pointerdown({ x: 0, y: 0 }, noneSnap({ x: 0, y: 0 })),
-      ctx,
-    ).state;
-    state = sliderTool.reduce(
-      state,
-      pointermove({ x: 10, y: 10 }, noneSnap({ x: 10, y: 10 })),
-      ctx,
-    ).state;
-    expect((state as { axisAngle: number }).axisAngle).toBeCloseTo(Math.atan2(10, 10));
-  });
-
-  it("an angle snap rounds axisAngle to the snapped 15deg value", () => {
-    const ctx = ctxFor(emptyDoc());
-    let state = sliderTool.reduce(
-      sliderTool.initial(),
-      pointerdown({ x: 0, y: 0 }, noneSnap({ x: 0, y: 0 })),
-      ctx,
-    ).state;
-    state = sliderTool.reduce(
-      state,
-      pointermove({ x: 10, y: 6 }, angleSnap({ x: 10, y: 6 }, 30)),
-      ctx,
-    ).state;
-    expect((state as { axisAngle: number }).axisAngle).toBeCloseTo(degToRad(30));
-  });
-
-  it("a pointermove at the anchor point (zero relative distance) doesn't change the axis", () => {
-    const ctx = ctxFor(emptyDoc());
-    let state = sliderTool.reduce(
-      sliderTool.initial(),
-      pointerdown({ x: 0, y: 0 }, noneSnap({ x: 0, y: 0 })),
-      ctx,
-    ).state;
-    state = sliderTool.reduce(
-      state,
-      pointermove({ x: 10, y: 6 }, angleSnap({ x: 10, y: 6 }, 30)),
-      ctx,
-    ).state;
-    const before = (state as { axisAngle: number }).axisAngle;
-    state = sliderTool.reduce(
-      state,
-      pointermove({ x: 0, y: 0 }, noneSnap({ x: 0, y: 0 })),
-      ctx,
-    ).state;
-    expect((state as { axisAngle: number }).axisAngle).toBe(before);
-  });
-
-  it("a click while aiming commits with the pointer-derived axis", () => {
-    const ctx = ctxFor(emptyDoc(), 4);
-    let state = sliderTool.reduce(
-      sliderTool.initial(),
-      pointerdown({ x: 0, y: 0 }, noneSnap({ x: 0, y: 0 })),
-      ctx,
-    ).state;
-    state = sliderTool.reduce(
-      state,
-      pointermove({ x: 10, y: 0 }, noneSnap({ x: 10, y: 0 })),
-      ctx,
-    ).state;
-    const result = sliderTool.reduce(
-      state,
-      pointerdown({ x: 10, y: 0 }, noneSnap({ x: 10, y: 0 })),
-      ctx,
-    );
-    expect(result.effects).toEqual([
-      {
-        kind: "commitSlider",
-        at: { x: 0, y: 0 },
-        axisAngle: 0,
-        siteId: undefined,
-        blockHalfSize: 6,
-      },
+  it("site on one part, then click on another bar: P joint between them, axis along the bar", () => {
+    const { state, effects } = run([
+      down({ x: 100, y: 0 }, site({ x: 100, y: 0 }, "r1", "rod")),
+      move({ x: 201, y: 50 }),
+      down({ x: 201, y: 50 }),
     ]);
-    expect(result.state).toEqual({ phase: "idle" });
+    expect(state).toEqual({ phase: "idle" });
+    expect(effects).toHaveLength(1);
+    const effect = effects[0] as Extract<ToolEffect, { kind: "commitPrismatic" }>;
+    expect(effect).toMatchObject({
+      kind: "commitPrismatic",
+      block: { kind: "site", siteId: "r1" },
+      at: { x: 100, y: 0 },
+      railLinkId: "cyl",
+    });
+    // The cylinder is vertical; the cursor is above the anchor, so the axis points +y.
+    expect(Math.cos(effect.axisAngle)).toBeCloseTo(0);
+    expect(Math.sin(effect.axisAngle)).toBeCloseTo(1);
   });
 
-  it("Enter commits with a typed angle exactly", () => {
-    const ctx = ctxFor(emptyDoc(), 4);
-    let state = sliderTool.reduce(
-      sliderTool.initial(),
-      pointerdown({ x: 0, y: 0 }, noneSnap({ x: 0, y: 0 })),
-      ctx,
-    ).state;
-    for (const k of ["4", "5"]) {
-      state = sliderTool.reduce(state, key(k), ctx).state;
-    }
-    const result = sliderTool.reduce(state, key("Enter"), ctx);
-    expect(result.effects).toEqual([
-      {
-        kind: "commitSlider",
-        at: { x: 0, y: 0 },
-        axisAngle: degToRad(45),
-        siteId: undefined,
-        blockHalfSize: 6,
-      },
+  it("a click on a part's body anchors the block there", () => {
+    const { state } = run([
+      down({ x: 40, y: 1 }, { kind: "link", point: { x: 40, y: 0 }, linkId: "rod" }),
     ]);
+    expect(state).toMatchObject({
+      phase: "aiming",
+      at: { x: 40, y: 0 },
+      block: { kind: "link", linkId: "rod", at: { x: 40, y: 0 } },
+      anchorLinkId: "rod",
+    });
   });
 
-  it("digits go straight to the angle field (no Tab needed)", () => {
-    const ctx = ctxFor(emptyDoc());
-    let state = sliderTool.reduce(
-      sliderTool.initial(),
-      pointerdown({ x: 0, y: 0 }, noneSnap({ x: 0, y: 0 })),
-      ctx,
-    ).state;
-    state = sliderTool.reduce(state, key("9"), ctx).state;
-    expect(sliderTool.dynamicInput(state)).toEqual({ field: "angle", length: "", angle: "9" });
+  it("a commit in empty space slides on ground at the aimed angle", () => {
+    const { effects } = run([
+      down({ x: 0, y: 0 }, site({ x: 0, y: 0 }, "r0", "rod")),
+      move({ x: -30, y: 0 }),
+      down({ x: -30, y: 0 }),
+    ]);
+    expect(effects[0]).toMatchObject({
+      kind: "commitPrismatic",
+      block: { kind: "site", siteId: "r0" },
+    });
+    expect(effects[0]).not.toHaveProperty("railLinkId");
+    expect((effects[0] as { axisAngle: number }).axisAngle).toBeCloseTo(Math.PI);
   });
 
-  it("an invalid typed angle does not commit", () => {
-    const ctx = ctxFor(emptyDoc());
-    let state = sliderTool.reduce(
-      sliderTool.initial(),
-      pointerdown({ x: 0, y: 0 }, noneSnap({ x: 0, y: 0 })),
-      ctx,
-    ).state;
-    state = sliderTool.reduce(state, key("."), ctx).state;
-    state = sliderTool.reduce(state, key("."), ctx).state;
-    const result = sliderTool.reduce(state, key("Enter"), ctx);
-    // "." then "." (ignored) leaves angle "." which parseNumberInput rejects.
-    expect(result.effects).toEqual([]);
+  it("the anchor's own part is never the guide", () => {
+    const { state } = run([
+      down({ x: 0, y: 0 }, site({ x: 0, y: 0 }, "r0", "rod")),
+      move({ x: 60, y: 0 }),
+    ]);
+    expect(state).toMatchObject({ phase: "aiming" });
+    expect(state).not.toHaveProperty("railLinkId", "rod");
+    expect((state as { railLinkId?: string }).railLinkId).toBeUndefined();
   });
 
-  it("Escape/cancel returns to idle", () => {
-    const ctx = ctxFor(emptyDoc());
-    const state = sliderTool.reduce(
-      sliderTool.initial(),
-      pointerdown({ x: 0, y: 0 }, noneSnap({ x: 0, y: 0 })),
+  it("a ground anchor needs a moving guide: empty-space commit is refused", () => {
+    const ctx = ctxFor();
+    const { state, effects } = run(
+      [down({ x: -50, y: 0 }, site({ x: -50, y: 0 }, "g0", "ground")), down({ x: -50, y: 80 })],
       ctx,
-    ).state;
-    const result = sliderTool.reduce(state, key("Escape"), ctx);
-    expect(result.state).toEqual({ phase: "idle" });
-    const result2 = sliderTool.reduce(state, { type: "cancel" }, ctx);
-    expect(result2.state).toEqual({ phase: "idle" });
-  });
+    );
+    expect(effects).toEqual([]);
+    expect(state.phase).toBe("aiming");
+    expect(sliderTool.hint(state, ctx).key).toBe("tools.slider.hint.needRail");
+    expectHintLocalized(sliderTool.hint(state, ctx));
 
-  it("right-click while aiming cancels", () => {
-    const ctx = ctxFor(emptyDoc());
-    const state = sliderTool.reduce(
-      sliderTool.initial(),
-      pointerdown({ x: 0, y: 0 }, noneSnap({ x: 0, y: 0 })),
-      ctx,
-    ).state;
     const result = sliderTool.reduce(
       state,
-      pointerdown({ x: 1, y: 1 }, noneSnap({ x: 1, y: 1 }), 2),
+      down({ x: 0, y: 0 }, site({ x: 0, y: 0 }, "r0", "rod")),
       ctx,
     );
-    expect(result.state).toEqual({ phase: "idle" });
+    expect(result.effects[0]).toMatchObject({
+      kind: "commitPrismatic",
+      block: { kind: "site", siteId: "g0" },
+      railLinkId: "rod",
+    });
   });
 
-  it("idle right-click / cancel are unhandled no-ops", () => {
-    const ctx = ctxFor(emptyDoc());
-    const rightClick = sliderTool.reduce(
-      sliderTool.initial(),
-      pointerdown({ x: 0, y: 0 }, noneSnap({ x: 0, y: 0 }), 2),
-      ctx,
-    );
-    expect(rightClick.handled).toBe(false);
-    const cancel = sliderTool.reduce(sliderTool.initial(), { type: "cancel" }, ctx);
-    expect(cancel.handled).toBe(false);
+  it("Enter commits a typed angle with the last hovered guide", () => {
+    const { effects } = run([
+      down({ x: 100, y: 0 }, site({ x: 100, y: 0 }, "r1", "rod")),
+      move({ x: 200, y: 20 }),
+      key("4"),
+      key("5"),
+      key("Enter"),
+    ]);
+    expect(effects[0]).toMatchObject({ kind: "commitPrismatic", railLinkId: "cyl" });
+    expect((effects[0] as { axisAngle: number }).axisAngle).toBeCloseTo(Math.PI / 4);
   });
 
-  it("hint reflects the current angle while aiming", () => {
-    const ctx = ctxFor(emptyDoc());
-    let state: SliderToolState = sliderTool.reduce(
-      sliderTool.initial(),
-      pointerdown({ x: 0, y: 0 }, noneSnap({ x: 0, y: 0 })),
-      ctx,
-    ).state;
-    state = sliderTool.reduce(
-      state,
-      pointermove({ x: 10, y: 0 }, noneSnap({ x: 10, y: 0 })),
-      ctx,
-    ).state;
-    const hint = sliderTool.hint(state, ctx);
-    expect(hint).toEqual({ key: "tools.slider.hint.aim", values: { angle: 0 } });
-    expectHintLocalized(hint);
+  it("hints are localized while aiming, with and without a guide", () => {
+    const ctx = ctxFor();
+    const aiming = run([down({ x: 0, y: 0 }, site({ x: 0, y: 0 }, "r0", "rod"))], ctx).state;
+    expect(sliderTool.hint(aiming, ctx).key).toBe("tools.slider.hint.aim");
+    expectHintLocalized(sliderTool.hint(aiming, ctx));
+    const onRail = sliderTool.reduce(aiming, move({ x: 200, y: 0 }), ctx).state;
+    expect(sliderTool.hint(onRail, ctx)).toMatchObject({
+      key: "tools.slider.hint.aimRail",
+      values: { rail: "Cylinder" },
+    });
+    expectHintLocalized(sliderTool.hint(onRail, ctx));
   });
 
-  it("hint is idle by default", () => {
-    const ctx = ctxFor(emptyDoc());
-    const hint = sliderTool.hint(sliderTool.initial(), ctx);
-    expect(hint).toEqual({ key: "tools.slider.hint.idle" });
-    expectHintLocalized(hint);
-  });
-
-  it("preview is a ray while aiming, empty while idle", () => {
-    const ctx = ctxFor(emptyDoc());
-    expect(sliderTool.preview(sliderTool.initial())).toEqual([]);
-    const state = sliderTool.reduce(
-      sliderTool.initial(),
-      pointerdown({ x: 1, y: 2 }, noneSnap({ x: 1, y: 2 })),
-      ctx,
-    ).state;
-    expect(sliderTool.preview(state)).toEqual([{ kind: "ray", from: { x: 1, y: 2 }, angle: 0 }]);
-  });
-
-  it("snapAnchor is the aim point while aiming, undefined while idle", () => {
-    const ctx = ctxFor(emptyDoc());
-    expect(sliderTool.snapAnchor(sliderTool.initial())).toBeUndefined();
-    const state = sliderTool.reduce(
-      sliderTool.initial(),
-      pointerdown({ x: 1, y: 2 }, noneSnap({ x: 1, y: 2 })),
-      ctx,
-    ).state;
-    expect(sliderTool.snapAnchor(state)).toEqual({ x: 1, y: 2 });
-  });
-
-  it("an unrecognized key is unhandled", () => {
-    const ctx = ctxFor(emptyDoc());
-    const state = sliderTool.reduce(
-      sliderTool.initial(),
-      pointerdown({ x: 0, y: 0 }, noneSnap({ x: 0, y: 0 })),
-      ctx,
-    ).state;
-    const result = sliderTool.reduce(state, key("z"), ctx);
-    expect(result.handled).toBe(false);
-    expect(result.state).toBe(state);
+  it("Escape and right-click cancel", () => {
+    expect(
+      run([down({ x: 0, y: 0 }, site({ x: 0, y: 0 }, "r0", "rod")), { type: "cancel" }]).state,
+    ).toEqual({
+      phase: "idle",
+    });
+    expect(
+      run([
+        down({ x: 0, y: 0 }, site({ x: 0, y: 0 }, "r0", "rod")),
+        down({ x: 5, y: 5 }, none({ x: 5, y: 5 }), 2),
+      ]).state,
+    ).toEqual({ phase: "idle" });
   });
 });

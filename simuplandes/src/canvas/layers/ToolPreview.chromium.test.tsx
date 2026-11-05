@@ -137,7 +137,7 @@ describe("ToolPreview (chromium, real Konva)", () => {
     const view = createViewStore();
     const { container, studio } = renderCanvasArea(view);
     const stageEl = await waitForStage(container);
-    setActiveTool(studio, "slider");
+    setActiveTool(studio, "sliderRevolute");
 
     dispatchPointer(
       stageEl,
@@ -152,7 +152,7 @@ describe("ToolPreview (chromium, real Konva)", () => {
     );
     await nextFrame();
 
-    await waitFor(() => expect(studio.getState().hint?.key).toBe("tools.slider.hint.aim"));
+    await waitFor(() => expect(studio.getState().hint?.key).toBe("tools.sliderRevolute.hint.aim"));
   });
 
   it("Pin: a point preview appears after picking the first site", async () => {

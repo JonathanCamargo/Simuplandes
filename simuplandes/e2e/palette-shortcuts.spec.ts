@@ -23,6 +23,7 @@ test("every registry tool key presses the matching rail button", async ({ page }
   await page.goto("/");
 
   for (const tool of TOOL_REGISTRY) {
+    if (!tool.key) continue;
     await page.keyboard.press(tool.key);
     await expect(page.locator(`[data-tool-id="${tool.id}"]`)).toHaveAttribute(
       "aria-pressed",

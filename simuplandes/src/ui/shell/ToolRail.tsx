@@ -71,8 +71,11 @@ export function ToolRail({
       >
         {tools.map((tool, index) => {
           const Icon = TOOL_ICONS[tool.id];
-          const label = `${t(tool.labelKey)} (${tool.key.toUpperCase()})`;
-          const tooltip = `${t(tool.labelKey)} — ${tool.key.toUpperCase()} — ${t(tool.descKey)}`;
+          const shortcut = tool.key?.toUpperCase();
+          const label = shortcut ? `${t(tool.labelKey)} (${shortcut})` : t(tool.labelKey);
+          const tooltip = shortcut
+            ? `${t(tool.labelKey)} — ${shortcut} — ${t(tool.descKey)}`
+            : `${t(tool.labelKey)} — ${t(tool.descKey)}`;
           const nextTool = tools[index + 1];
           const isLastOfGroup = nextTool === undefined || nextTool.group !== tool.group;
           const groupGap = horizontal ? { mr: 1 } : { mb: 1 };

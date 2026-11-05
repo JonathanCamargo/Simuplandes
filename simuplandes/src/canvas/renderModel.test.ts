@@ -247,6 +247,9 @@ describe("buildRenderModel: sliders", () => {
     expect(slider.axisWorld.x).toBeCloseTo(0, 9);
     expect(slider.axisWorld.y).toBeCloseTo(1, 9);
     expect(slider.blockAngle).toBeCloseTo(Math.PI / 2, 9);
+    // The guide is drawn at the rail site (siteA), the block at the sliding site (siteB).
+    expect(slider.point).toEqual({ x: 0, y: 0 });
+    expect(slider.blockPoint).toEqual({ x: 0, y: 0 });
   });
 });
 

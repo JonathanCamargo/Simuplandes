@@ -15,7 +15,6 @@ import HorizontalRuleIcon from "@mui/icons-material/esm/HorizontalRule";
 import PentagonIcon from "@mui/icons-material/esm/Pentagon";
 import AnchorIcon from "@mui/icons-material/esm/Anchor";
 import RadioButtonUncheckedIcon from "@mui/icons-material/esm/RadioButtonUnchecked";
-import SwapHorizIcon from "@mui/icons-material/esm/SwapHoriz";
 import AutorenewIcon from "@mui/icons-material/esm/Autorenew";
 import AddLocationAltIcon from "@mui/icons-material/esm/AddLocationAlt";
 import ShapeLineIcon from "@mui/icons-material/esm/ShapeLine";
@@ -37,6 +36,25 @@ const SpringIcon = createSvgIcon(
   "Spring",
 );
 
+/** A block on a hatched guide: the pure prismatic joint. */
+const SliderIcon = createSvgIcon(
+  <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <rect x="5" y="5" width="14" height="10" rx="1" />
+    <path d="M2 18h20M5 18l-2 4M10 18l-2 4M15 18l-2 4M20 18l-2 4" />
+  </g>,
+  "Slider",
+);
+
+/** A block (square) pinned by a revolute (circle): the slider block as its own body. */
+const SliderRevoluteIcon = createSvgIcon(
+  <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <rect x="5" y="3" width="14" height="12" rx="1" />
+    <circle cx="12" cy="9" r="3" />
+    <path d="M2 18h20M5 18l-2 4M10 18l-2 4M15 18l-2 4M20 18l-2 4" />
+  </g>,
+  "SliderRevolute",
+);
+
 export const TOOL_ICONS: Record<ToolId, ComponentType<SvgIconProps>> = {
   select: NearMeIcon,
   pan: PanToolIcon,
@@ -44,7 +62,8 @@ export const TOOL_ICONS: Record<ToolId, ComponentType<SvgIconProps>> = {
   plate: PentagonIcon,
   groundPivot: AnchorIcon,
   pin: RadioButtonUncheckedIcon,
-  slider: SwapHorizIcon,
+  slider: SliderIcon,
+  sliderRevolute: SliderRevoluteIcon,
   spring: SpringIcon,
   motor: AutorenewIcon,
   marker: AddLocationAltIcon,

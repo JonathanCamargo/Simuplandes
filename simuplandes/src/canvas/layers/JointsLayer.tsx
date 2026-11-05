@@ -24,6 +24,7 @@ import { Layer, Circle, Line, Rect, Arc, Arrow, Group } from "react-konva";
 import type Konva from "konva";
 import { worldToScreen, angleToKonvaRotationDeg, type Viewport } from "../viewport";
 import { springZigzag, torsionalSpiral, LOAD_ARROW_LENGTH } from "../springGlyph";
+import { BLOCK_HEIGHT, BLOCK_WIDTH, sliderGlyph } from "../sliderGlyph";
 import type { RenderModel } from "../renderModel";
 import type { CanvasTokens } from "../../ui/theme/tokens";
 
@@ -87,29 +88,10 @@ export const JointsLayer = forwardRef<Konva.Layer, JointsLayerProps>(function Jo
         );
       })}
 
-      {model.pins.map((pin) => {
-        const s = worldToScreen(viewport, pin.point);
-        const stroke = pin.selected ? tokens.selection : pin.hovered ? tokens.hover : tokens.ink;
-        const strokeWidth = 1.5 + (pin.hovered ? 2 : 0);
-        return (
-          <Circle
-            key={pin.jointId}
-            id={`pin:${pin.jointId}`}
-            name={haloNames(pin)}
-            x={s.x}
-            y={s.y}
-            radius={5}
-            fill={tokens.pin}
-            stroke={stroke}
-            strokeWidth={strokeWidth}
-            listening={false}
-          />
-        );
-      })}
-
       {model.sliders.map((slider) => {
         const s = worldToScreen(viewport, slider.point);
         const rotation = angleToKonvaRotationDeg(slider.blockAngle);
+        const glyph = sliderGlyph(s, worldToScreen(viewport, slider.blockPoint), rotation);
         const stroke = slider.selected
           ? tokens.selection
           : slider.hovered
@@ -127,23 +109,45 @@ export const JointsLayer = forwardRef<Konva.Layer, JointsLayerProps>(function Jo
             listening={false}
           >
             <Line
-              points={[-24, 0, 24, 0]}
+              points={glyph.guide}
               stroke={tokens.muted}
-              strokeWidth={1}
-              dash={[4, 3]}
+              strokeWidth={1.5}
+              lineCap="round"
+              lineJoin="round"
               listening={false}
             />
             <Rect
-              x={-10}
-              y={-6}
-              width={20}
-              height={12}
+              x={glyph.blockX - BLOCK_WIDTH / 2}
+              y={-BLOCK_HEIGHT / 2}
+              width={BLOCK_WIDTH}
+              height={BLOCK_HEIGHT}
               fill={tokens.panel2}
               stroke={stroke}
               strokeWidth={strokeWidth}
               listening={false}
             />
           </Group>
+        );
+      })}
+
+      {/* Pins after sliders: a slider block's revolute sits on the block and must stay visible. */}
+      {model.pins.map((pin) => {
+        const s = worldToScreen(viewport, pin.point);
+        const stroke = pin.selected ? tokens.selection : pin.hovered ? tokens.hover : tokens.ink;
+        const strokeWidth = 1.5 + (pin.hovered ? 2 : 0);
+        return (
+          <Circle
+            key={pin.jointId}
+            id={`pin:${pin.jointId}`}
+            name={haloNames(pin)}
+            x={s.x}
+            y={s.y}
+            radius={5}
+            fill={tokens.pin}
+            stroke={stroke}
+            strokeWidth={strokeWidth}
+            listening={false}
+          />
         );
       })}
 

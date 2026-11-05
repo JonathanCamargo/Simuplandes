@@ -11,7 +11,7 @@
   },
   "pan": {
     "label": "Desplazar",
-    "description": "Desplaza la vista con el botón central o manteniendo H",
+    "description": "Desplaza la vista arrastrando, o con el botón central en cualquier herramienta",
     "hint": {
       "idle": "Arrastra para desplazar la vista; rueda para hacer zoom"
     }
@@ -63,10 +63,22 @@
   },
   "slider": {
     "label": "Corredera",
-    "description": "Crea una articulación prismática con eje de deslizamiento",
+    "description": "Prismática entre dos piezas, sin giro",
     "hint": {
-      "idle": "Haz clic en un punto y arrastra la dirección del eje",
-      "aim": "Apunta el eje (pasos de 15°) o escribe el ángulo y ⏎ — ángulo {{angle}}°"
+      "idle": "Haz clic en la pieza que desliza (un punto o su cuerpo)",
+      "needLink": "Haz clic en una pieza: la corredera une dos piezas existentes",
+      "aim": "Apunta el eje (pasos de 15°) o escribe el ángulo y ⏎; haz clic en una pieza para deslizar sobre ella, o en un espacio vacío para la bancada. Ángulo {{angle}}°",
+      "aimRail": "Desliza sobre {{rail}}, ángulo {{angle}}°. Haz clic para colocar",
+      "needRail": "La bancada no puede deslizar sobre la bancada: señala una pieza móvil como guía"
+    }
+  },
+  "sliderRevolute": {
+    "label": "Corredera + revoluta",
+    "description": "Bloque corredera articulado a una pieza",
+    "hint": {
+      "idle": "Haz clic en un punto o pieza para articular el bloque, o en un espacio vacío",
+      "aim": "Apunta el eje (pasos de 15°) o escribe el ángulo y ⏎; señala una pieza para deslizar sobre ella. Guía: bancada, ángulo {{angle}}°",
+      "aimRail": "Desliza sobre {{rail}}, ángulo {{angle}}°. Haz clic para colocar, o señala un espacio vacío para deslizar sobre la bancada"
     }
   },
   "motor": {

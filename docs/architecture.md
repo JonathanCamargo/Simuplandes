@@ -37,7 +37,8 @@ sim/           Simulation orchestration: session, runtime (play/scrub/drag),
 canvas/        Viewport transform, grid, snapping, hit-testing, render model,
                Konva layers.
 tools/         Drawing tools as pure state machines: bar, plate, ground pivot,
-               pin, slider, motor, marker, select.
+               pin, slider (pure prismatic), slider + revolute (block body),
+               motor, marker, select.
 graph/         Link graph from the document, Gruebler, Baranov, assortment,
                canonical form, isomorphism, atlas identification, layouts.
 interchange/   GraphThe export/import, validation report, multi-joint split,

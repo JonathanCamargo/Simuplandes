@@ -46,7 +46,7 @@ describe("ShortcutSheet", () => {
     act(() => studioStore.getState().openShortcutSheet());
     const dialog = screen.getByRole("dialog");
     for (const tool of TOOL_REGISTRY) {
-      expect(within(dialog).getByText(tool.key.toUpperCase())).toBeTruthy();
+      if (tool.key) expect(within(dialog).getByText(tool.key.toUpperCase())).toBeTruthy();
     }
     expect(within(dialog).getAllByText(/./).length).toBeGreaterThan(0);
     expect(within(dialog).getByText("Barra")).toBeTruthy();

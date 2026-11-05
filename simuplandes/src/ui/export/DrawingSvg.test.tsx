@@ -225,3 +225,43 @@ describe("renderDrawingSvgText: springs and loads", () => {
     }
   });
 });
+
+describe("renderDrawingSvgText: slider + revolute", () => {
+  it("draws the revolute's pin over the slider block so it stays visible", async () => {
+    const { createMechanismStore } = await import("../../store");
+    const { applyToolEffects } = await import("../../tools/effects");
+    const store = createMechanismStore({ validate: true });
+    const crank = store.getState().addLink({ name: "Crank", sites: [{ local: [0, 0] }] });
+    applyToolEffects(
+      store,
+      [
+        {
+          kind: "commitSlider",
+          at: { x: 0, y: 0 },
+          axisAngle: 0,
+          blockHalfSize: 10,
+          siteId: crank.siteIds[0],
+        },
+      ],
+      {
+        defaultNames: {
+          bar: "Bar",
+          plate: "Plate",
+          ground: "Ground",
+          slider: "Slider",
+          marker: "Point",
+          spring: "Spring",
+        },
+      },
+    );
+    const svg = parse(
+      renderDrawingSvgText({ doc: store.getState().document, view: VIEW, themeMode: "light" }),
+    );
+    const kinds = Array.from(svg.querySelectorAll("[data-kind]")).map((el) =>
+      el.getAttribute("data-kind"),
+    );
+    expect(kinds).toContain("slider");
+    expect(kinds).toContain("pin");
+    expect(kinds.lastIndexOf("pin")).toBeGreaterThan(kinds.indexOf("slider"));
+  });
+});

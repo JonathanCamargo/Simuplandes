@@ -19,6 +19,7 @@ export type ToolId =
   | "groundPivot"
   | "pin"
   | "slider"
+  | "sliderRevolute"
   | "spring"
   | "motor"
   | "marker"
@@ -40,8 +41,12 @@ export type EditMode = "build" | "draw";
 
 export interface ToolDescriptor {
   id: ToolId;
-  /** Single lowercase-letter shortcut, matched by keyboard code (not layout-shifted). */
-  key: string;
+  /**
+   * Single lowercase-letter shortcut, matched by keyboard code (not
+   * layout-shifted). Absent: no single-key shortcut (e.g. Pan, which is
+   * also middle-drag).
+   */
+  key?: string;
   labelKey: string;
   descKey: string;
   hintKey: string;
@@ -62,7 +67,6 @@ export const TOOL_REGISTRY: readonly ToolDescriptor[] = [
   },
   {
     id: "pan",
-    key: "h",
     labelKey: "tools.pan.label",
     descKey: "tools.pan.description",
     hintKey: "tools.pan.hint.idle",
@@ -98,7 +102,7 @@ export const TOOL_REGISTRY: readonly ToolDescriptor[] = [
   },
   {
     id: "pin",
-    key: "j",
+    key: "r",
     labelKey: "tools.pin.label",
     descKey: "tools.pin.description",
     hintKey: "tools.pin.hint.idle",
@@ -111,6 +115,15 @@ export const TOOL_REGISTRY: readonly ToolDescriptor[] = [
     labelKey: "tools.slider.label",
     descKey: "tools.slider.description",
     hintKey: "tools.slider.hint.idle",
+    group: "connect",
+    modes: ["build"],
+  },
+  {
+    id: "sliderRevolute",
+    key: "h",
+    labelKey: "tools.sliderRevolute.label",
+    descKey: "tools.sliderRevolute.description",
+    hintKey: "tools.sliderRevolute.hint.idle",
     group: "connect",
     modes: ["build"],
   },

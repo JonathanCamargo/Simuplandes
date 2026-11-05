@@ -38,7 +38,7 @@ describe("buildPaletteCommands", () => {
     for (const [i, cmd] of toolCommands.entries()) {
       const tool = TOOL_REGISTRY[i];
       expect(cmd.action).toEqual({ type: "setTool", tool: tool.id });
-      expect(cmd.shortcut).toBe(tool.key.toUpperCase());
+      expect(cmd.shortcut).toBe(tool.key?.toUpperCase());
       expect(cmd.keywordsKeys).toEqual([tool.descKey]);
       expect(cmd.labelKey).toBe(tool.labelKey);
     }

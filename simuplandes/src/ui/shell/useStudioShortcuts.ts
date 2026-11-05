@@ -19,8 +19,11 @@ import { TOOL_REGISTRY, type ToolId } from "../../tools/registry";
 import { selectModalOpen, type StudioState } from "../../uiState/studioStore";
 import type { MechanismState } from "../../store";
 
-const TOOL_KEYS = TOOL_REGISTRY.map((tool) => tool.key).join(",");
-const TOOLS_BY_KEY = new Map(TOOL_REGISTRY.map((tool) => [tool.key, tool.id]));
+const KEYED_TOOLS = TOOL_REGISTRY.filter(
+  (tool): tool is typeof tool & { key: string } => tool.key !== undefined,
+);
+const TOOL_KEYS = KEYED_TOOLS.map((tool) => tool.key).join(",");
+const TOOLS_BY_KEY = new Map(KEYED_TOOLS.map((tool) => [tool.key, tool.id]));
 
 /**
  * Resolves the pressed key (`hotkeysEvent.keys?.[0]`) to a `ToolId`, or

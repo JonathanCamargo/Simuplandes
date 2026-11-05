@@ -8,7 +8,14 @@
  */
 
 import type { Vec2 } from "../geom";
-import type { AnnotationColor, BackgroundImage, Edge, Id, MechanismDocument, Vec2Tuple } from "../model";
+import type {
+  AnnotationColor,
+  BackgroundImage,
+  Edge,
+  Id,
+  MechanismDocument,
+  Vec2Tuple,
+} from "../model";
 import type { SnapKinds, SnapResult } from "../canvas/snapping";
 import type { SelectionMode } from "../store/selection";
 import type { ToolId } from "./registry";
@@ -82,11 +89,22 @@ export type ToolEffect =
   /** `siteId` pins that site; `linkId` adds a site on that link at `at` and pins it; neither: a lone pivot. */
   | { kind: "commitGroundPivot"; at: Vec2; siteId?: Id; linkId?: Id }
   | { kind: "commitPin"; a: LinkEnd; b: LinkEnd }
+  /**
+   * A pure prismatic joint: `block` (an existing site, or a point on a
+   * link's body where a site is added) slides along `railLinkId` (ground
+   * when absent), axis `axisAngle` (world) through `at`. No new link.
+   */
+  | { kind: "commitPrismatic"; block: LinkEnd; at: Vec2; axisAngle: number; railLinkId?: Id }
   | {
       kind: "commitSlider";
       at: Vec2;
       axisAngle: number;
+      /** Pin the block to this site. */
       siteId?: Id;
+      /** Pin the block to this link's body at `at` (a site is added there). */
+      linkId?: Id;
+      /** The moving link the block slides along (owns the P joint); absent: ground. */
+      railLinkId?: Id;
       blockHalfSize: number;
     }
   /** Selection changes are never part of undo history (by design). */

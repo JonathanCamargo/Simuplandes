@@ -440,6 +440,150 @@ describe("applyToolEffects: commitSlider", () => {
     const blockLink = store.getState().document.links.find((l) => !l.isGround);
     expect(blockLink?.name).toBe("Corredera 1");
   });
+
+  it("puts the P joint on a moving rail link (not ground) when railLinkId is given", () => {
+    const store = createMechanismStore({ validate: true });
+    const crank = store.getState().addLink({ name: "Crank", sites: [{ local: [0, 0] }] });
+    const rocker = store.getState().addLink({
+      name: "Rocker",
+      pose: { position: [0, 0], angle: Math.PI / 2 },
+      sites: [{ local: [0, 0] }, { local: [100, 0] }],
+    });
+    const before = store.getState().document;
+
+    applyToolEffects(
+      store,
+      [
+        {
+          kind: "commitSlider",
+          at: { x: 0, y: 50 },
+          axisAngle: Math.PI / 2,
+          blockHalfSize: 10,
+          siteId: crank.siteIds[0],
+          railLinkId: rocker.linkId,
+        },
+      ],
+      { defaultNames: DEFAULT_NAMES },
+    );
+
+    const doc = store.getState().document;
+    expect(MechanismDocumentSchema.safeParse(doc).success).toBe(true);
+    expect(doc.links.some((l) => l.isGround)).toBe(false);
+    const p = doc.joints.find((j) => j.type === "P");
+    const rockerLink = doc.links.find((l) => l.id === rocker.linkId)!;
+    const railSite = rockerLink.sites.find((s) => s.id === p?.siteA);
+    expect(railSite).toBeDefined();
+    expect(railSite!.local[0]).toBeCloseTo(50);
+    expect(railSite!.local[1]).toBeCloseTo(0);
+    if (p?.type === "P") {
+      // World +y on a rocker rotated 90deg is its local +x.
+      expect(p.axis[0]).toBeCloseTo(1);
+      expect(p.axis[1]).toBeCloseTo(0);
+    }
+    const r = doc.joints.find((j) => j.type === "R");
+    expect(r?.siteB).toBe(crank.siteIds[0]);
+
+    store.getState().undo();
+    expect(store.getState().document).toEqual(before);
+  });
+
+  it("pins the block to a link body point when linkId is given", () => {
+    const store = createMechanismStore({ validate: true });
+    const bar = store.getState().addLink({ name: "B", sites: [{ local: [0, 0] }] });
+    applyToolEffects(
+      store,
+      [
+        {
+          kind: "commitSlider",
+          at: { x: 20, y: 0 },
+          axisAngle: 0,
+          blockHalfSize: 10,
+          linkId: bar.linkId,
+        },
+      ],
+      { defaultNames: DEFAULT_NAMES },
+    );
+    const doc = store.getState().document;
+    const barLink = doc.links.find((l) => l.id === bar.linkId)!;
+    expect(barLink.sites).toHaveLength(2);
+    const r = doc.joints.find((j) => j.type === "R");
+    expect(r?.siteB).toBe(barLink.sites[1].id);
+  });
+});
+
+describe("applyToolEffects: commitPrismatic", () => {
+  it("joins two existing links with ONE P joint (no new link, no R), one undo step", () => {
+    const store = createMechanismStore({ validate: true });
+    const rod = store.getState().addLink({ name: "Rod", sites: [{ local: [0, 0] }] });
+    const cyl = store.getState().addLink({
+      name: "Cylinder",
+      pose: { position: [0, 0], angle: Math.PI / 2 },
+      sites: [{ local: [0, 0] }],
+    });
+    const before = store.getState().document;
+
+    const [result] = applyToolEffects(
+      store,
+      [
+        {
+          kind: "commitPrismatic",
+          block: { kind: "site", siteId: rod.siteIds[0] },
+          at: { x: 0, y: 30 },
+          axisAngle: Math.PI / 2,
+          railLinkId: cyl.linkId,
+        },
+      ],
+      { defaultNames: DEFAULT_NAMES },
+    );
+
+    const doc = store.getState().document;
+    expect(MechanismDocumentSchema.safeParse(doc).success).toBe(true);
+    expect(doc.links).toHaveLength(2);
+    expect(doc.joints).toHaveLength(1);
+    const p = doc.joints[0];
+    expect(p.type).toBe("P");
+    expect(p.siteB).toBe(rod.siteIds[0]);
+    const cylLink = doc.links.find((l) => l.id === cyl.linkId)!;
+    const railSite = cylLink.sites.find((s) => s.id === p.siteA)!;
+    expect(railSite.local[0]).toBeCloseTo(30);
+    expect(railSite.local[1]).toBeCloseTo(0);
+    if (p.type === "P") {
+      expect(p.axis[0]).toBeCloseTo(1);
+      expect(p.axis[1]).toBeCloseTo(0);
+    }
+    expect(result.linkId).toBeUndefined();
+
+    store.getState().undo();
+    expect(store.getState().document).toEqual(before);
+  });
+
+  it("adds a site on the sliding link's body, and uses ground as the guide when no rail is given", () => {
+    const store = createMechanismStore({ validate: true });
+    const rod = store.getState().addLink({ name: "Rod", sites: [{ local: [0, 0] }] });
+    applyToolEffects(
+      store,
+      [
+        {
+          kind: "commitPrismatic",
+          block: { kind: "link", linkId: rod.linkId, at: { x: 20, y: 0 } },
+          at: { x: 20, y: 0 },
+          axisAngle: 0,
+        },
+      ],
+      { defaultNames: DEFAULT_NAMES },
+    );
+    const doc = store.getState().document;
+    const ground = doc.links.find((l) => l.isGround)!;
+    const rodLink = doc.links.find((l) => l.id === rod.linkId)!;
+    expect(doc.links).toHaveLength(2);
+    expect(rodLink.sites).toHaveLength(2);
+    expect(doc.joints).toHaveLength(1);
+    expect(doc.joints[0]).toMatchObject({
+      type: "P",
+      siteA: ground.sites[0].id,
+      siteB: rodLink.sites[1].id,
+    });
+  });
 });
 
 describe("applyToolEffects: select / clearSelection", () => {

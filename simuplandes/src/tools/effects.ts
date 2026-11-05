@@ -307,6 +307,80 @@ function buildCommitPin(
   return { label: "add-pin", recipes, result: { siteIds: [siteA, siteB], createdIds } };
 }
 
+/**
+ * Adds a site on the rail (the chosen moving link, else ground) at
+ * `slide.at` and a P joint from it (siteA, which owns the axis) to
+ * `blockSiteId` (siteB, the sliding side). Returns the rail site's id.
+ */
+function prismaticStep(
+  doc: MechanismDocument,
+  slide: { at: Vec2; axisAngle: number; railLinkId?: Id },
+  blockSiteId: Id,
+  idFactory: (kind: "link" | "site" | "joint") => Id,
+  defaultNames: DefaultNames,
+  recipes: Recipe[],
+  createdIds: Id[],
+): Id {
+  const rail = slide.railLinkId
+    ? doc.links.find((l) => l.id === slide.railLinkId && !l.isGround)
+    : undefined;
+  let railSiteId: Id;
+  let railPose: Pose;
+  if (rail) {
+    railSiteId = idFactory("site");
+    railPose = rail.pose;
+    recipes.push(
+      addSite(rail.id, { id: railSiteId, local: worldToLinkLocal(rail.pose, slide.at) }),
+    );
+    createdIds.push(railSiteId);
+  } else {
+    const ground = groundSiteStep(doc, slide.at, idFactory, defaultNames, recipes);
+    railSiteId = ground.groundSiteId;
+    railPose = ground.groundPose;
+    if (ground.createdLink) createdIds.push(ground.groundLinkId);
+    createdIds.push(railSiteId);
+  }
+
+  const axisLocal = rotate(fromPolar(1, slide.axisAngle), -railPose.angle);
+  const pJointId = idFactory("joint");
+  recipes.push(
+    addJoint({
+      id: pJointId,
+      type: "P",
+      siteA: railSiteId,
+      siteB: blockSiteId,
+      axis: [axisLocal.x, axisLocal.y],
+    }),
+  );
+  createdIds.push(pJointId);
+  return railSiteId;
+}
+
+function buildCommitPrismatic(
+  effect: Extract<ToolEffect, { kind: "commitPrismatic" }>,
+  doc: MechanismDocument,
+  idFactory: (kind: "link" | "site" | "joint") => Id,
+  defaultNames: DefaultNames,
+): { label: string; recipes: Recipe[]; result: CommitResult } {
+  const recipes: Recipe[] = [];
+  const createdIds: Id[] = [];
+  const blockSiteId = linkEndSite(doc, effect.block, idFactory, recipes, createdIds);
+  const railSiteId = prismaticStep(
+    doc,
+    effect,
+    blockSiteId,
+    idFactory,
+    defaultNames,
+    recipes,
+    createdIds,
+  );
+  return {
+    label: "add-prismatic",
+    recipes,
+    result: { siteIds: [blockSiteId, railSiteId], createdIds },
+  };
+}
+
 function buildCommitSlider(
   effect: Extract<ToolEffect, { kind: "commitSlider" }>,
   doc: MechanismDocument,
@@ -336,42 +410,33 @@ function buildCommitSlider(
     }),
   );
 
-  const { groundLinkId, groundSiteId, groundPose, createdLink } = groundSiteStep(
+  const createdIds: Id[] = [blockLinkId, blockSiteId];
+  const railSiteId = prismaticStep(
     doc,
-    effect.at,
+    effect,
+    blockSiteId,
     idFactory,
     defaultNames,
     recipes,
+    createdIds,
   );
 
-  const axisWorld = fromPolar(1, effect.axisAngle);
-  const axisLocal = rotate(axisWorld, -groundPose.angle);
-
-  const pJointId = idFactory("joint");
-  recipes.push(
-    addJoint({
-      id: pJointId,
-      type: "P",
-      siteA: groundSiteId,
-      siteB: blockSiteId,
-      axis: [axisLocal.x, axisLocal.y],
-    }),
-  );
-
-  const createdIds: Id[] = createdLink
-    ? [blockLinkId, blockSiteId, groundLinkId, groundSiteId, pJointId]
-    : [blockLinkId, blockSiteId, groundSiteId, pJointId];
-
-  if (effect.siteId) {
+  const pin: LinkEnd | undefined = effect.siteId
+    ? { kind: "site", siteId: effect.siteId }
+    : effect.linkId
+      ? { kind: "link", linkId: effect.linkId, at: effect.at }
+      : undefined;
+  if (pin) {
+    const pinSiteId = linkEndSite(doc, pin, idFactory, recipes, createdIds);
     const rJointId = idFactory("joint");
-    recipes.push(addJoint({ id: rJointId, type: "R", siteA: blockSiteId, siteB: effect.siteId }));
+    recipes.push(addJoint({ id: rJointId, type: "R", siteA: blockSiteId, siteB: pinSiteId }));
     createdIds.push(rJointId);
   }
 
   return {
     label: "add-slider",
     recipes,
-    result: { linkId: blockLinkId, siteIds: [blockSiteId, groundSiteId], createdIds },
+    result: { linkId: blockLinkId, siteIds: [blockSiteId, railSiteId], createdIds },
   };
 }
 
@@ -431,6 +496,17 @@ export function applyToolEffects(
       }
       case "commitPin": {
         const built = buildCommitPin(effect, store.getState().document, idFactory);
+        store.getState().execute(built.label, built.recipes);
+        results.push(built.result);
+        break;
+      }
+      case "commitPrismatic": {
+        const built = buildCommitPrismatic(
+          effect,
+          store.getState().document,
+          idFactory,
+          options.defaultNames,
+        );
         store.getState().execute(built.label, built.recipes);
         results.push(built.result);
         break;

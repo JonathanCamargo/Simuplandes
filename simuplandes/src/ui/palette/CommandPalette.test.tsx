@@ -72,7 +72,8 @@ describe("CommandPalette", () => {
     expect(screen.getByRole("option", { name: /Desplazar/ })).toBeTruthy();
     expect(screen.getByRole("option", { name: /Placa/ })).toBeTruthy();
     expect(screen.getByRole("option", { name: /Pivote a tierra/ })).toBeTruthy();
-    expect(screen.getByRole("option", { name: /Corredera/ })).toBeTruthy();
+    expect(screen.getAllByRole("option", { name: /Corredera/ })).toHaveLength(2);
+    expect(screen.getByRole("option", { name: /Corredera \+ revoluta/ })).toBeTruthy();
     expect(screen.getByRole("option", { name: /Motor/ })).toBeTruthy();
   });
 

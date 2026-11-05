@@ -87,7 +87,7 @@ export function ShortcutSheet({ studioStore }: ShortcutSheetProps): ReactNode {
             {TOOL_REGISTRY.map((tool) => (
               <TableRow key={tool.id}>
                 <TableCell>
-                  <Typography component="kbd">{tool.key.toUpperCase()}</Typography>
+                  {tool.key && <Typography component="kbd">{tool.key.toUpperCase()}</Typography>}
                 </TableCell>
                 <TableCell>{t(tool.labelKey)}</TableCell>
                 <TableCell sx={{ color: "text.secondary" }}>{t(tool.descKey)}</TableCell>
