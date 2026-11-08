@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { useSimRuntime, type UseSimRuntimeOptions } from "./useSimRuntime";
 import { createStudioStore } from "../../uiState/studioStore";
 import { createMechanismStore } from "../../store";
+import { addAnnotation } from "../../store/commands";
 import { createSimStore } from "../simStore";
 import { createSimRuntime, type SimRuntime } from "../runtime";
 import { build as buildFourBar } from "../../kinematics/__fixtures__/fourBar";
@@ -155,6 +156,34 @@ describe("useSimRuntime", () => {
 
     expect(runtime.exit).toHaveBeenCalledTimes(1);
     expect(studioStore.getState().simHint).toBeNull();
+  });
+
+  it("Simulate -> Draw holds the frame; brush strokes keep it, geometry edits drop it", () => {
+    const { studioStore, mechanismStore, simStore, options } = makeHarness();
+    renderHook(() => useSimRuntime(options));
+
+    const frame = new Map([["L1", { position: [1, 2], angle: 0.5 }]]) as unknown as ReadonlyMap<
+      string,
+      never
+    >;
+    act(() => studioStore.getState().setMode("simulate"));
+    act(() => simStore.getState().setPoses(frame));
+    act(() => studioStore.getState().setMode("draw"));
+
+    expect(studioStore.getState().drawPoses).toBe(frame);
+    expect(studioStore.getState().activeTool).toBe("brush");
+
+    act(() => {
+      mechanismStore
+        .getState()
+        .execute("add", addAnnotation({ id: "s1", points: [[0, 0]], color: "ink", width: 1 }));
+    });
+    expect(studioStore.getState().drawPoses).toBe(frame);
+
+    act(() => {
+      mechanismStore.getState().addLink({ name: "Bar", sites: [{ local: [0, 0] }] });
+    });
+    expect(studioStore.getState().drawPoses).toBeNull();
   });
 
   it("simStore.dragging set publishes a dragging hint with the link's name; cleared reverts to the simulate hint", () => {

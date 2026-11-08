@@ -89,8 +89,15 @@ export function useSimRuntime(opts: UseSimRuntimeOptions): void {
 
     const unsubscribeDocument = mechanismStore.subscribe((state, prevState) => {
       if (state.document === prevState.document) return;
-      // The held frame no longer matches the geometry once the document changes.
-      if (studioStore.getState().drawPoses) studioStore.getState().setDrawPoses(null);
+      // The held frame no longer matches the geometry once links or joints change.
+      // Brush/Eraser edits only touch `annotations` (Immer keeps the other arrays'
+      // identity), so drawing over a simulated frame keeps that frame on screen.
+      const geometryChanged =
+        state.document.links !== prevState.document.links ||
+        state.document.joints !== prevState.document.joints;
+      if (geometryChanged && studioStore.getState().drawPoses) {
+        studioStore.getState().setDrawPoses(null);
+      }
       if (studioStore.getState().mode !== "simulate") return;
       runtime.documentChanged(state.document);
       publishModeHint();

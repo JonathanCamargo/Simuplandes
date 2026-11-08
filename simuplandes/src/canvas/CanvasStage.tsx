@@ -20,7 +20,7 @@
  *   reference poses" (Build mode, or Simulate mode before the first solve).
  */
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Stage } from "react-konva";
 import type Konva from "konva";
 import { useStore, type StoreApi } from "zustand";
@@ -204,6 +204,23 @@ export function CanvasStage({
     container.addEventListener("pointercancel", handleCancel);
     return () => container.removeEventListener("pointercancel", handleCancel);
   }, []);
+
+  // Re-sync the Konva nodes with what React just rendered. `posesSource.subscribe`
+  // moves nodes behind React's back, and react-konva only re-applies a prop
+  // whose value differs from its own last render. Pins and pivots are
+  // positioned by plain numbers, so a pose React has already rendered once
+  // (e.g. during a Simulate drag) is skipped after an imperative move put the
+  // node elsewhere. Without this, Simulate -> Draw kept the links in the held
+  // frame but left the joints in the construction pose.
+  useLayoutEffect(() => {
+    applyRenderModelToLayers(
+      { links: linksLayerRef.current, joints: jointsLayerRef.current },
+      renderModel,
+      viewport,
+    );
+    // `posesSource` too: the held Draw frame can be the very Map React last
+    // rendered during the drag, leaving `renderModel` memoized and unchanged.
+  }, [renderModel, viewport, posesSource]);
 
   useEffect(() => {
     if (!posesSource) return undefined;
